@@ -1,0 +1,434 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import * as LucideIcons from 'lucide-react';
+import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+import { GET } from '@/app/api/landing-data/route';
+
+// Components
+import HeroCarousel from '@/components/landing/HeroCarousel';
+import EventsSection from '@/components/landing/EventsSection';
+import TestimonialsSection from '@/components/landing/TestimonialsSection';
+import GalleryMasonry from '@/components/landing/GalleryMasonry';
+import NewsletterSignup from '@/components/landing/NewsletterSignup';
+import LandingNav from '@/components/landing/LandingNav';
+
+async function getLandingData() {
+  const res = await GET();
+  return await res.json();
+}
+
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('alumniAccessToken')?.value;
+  let isAuthenticated = false;
+
+  if (token) {
+    try {
+      verifyAlumniAccessToken(token);
+      isAuthenticated = true;
+    } catch {
+      // Token expired – treat as not authenticated
+    }
+  }
+
+  if (isAuthenticated) {
+    redirect('/alumni/feed');
+  }
+
+  // Load landing page data (API route call)
+  const data = await getLandingData();
+
+  // Static campuses list as requested
+  const staticCampuses = [
+    {
+      id: 'mohali-1',
+      name: 'Mohali-I Campus',
+      location: 'Mohali, Punjab',
+      iconName: 'Building',
+      description: 'Pioneering specialized computer applications, professional management modules, and emerging science labs.',
+      alumniCount: '1,200+',
+    },
+    {
+      id: 'mohali-2',
+      name: 'Mohali-II Campus',
+      location: 'Mohali, Punjab',
+      iconName: 'Building2',
+      description: 'Advanced center of technology studies, computer sciences, software incubation cells, and startups.',
+      alumniCount: '800+',
+    },
+    {
+      id: 'amritsar',
+      name: 'Amritsar Campus',
+      location: 'Amritsar, Punjab',
+      iconName: 'GraduationCap',
+      description: 'Nurturing foundational technology pathways, mechanical designs, computer networking, and placements.',
+      alumniCount: '1,500+',
+    },
+    {
+      id: 'hoshiarpur',
+      name: 'Hoshiarpur Campus',
+      location: 'Hoshiarpur, Punjab',
+      iconName: 'School',
+      description: 'Fostering core engineering practices, local industrial trades, and foundational sciences research.',
+      alumniCount: '1,100+',
+    },
+    {
+      id: 'batala',
+      name: 'Batala Campus',
+      location: 'Batala, Punjab',
+      iconName: 'Library',
+      description: 'Promoting vocational technical excellence, manufacturing trades, and local community startups.',
+      alumniCount: '700+',
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans antialiased text-gray-900 selection:bg-[#C41E3A] selection:text-white">
+      {/* Navigation Header */}
+      <LandingNav />
+
+      {/* 1. Hero Section (Dynamic rotating carousel) */}
+      <HeroCarousel slides={data.heroSlides} />
+
+      {/* 2. Stats Strip */}
+      <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-14 text-white relative overflow-hidden shadow-inner">
+        <div className="absolute inset-0 bg-blue-950/20 backdrop-brightness-75"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-wrap md:grid md:grid-cols-5 gap-y-8 gap-x-4 justify-center text-center">
+            {data.statsList?.map((stat: any, idx: number) => {
+              // Resolve Lucide Icon dynamically
+              const IconComponent = (LucideIcons as any)[stat.icon] || LucideIcons.BarChart3;
+              return (
+                <div key={idx} className="flex-1 min-w-[140px] md:border-r md:border-white/10 last:border-none flex flex-col items-center">
+                  <div className="mb-2 p-2 bg-white/10 rounded-xl">
+                    <IconComponent size={22} className="text-white" />
+                  </div>
+                  <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{stat.number}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">{stat.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. About / Welcome Note */}
+      <section id="leadership" className="scroll-mt-16 py-24 bg-gradient-to-b from-white via-slate-50/60 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            {/* Note text */}
+            <div className="lg:col-span-7">
+              <span className="inline-block px-3 py-1 bg-[#003D7A]/5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-[#003D7A] mb-4">
+                Message from Leadership
+              </span>
+              <h2 className="text-3xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
+                {data.welcomeNote.title}
+              </h2>
+              <div 
+                className="text-gray-600 text-sm leading-relaxed font-light mb-8"
+                dangerouslySetInnerHTML={{ __html: data.welcomeNote.body }}
+              />
+              <div>
+                <h4 className="font-extrabold text-gray-900 text-sm">{data.welcomeNote.name}</h4>
+                <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5">{data.welcomeNote.designation}</p>
+              </div>
+            </div>
+            
+            {/* Leadership Photo Card with Layered Offset Borders */}
+            <div className="lg:col-span-5 flex justify-center relative">
+              <div className="absolute -inset-2.5 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] rounded-[2.5rem] blur opacity-15 -rotate-1 scale-95" />
+              <div className="absolute -top-3 -left-3 w-16 h-16 border-t-4 border-l-4 border-[#C41E3A] rounded-tl-3xl hidden sm:block" />
+              <div className="absolute -bottom-3 -right-3 w-16 h-16 border-b-4 border-r-4 border-[#003D7A] rounded-br-3xl hidden sm:block" />
+              <div className="relative p-3.5 bg-white border border-slate-100 rounded-[2.2rem] shadow-2xl max-w-sm w-full z-10 transition-transform duration-300 hover:scale-[1.02]">
+                <div className="relative h-96 w-full rounded-3xl overflow-hidden bg-slate-50">
+                  <img 
+                    src={data.welcomeNote.photo} 
+                    alt={data.welcomeNote.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Upcoming Events Section */}
+      <EventsSection events={data.events} />
+
+      {/* 5. News & Campus Updates Section */}
+      <section id="news" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Stay Updated</h3>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">News & Campus Updates</h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+              Read about student placements, faculty breakthroughs, and alumni milestones.
+            </p>
+          </div>
+
+          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+            {data.news.map((item: any) => (
+              <a
+                key={item.id}
+                href="https://ptu.ac.in/news-events"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto cursor-pointer"
+              >
+                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                  <img 
+                    src={item.coverImage} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {item.featured && (
+                    <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
+                      ★ Featured
+                    </span>
+                  )}
+                  <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded">
+                    {item.category}
+                  </span>
+                </div>
+                <div className="p-6 flex flex-col flex-grow">
+                  <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">
+                    {item.publishedDate} • By {item.author}
+                  </div>
+                  <h4 className="text-base font-extrabold text-gray-900 mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
+                    {item.title}
+                  </h4>
+                  <p className="text-gray-600 text-xs leading-relaxed line-clamp-3 mb-6">
+                    {item.summary}
+                  </p>
+                  <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-semibold text-[#003D7A]">
+                    <span>Read Full Story →</span>
+                    <span className="text-slate-400 font-medium">📍 {item.campusTag}</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Gallery / Memories Section */}
+      <GalleryMasonry items={data.gallery} />
+
+      {/* 6.5 Alumni Videos Section */}
+      <section id="videos" className="py-24 bg-gradient-to-b from-slate-50/50 to-white scroll-mt-16 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Watch & Relive</h3>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Videos</h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+              Explore event diaries, campus tours, and guest lectures from our distinguished alumni community.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            {data.videos && data.videos.map((video: any) => (
+              <div 
+                key={video.id}
+                className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col h-full group"
+              >
+                <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
+                  <video 
+                    src={video.videoUrl} 
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="p-6 flex flex-col flex-grow">
+                  <h4 className="text-base font-extrabold text-gray-900 mb-2 leading-snug">
+                    {video.title}
+                  </h4>
+                  {video.description && (
+                    <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">
+                      {video.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Notable Alumni / Spotlight Section */}
+      <section id="spotlight" className="py-24 bg-gradient-to-b from-white via-blue-50/15 to-white scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Hall of Fame</h3>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Spotlight</h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+              Celebrating our distinguished alumni leading global enterprise domains and pathbreaking research cells.
+            </p>
+          </div>
+
+          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+            {data.notableAlumni.map((alum: any) => (
+              <div 
+                key={alum.id}
+                className="bg-white rounded-3xl border border-slate-100 p-6 shadow-md hover:shadow-xl hover:shadow-[#003D7A]/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col text-center w-[285px] flex-shrink-0 md:w-auto"
+              >
+                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-200 bg-slate-50 relative p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A]">
+                  <img 
+                    src={alum.photo} 
+                    alt={alum.name} 
+                    className="w-full h-full object-cover rounded-full bg-white"
+                  />
+                </div>
+                <h4 className="text-base font-bold text-gray-900">{alum.name}</h4>
+                <p className="text-xs font-medium text-[#C41E3A] uppercase tracking-wider mt-0.5">
+                  Class of {alum.batch} | {alum.branch}
+                </p>
+                <div className="my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-semibold text-gray-700">
+                  {alum.designation} @ <span className="text-[#003D7A]">{alum.company}</span>
+                </div>
+                <p className="text-gray-605 text-xs leading-relaxed font-light my-4 line-clamp-3">
+                  "{alum.bio}"
+                </p>
+                <a 
+                  href={alum.linkedIn}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-auto pt-4 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition-colors flex items-center justify-center gap-1.5"
+                >
+                  Connect on LinkedIn ↗
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Testimonials Section */}
+      <TestimonialsSection initialTestimonials={data.testimonials} />
+
+
+      {/* 9. Campus Showcase (Statically Fixed) */}
+      <section id="campuses" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Our Footprint</h3>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Campus Showcase</h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+              Explore our core campuses fostering engineering, tech research, and professional domains.
+            </p>
+          </div>
+
+          {/* Horizontal scroll support for campuses on mobile */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 lg:grid-cols-5 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+            {staticCampuses.map((campus) => {
+              const IconComp = (LucideIcons as any)[campus.iconName] || LucideIcons.School;
+              return (
+                <div 
+                  key={campus.id}
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[260px] flex-shrink-0 md:w-auto"
+                >
+                  {/* Elegant Gradient Image Placeholder */}
+                  <div className="h-36 w-full bg-gradient-to-br from-[#003D7A]/15 to-[#C41E3A]/15 flex flex-col items-center justify-center p-4 border-b border-slate-100 relative group">
+                    <div className="p-3 bg-white/95 rounded-2xl shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
+                      <IconComp size={24} />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-widest text-[#003D7A] font-extrabold mt-3">
+                      [ Image Placeholder ]
+                    </span>
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-grow">
+                    <h4 className="text-base font-extrabold text-gray-900 mb-1">{campus.name}</h4>
+                    <p className="text-[10px] font-bold text-[#C41E3A] uppercase tracking-wider mb-3">📍 {campus.location}</p>
+                    <p className="text-gray-500 text-xs leading-relaxed mb-4 font-light flex-grow">
+                      {campus.description}
+                    </p>
+                    <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-[11px] font-bold text-gray-700">
+                      <span>{campus.alumniCount} Alumni</span>
+                      <span className="text-slate-400 font-medium">IKGPTU Org</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 10. Partner/Affiliated Colleges strip */}
+      <section className="py-16 bg-white border-t border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-8">
+            Partner / Affiliated Institutions
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-12 opacity-70">
+            {data.affiliatedColleges?.map((college: any) => (
+              <div key={college.id} className="flex items-center gap-2 hover:opacity-100 transition-opacity">
+                {college.logo.includes('https://') || college.logo.includes('http://') ? (
+                  <img src={college.logo} alt={college.name} className="h-14" />
+                ) : (
+                  <span className="text-xl">{college.logo}</span>
+                )}
+                <span className="text-xs font-bold text-slate-600">{college.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 11. Newsletter Capture Form */}
+      <NewsletterSignup />
+
+      {/* 12. Footer */}
+      <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+            <div>
+              <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">IKGPTU Alumni</h4>
+              <p className="text-[11px] leading-relaxed font-light text-slate-400">
+                Fostering lifelong alliances across technology, management research, and creative design domains globally since 1997.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Quick Navigation</h4>
+              <ul className="space-y-2.5 text-xs font-semibold">
+                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">About Association</a></li>
+                <li><a href="#events" className="hover:text-[#C41E3A] transition-colors">Events & Reunions</a></li>
+                <li><a href="#news" className="hover:text-[#C41E3A] transition-colors">News Updates</a></li>
+                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Support Desk</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Compliance</h4>
+              <ul className="space-y-2.5 text-xs font-semibold">
+                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Privacy Charter</a></li>
+                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Platform Guidelines</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Connect Safely</h4>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
+                <a href="https://www.linkedin.com/school/vinukonda-b.ed.-college/posts/?feedView=all" className="hover:text-white transition-colors">LinkedIn</a>
+                <a href="#" className="hover:text-white transition-colors">Facebook</a>
+                <a href="#" className="hover:text-white transition-colors">Twitter</a>
+                <a href="https://www.instagram.com/ikgujralptu" className="hover:text-white transition-colors">Instagram</a>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-slate-800/80 pt-8 text-center text-[11px] font-medium tracking-wide text-slate-500">
+            <p>&copy; {new Date().getFullYear()} IKGPTU Alumni Network. Designed to University Excellence Standards. All rights Reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
