@@ -574,7 +574,7 @@ Get current alumni profile
     "currentRole": "Software Engineer",
     "currentCompany": "Tech Corp",
     "city": "Bangalore",
-    "avatarUrl": "https://cloudinary.com/...",
+    "avatarUrl": "/uploads/avatars/avatar-123.jpg",
     "bio": "Passionate developer",
     "linkedinUrl": "https://linkedin.com/in/johndoe"
   }
@@ -619,7 +619,7 @@ Upload profile avatar
 ```json
 {
   "success": true,
-  "avatarUrl": "https://cloudinary.com/..."
+  "avatarUrl": "/uploads/avatars/avatar-123.jpg"
 }
 ```
 
@@ -653,7 +653,7 @@ limit=20
       "eventDate": "2024-06-15T10:00:00Z",
       "venue": "Main Campus Auditorium",
       "category": "Reunion",
-      "coverImageUrl": "https://cloudinary.com/...",
+      "coverImageUrl": "/uploads/events/event-cover-123.jpg",
       "attendingCount": 120,
       "maybeCount": 20,
       "totalRsvps": 150,
@@ -784,11 +784,11 @@ Create post
   "post": {
     "id": "post-222",
     "content": "This is my post",
-    "images": ["https://cloudinary.com/..."],
+    "images": ["/uploads/posts/post-image-123.jpg"],
     "author": {
       "id": "alumni-123",
       "name": "John Doe",
-      "avatarUrl": "https://cloudinary.com/..."
+      "avatarUrl": "/uploads/avatars/avatar-123.jpg"
     },
     "createdAt": "2024-01-15T10:30:00Z"
   }
@@ -814,11 +814,11 @@ limit=20
     {
       "id": "post-222",
       "content": "This is my post",
-      "images": ["https://cloudinary.com/..."],
+      "images": ["/uploads/posts/post-image-123.jpg"],
       "author": {
         "id": "alumni-123",
         "name": "John Doe",
-        "avatarUrl": "https://cloudinary.com/..."
+        "avatarUrl": "/uploads/avatars/avatar-123.jpg"
       },
       "likes": 15,
       "comments": 3,

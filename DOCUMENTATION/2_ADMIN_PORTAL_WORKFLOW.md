@@ -342,13 +342,7 @@ Displays:
    - Branch
    - College
    - Professional details
-   - ID proof (document upload to Cloudinary)
-
-3. Request stored as RegistrationRequest with status: PENDING
-
-4. Admin reviews in /admin/requests
-5. Sees request details + ID proof image
-6. Can:
+- ID proof (document upload to local disk under `/uploads/id-proofs`)
    - APPROVE: Creates Alumni record, sends welcome email
    - REJECT: Marks status REJECTED, optional rejection reason sent to email
 ```
@@ -360,7 +354,7 @@ Displays:
   name: string
   email: string (unique)
   enrollmentNo?: string
-  idProffUrl?: string (Cloudinary image URL)
+  idProffUrl?: string (local upload path)
   batchYear: number
   branch: string
   college: string
@@ -403,7 +397,7 @@ Displays:
 - Category (dropdown)
 - Event Date & Time (required)
 - Venue (required)
-- Cover Image (optional, uploads to Cloudinary)
+- Cover Image (optional, uploads to local disk under `/uploads/events`)
 - RSVP Deadline (optional)
 - Publish toggle
 - Show on Landing toggle
@@ -561,7 +555,7 @@ Job {
 - Startup Name
 - Description
 - Website URL
-- Logo (Cloudinary image)
+- Logo (uploaded to local disk under `/uploads/startups`)
 - Industry
 - Founded Year
 - Founder (alumni reference)
@@ -597,7 +591,7 @@ Job {
 Post {
   id: string
   content?: string
-  images: string[] (Cloudinary URLs)
+  images: string[] (local upload paths)
   authorId?: string (alumni)
   postedByStaffId?: string (admin)
   createdAt: DateTime
@@ -633,7 +627,7 @@ Comment {
 **Album Management:**
 ```
 - Create album with title and description
-- Upload multiple images to Cloudinary
+- Upload multiple images to local disk under `/uploads/albums`
 - Add captions per image
 - Toggle: showOnLanding (featured in gallery)
 - Publish/unpublish albums

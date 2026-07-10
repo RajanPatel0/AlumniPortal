@@ -42,7 +42,7 @@ The documentation is organized into 6 main documents, each serving a specific au
 - Project structure and file organization
 - Deployment architecture
 - Security considerations
-- Integration points (Cloudinary, Brevo, OAuth)
+- Integration points (Brevo, Google OAuth, LinkedIn OAuth)
 
 **Start Here If:** You need to understand the overall architecture
 
@@ -162,10 +162,9 @@ The documentation is organized into 6 main documents, each serving a specific au
 - Complete deployment architecture
 - Pre-deployment checklist
 - Step-by-step Vercel deployment
-- Supabase PostgreSQL setup
+- MySQL setup
 - Environment variables configuration
 - Third-party service setup:
-  - Cloudinary
   - Brevo email
   - Google OAuth
   - LinkedIn OAuth

@@ -193,7 +193,7 @@ User provides:
 - Phone (optional)
 - Current Role (optional)
 - Current Company (optional)
-- ID Proof (image upload to Cloudinary)
+- ID Proof (image upload to local disk under `/uploads/id-proofs`)
 - Professional Details
 - Address, DOB, Gender (optional)
 ```
@@ -205,7 +205,7 @@ Request to /api/alumni/open-registration (POST)
 System:
 1. Validates all required fields
 2. Checks email uniqueness
-3. Uploads ID proof to Cloudinary
+3. Uploads ID proof to local disk storage
 4. Creates RegistrationRequest record:
    - status = PENDING
    - authProvider = MANUAL
@@ -243,7 +243,7 @@ RegistrationRequest {
   branch: string
   college: string
   authProvider: "MANUAL"
-  idProffUrl: string (Cloudinary)
+  idProffUrl: string (local upload path)
   status: PENDING
   reviewedBy?: Staff
   reviewedAt?: DateTime
@@ -321,7 +321,7 @@ From registration:
 - Campus
 
 Can add:
-- Avatar Image (Cloudinary upload)
+- Avatar Image (local upload under `/uploads/avatars`)
 - Phone
 - Current Role
 - Current Company
@@ -375,7 +375,7 @@ Alumni {
   currentCompany?: string
   city?: string
   linkedinUrl?: string
-  avatarUrl?: string (Cloudinary)
+  avatarUrl?: string (local upload path)
   bio?: string
   phone?: string
 
@@ -435,7 +435,7 @@ WorkExperience {
 ```
 User can post:
 - Text content
-- Multiple images (Cloudinary upload)
+- Multiple images (local upload under `/uploads/posts`)
 - Privacy: Campus-wide visible
 
 Post appears for:
@@ -461,7 +461,7 @@ Database:
 Post {
   id: string
   content?: string
-  images: string[] (Cloudinary URLs)
+  images: string[] (local upload paths)
   authorId: string (alumni)
   createdAt: DateTime
 }
@@ -785,7 +785,7 @@ Click startup to see:
 ```
 Alumni can register startup:
 - Fill startup details
-- Upload logo (Cloudinary)
+- Upload logo (local upload under `/uploads/startups`)
 - Add description
 - Provide contact info
 
@@ -801,7 +801,7 @@ StartUp {
   name: string
   description: string
   websiteUrl?: string
-  logoUrl?: string (Cloudinary)
+  logoUrl?: string (local upload path)
   industry?: string
   foundedYear?: number
   founderId: string (Alumni)
@@ -869,7 +869,7 @@ Album {
 AlbumImage {
   id: string
   albumId: string
-  imageUrl: string (Cloudinary)
+  imageUrl: string (local upload path)
   caption?: string
   showOnLanding: boolean
   createdAt: DateTime

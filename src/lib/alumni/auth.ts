@@ -74,6 +74,8 @@ export const alumniAuthConfig: NextAuthOptions = {
       id: 'linkedin',
       name: 'LinkedIn',
       type: 'oauth',
+      clientId: process.env.LINKEDIN_CLIENT_ID!,
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
       wellKnown: 'https://www.linkedin.com/oauth/.well-known/openid-configuration',
       issuer: 'https://www.linkedin.com/oauth',
       authorization: {

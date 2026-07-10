@@ -5,10 +5,9 @@
 
 ## 📊 Database Overview
 
-**Type:** PostgreSQL (Relational Database)
-**Hosted on:** Supabase (AWS ap-south-1 region)
+**Type:** MySQL (Relational Database)
 **ORM:** Prisma 5.22.0
-**Connection:** Pooled via PgBouncer for efficiency
+**Connection:** Standard MySQL connection via `DATABASE_URL`
 
 **Key Statistics:**
 - ~15 core models
@@ -577,7 +576,7 @@ model StartUp {
 model Post {
   id              String    @id @default(cuid())
   content         String?
-  images          String[]  // Cloudinary URLs
+  images          String[]  // Local upload paths
   authorId        String?
   author          Alumni?   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   postedByStaffId String?
@@ -657,7 +656,7 @@ model AlbumImage {
   id            String   @id @default(cuid())
   albumId       String
   album         Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  imageUrl      String   // Cloudinary URL
+  imageUrl      String   // Local upload path
   caption       String?
   showOnLanding Boolean  @default(false)
   createdAt     DateTime @default(now())
@@ -867,9 +866,9 @@ SELECT * FROM email_logs WHERE recipientEmail = ? ORDER BY sentAt DESC
 - Can scale to 10+ GB with proper indexing
 
 **Backup Strategy:**
-- Supabase automatic daily backups
-- 30-day backup retention
-- Point-in-time recovery available
+- Regular MySQL backups managed by the deployment environment
+- 30-day backup retention is recommended
+- Point-in-time recovery if supported by the MySQL host
 
 ---
 

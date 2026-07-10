@@ -13,7 +13,7 @@
 - Enable alumni networking and professional growth
 - Track alumni registrations and communications
 
-**Current Status:** Production-ready application deployed on Vercel with PostgreSQL backend
+**Current Status:** Production-ready application deployed on Vercel with MySQL backend
 
 ---
 
@@ -78,15 +78,14 @@
 - **Runtime:** Node.js (Next.js API Routes)
 - **Authentication:** JWT (access + refresh tokens)
 - **Email Service:** Brevo API
-- **File Upload:** Cloudinary CDN
+- **File Upload:** Local disk storage under `public/uploads`
 - **Form Parsing:** Formidable, Multer
 - **Password Hashing:** bcryptjs
 - **CSV/Excel Processing:** Papa Parse, XLSX
 
 ### **Database**
-- **Primary:** PostgreSQL (via Supabase)
+- **Primary:** MySQL
 - **ORM:** Prisma 5.22.0
-- **Connection Pooling:** PgBouncer (Supabase connection pooler)
 - **Migrations:** Prisma migrate
 
 ### **Authentication**
@@ -96,8 +95,8 @@
 
 ### **Deployment**
 - **Hosting:** Vercel (serverless)
-- **Database:** Supabase PostgreSQL
-- **File Storage:** Cloudinary
+- **Database:** MySQL
+- **File Storage:** Local disk under `public/uploads`
 - **Email:** Brevo SMTP
 
 ---
@@ -181,7 +180,7 @@ ptumni/
 │   ├── lib/                    # Utility functions
 │   │   ├── auth/               # JWT & auth helpers
 │   │   ├── brevo.ts            # Email service
-│   │   ├── cloudinary.ts       # File upload
+│   │   ├── fileUpload.ts       # File upload
 │   │   ├── prisma.ts           # DB client
 │   │   ├── import-*.ts         # CSV import logic
 │   │   └── rate-limit.ts       # API rate limiting
@@ -209,8 +208,7 @@ ptumni/
 
 #### Database
 ```
-DATABASE_URL=postgresql://...            # Pooler connection
-DIRECT_URL=postgresql://...              # Direct migration connection
+DATABASE_URL=mysql://...                 # Primary MySQL connection
 ```
 
 #### Authentication Secrets
@@ -225,10 +223,6 @@ NEXTAUTH_SECRET=...                      # Next-Auth
 
 #### Third-Party Services
 ```
-CLOUDINARY_CLOUD_NAME=...                # File uploads
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-
 BREVO_API_KEY=...                        # Email service
 BREVO_SENDER_EMAIL=...
 BREVO_SENDER_NAME=...
@@ -309,11 +303,11 @@ DEV_MODE=false
 - Event announcement emails
 - Transactional notifications
 
-### **File Storage (Cloudinary)**
-- Album images
-- Event cover images
-- Startup logos
-- User avatars
+### **File Storage (Local Disk)**
+- Album images stored under `/uploads/albums`
+- Event cover images stored under `/uploads/events`
+- Startup logos stored under `/uploads/startups`
+- User avatars stored under `/uploads/avatars`
 
 ### **OAuth Providers**
 - Google Sign-in for alumni
