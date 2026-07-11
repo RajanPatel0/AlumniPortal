@@ -417,10 +417,10 @@ export default async function HomePage() {
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Connect Safely</h4>
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
-                <a href="https://www.linkedin.com/school/vinukonda-b.ed.-college/posts/?feedView=all" className="hover:text-white transition-colors">LinkedIn</a>
+                <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
                 <a href="#" className="hover:text-white transition-colors">Facebook</a>
                 <a href="#" className="hover:text-white transition-colors">Twitter</a>
-                <a href="https://www.instagram.com/ikgujralptu" className="hover:text-white transition-colors">Instagram</a>
+                <a href="#" className="hover:text-white transition-colors">Instagram</a>
               </div>
             </div>
           </div>
