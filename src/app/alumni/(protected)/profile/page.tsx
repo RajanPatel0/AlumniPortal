@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from "@/lib/api";
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -71,8 +72,8 @@ function ProfilePageClient() {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const url = id ? `/api/alumni/me?id=${id}` : '/api/alumni/me';
-      const res = await fetch(url);
+      const url = id ? `/alumni/me?id=${id}` : '/alumni/me';
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Unauthorized');
       const data = await res.json();
       setProfile(data.user);
@@ -81,7 +82,7 @@ function ProfilePageClient() {
     } catch {
       // Before redirecting to alumni login, check if this is an admin session
       try {
-        const adminRes = await fetch('/api/admin/me');
+        const adminRes = await apiFetch('/admin/me');
         if (adminRes.ok) {
           // Admin is authenticated but the profile fetch still failed (maybe no id param)
           // Redirect back to admin dashboard
@@ -103,7 +104,7 @@ function ProfilePageClient() {
     if (!formData) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/alumni/update-profile', {
+      const res = await apiFetch('/alumni/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -149,7 +150,7 @@ function ProfilePageClient() {
     uploadData.append('file', file);
 
     try {
-      const res = await fetch('/api/alumni/upload-avatar', {
+      const res = await apiFetch('/alumni/upload-avatar', {
         method: 'POST',
         body: uploadData,
       });
@@ -174,11 +175,11 @@ function ProfilePageClient() {
     if (!selectedEdu) return;
 
     const isEdit = !!selectedEdu.id;
-    const url = '/api/alumni/education';
+    const url = '/alumni/education';
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedEdu),
@@ -198,7 +199,7 @@ function ProfilePageClient() {
     if (!window.confirm('Are you sure you want to delete this education?')) return;
 
     try {
-      const res = await fetch(`/api/alumni/education?id=${eduId}`, {
+      const res = await apiFetch(`/alumni/education?id=${eduId}`, {
         method: 'DELETE',
       });
 
@@ -217,11 +218,11 @@ function ProfilePageClient() {
     if (!selectedExp) return;
 
     const isEdit = !!selectedExp.id;
-    const url = '/api/alumni/experience';
+    const url = '/alumni/experience';
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedExp),
@@ -241,7 +242,7 @@ function ProfilePageClient() {
     if (!window.confirm('Are you sure you want to delete this experience?')) return;
 
     try {
-      const res = await fetch(`/api/alumni/experience?id=${expId}`, {
+      const res = await apiFetch(`/alumni/experience?id=${expId}`, {
         method: 'DELETE',
       });
 

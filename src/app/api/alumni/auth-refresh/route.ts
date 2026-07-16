@@ -5,6 +5,7 @@ import {
   generateAlumniAccessToken,
   generateAlumniRefreshToken,
 } from '@/lib/auth/alumni-jwt';
+import { BASE_PATH } from '@/lib/api';
 
 function parseExpiryToMs(expiry: string): number {
   const value = parseInt(expiry);
@@ -17,7 +18,7 @@ function parseExpiryToMs(expiry: string): number {
 
 export async function GET(req: NextRequest) {
   const callbackUrl = req.nextUrl.searchParams.get('callbackUrl') || '/alumni/feed';
-  const loginUrl = new URL('/alumni/login', req.url);
+  const loginUrl = new URL(`${BASE_PATH}/alumni/login`, req.url);
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
 
   const refreshToken = req.cookies.get('alumniRefreshToken')?.value;
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
     const refreshMaxAge = parseExpiryToMs(process.env.REFRESH_TOKEN_EXPIRY || '7d');
 
     // Redirect to original destination with new cookies set
-    const redirectTarget = new URL(callbackUrl, req.url);
+    const redirectTarget = new URL(`${BASE_PATH}${callbackUrl}`, req.url);
     const response = NextResponse.redirect(redirectTarget);
 
     response.cookies.set('alumniAccessToken', newAccessToken, {

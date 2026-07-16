@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from "@/lib/api";
 import { toast } from 'react-hot-toast';
 
 interface RegistrationRequest {
@@ -39,7 +40,7 @@ export default function AdminRequestsPage() {
 
     setSendingLink(true);
     try {
-      const res = await fetch('/api/admin/registration-requests/send-link', {
+      const res = await apiFetch('/admin/registration-requests/send-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: inviteName, email: inviteEmail }),
@@ -62,7 +63,7 @@ export default function AdminRequestsPage() {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch('/api/admin/registration-requests');
+      const res = await apiFetch('/admin/registration-requests');
       
       // Safety Check: Verify response type before trying to read JSON
       const contentType = res.headers.get("content-type");
@@ -99,7 +100,7 @@ export default function AdminRequestsPage() {
         payload.rejectionReason = 'Information verification failed'
       }
 
-      const res = await fetch(`/api/admin/registration-requests/${requestId}/${action}`, {
+      const res = await apiFetch(`/admin/registration-requests/${requestId}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

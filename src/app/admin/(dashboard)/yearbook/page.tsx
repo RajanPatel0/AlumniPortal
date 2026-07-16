@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import {
   BookOpen, Users, ChevronDown, ChevronRight,
@@ -97,7 +98,7 @@ function BranchSection({
           limit: '8',
           ...(searchVal ? { search: searchVal } : {}),
         });
-        const res = await fetch(`/api/yearbook/alumni?${params}`);
+        const res = await apiFetch(`/yearbook/alumni?${params}`);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         setAlumni(data.alumni || []);
@@ -314,7 +315,7 @@ function YearSection({ year }: { year: YearData }) {
     if (branches.length > 0) return;
     setLoadingBranches(true);
     try {
-      const res = await fetch(`/api/yearbook/branches?year=${year.year}`);
+      const res = await apiFetch(`/yearbook/branches?year=${year.year}`);
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       setBranches(data.branches || []);
@@ -421,7 +422,7 @@ export default function AdminYearbookPage() {
   useEffect(() => {
     const fetch_ = async () => {
       try {
-        const res = await fetch('/api/yearbook/years');
+        const res = await apiFetch('/yearbook/years');
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         setYears(data.years || []);

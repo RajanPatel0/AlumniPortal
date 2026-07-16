@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import { use } from 'react';
 import { BookOpen, Users, ChevronRight, ArrowLeft, GraduationCap } from 'lucide-react';
@@ -60,7 +61,7 @@ export default function YearbookYearPage({ params }: { params: Promise<{ year: s
   useEffect(() => {
     const fetchBranches = async () => {
       try {
-        const res = await fetch(`/api/yearbook/branches?year=${year}`);
+        const res = await apiFetch(`/yearbook/branches?year=${year}`);
         if (!res.ok) throw new Error('Failed to fetch branches');
         const data = await res.json();
         setBranches(data.branches || []);

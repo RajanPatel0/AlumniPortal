@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
+import { apiFetch } from "@/lib/api";
 
 // Static Subcomponents
 import { ListBusinessBanner } from '@/components/startups/ListBusinessBanner';
@@ -82,7 +83,7 @@ function StartupsShowcaseClient() {
       params.set('page', page.toString());
       params.set('limit', '8');
 
-      const response = await fetch(`/api/alumni/startups?${params.toString()}`);
+      const response = await apiFetch(`/alumni/startups?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch startups');
       }
@@ -93,7 +94,7 @@ function StartupsShowcaseClient() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/alumni/startups/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/alumni/startups/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');

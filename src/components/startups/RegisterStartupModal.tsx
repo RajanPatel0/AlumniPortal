@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { startupSchema, type StartupSchemaType } from '@/schemas/startup';
 import { ImageUploader } from '@/components/ImageUploader';
 import { useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 
 interface StartupItem {
   id: string;
@@ -30,9 +31,9 @@ export function RegisterStartupModal({ isOpen, onClose, startup }: RegisterStart
 
   const createStartupMutation = useMutation({
     mutationFn: async (formData: StartupSchemaType & { logoUrl?: string }) => {
-      const url = isEditing ? `/api/alumni/startups/${startup!.id}` : '/api/alumni/startups';
+      const url = isEditing ? `/alumni/startups/${startup!.id}` : '/alumni/startups';
       const method = isEditing ? 'PATCH' : 'POST';
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

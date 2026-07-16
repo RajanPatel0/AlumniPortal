@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { apiFetch } from "@/lib/api"
 import { useRouter } from 'next/navigation'
 
 export default function AdminSetupPage() {
@@ -21,7 +22,7 @@ export default function AdminSetupPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/admin/register', {
+      const res = await apiFetch('/admin/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
@@ -49,7 +50,7 @@ export default function AdminSetupPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/admin/verify-otp', {
+      const res = await apiFetch('/admin/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp, otpToken }),

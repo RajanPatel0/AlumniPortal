@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import { BookOpen, Users, ChevronRight, GraduationCap, Sparkles } from 'lucide-react';
 
@@ -28,7 +29,7 @@ export default function YearbookPage() {
   useEffect(() => {
     const fetchYears = async () => {
       try {
-        const res = await fetch('/api/yearbook/years');
+        const res = await apiFetch('/yearbook/years');
         if (!res.ok) throw new Error('Failed to fetch years');
         const data = await res.json();
         setYears(data.years || []);

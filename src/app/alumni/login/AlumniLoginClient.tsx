@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch, BASE_PATH } from "@/lib/api";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
@@ -40,7 +41,7 @@ export default function AlumniLoginPage() {
 
     setTokenLoading(true);
     setTokenError('');
-    fetch(`/api/alumni/verify-token?token=${encodeURIComponent(inviteToken)}`)
+    apiFetch(`/alumni/verify-token?token=${encodeURIComponent(inviteToken)}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok || !data.valid) {
@@ -59,8 +60,8 @@ export default function AlumniLoginPage() {
       document.cookie = `invite_token=${encodeURIComponent(inviteToken)}; path=/; max-age=3600; SameSite=Lax`;
     }
     const callbackUrl = inviteToken
-      ? `/alumni/oauth-success?token=${encodeURIComponent(inviteToken)}`
-      : '/alumni/oauth-success';
+      ? `${BASE_PATH}/alumni/oauth-success?token=${encodeURIComponent(inviteToken)}`
+      : `${BASE_PATH}/alumni/oauth-success`;
     signIn(provider, { callbackUrl });
   };
 
@@ -83,7 +84,7 @@ export default function AlumniLoginPage() {
 
     try {
       if (isInviteSetup) {
-        const res = await fetch('/api/alumni/register-manual', {
+        const res = await apiFetch('/alumni/register-manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -103,7 +104,7 @@ export default function AlumniLoginPage() {
         return;
       }
 
-      const res = await fetch('/api/alumni/login', {
+      const res = await apiFetch('/alumni/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,7 +163,7 @@ export default function AlumniLoginPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group transition-transform duration-200 active:scale-95">
             <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
-              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+              <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-none mb-1 group-hover:text-[#003D7A] transition-colors">

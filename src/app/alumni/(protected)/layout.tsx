@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import AlumniBottomNav from '@/components/AlumniBottomNav';
+import { BASE_PATH } from '@/lib/api';
 
 export default async function ProtectedAlumniLayout({
   children,
@@ -51,7 +52,7 @@ export default async function ProtectedAlumniLayout({
             <div className="flex items-center gap-2.5 sm:gap-3.5">
               {/* Refined Institutional Crest Wrapper */}
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider flex-shrink-0">
-                <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+                <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
               </div>
               
               <Link href="/" className="group block focus:outline-none max-w-[160px] sm:max-w-none">

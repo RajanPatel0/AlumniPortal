@@ -15,6 +15,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from '@/lib/auth/jwt'
+import { BASE_PATH } from '@/lib/api'
 
 function parseExpiryToMs(expiry: string): number {
   const value = parseInt(expiry)
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const callbackUrl =
     req.nextUrl.searchParams.get('callbackUrl') || '/admin/dashboard'
 
-  const loginUrl = new URL('/admin/auth/login', req.url)
+  const loginUrl = new URL(`${BASE_PATH}/admin/auth/login`, req.url)
   loginUrl.searchParams.set('callbackUrl', callbackUrl)
 
   const refreshToken = req.cookies.get('refreshToken')?.value
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
     )
 
     // Redirect to the original destination with new cookies set
-    const redirectTarget = new URL(callbackUrl, req.url)
+    const redirectTarget = new URL(`${BASE_PATH}${callbackUrl}`, req.url)
     const response = NextResponse.redirect(redirectTarget)
 
     response.cookies.set('accessToken', newAccessToken, {

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import { 
   Search, 
   Plus, 
@@ -38,7 +39,7 @@ function AlbumImagesUploader({
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', 'alumni_gallery');
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await apiFetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok) uploaded.push({ url: data.url, caption: '' });
       } catch {
@@ -191,7 +192,7 @@ export default function GalleryPage() {
 
   // Fetch albums from API on mount
   useEffect(() => {
-    fetch('/api/alumni/gallery')
+    apiFetch('/alumni/gallery')
       .then(res => res.ok ? res.json() : { albums: [] })
       .then(data => {
         setStartups(data.albums || []);
@@ -228,7 +229,7 @@ export default function GalleryPage() {
     setIsSubmittingAlbum(true);
 
     try {
-      const res = await fetch('/api/alumni/gallery', {
+      const res = await apiFetch('/alumni/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

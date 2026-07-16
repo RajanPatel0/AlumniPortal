@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
+import { BASE_PATH } from '@/lib/api';
 
 // Define the shape of a navigation item
 interface NavItem {
@@ -130,7 +131,7 @@ export default function DashboardLayout({
       >
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-9">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
-              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+              <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
             </div>
           <span className="text-lg font-semibold">IKGPTU Alumni</span>
           <button

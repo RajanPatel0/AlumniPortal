@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { BASE_PATH } from '@/lib/api';
 
 export default function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -33,7 +34,7 @@ export default function LandingNav() {
         {/* Crest & Title Logo */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white shadow-md overflow-hidden border border-slate-100/10 flex-shrink-0">
-            <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+            <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-none">

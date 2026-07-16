@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from "@/lib/api";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -96,7 +97,7 @@ export default function AlumniNoticeboard() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/alumni/me')
+    apiFetch('/alumni/me')
       .then((res) => {
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
@@ -107,7 +108,7 @@ export default function AlumniNoticeboard() {
       })
       .catch(() => {
         // Check if admin session exists before redirecting to alumni login
-        fetch('/api/admin/me')
+        apiFetch('/admin/me')
           .then(res => res.ok ? res.json() : Promise.reject())
           .then((adminData) => {
             // Populate profile with actual admin details from Staff table
@@ -133,8 +134,8 @@ export default function AlumniNoticeboard() {
   const { data: eventsData } = useQuery({
     queryKey: ['noticeboard-events'],
     queryFn: async () => {
-      const res = await fetch(
-        '/api/alumni/events?limit=3&page=1&sort=date&showPast=false'
+      const res = await apiFetch(
+        '/alumni/events?limit=3&page=1&sort=date&showPast=false'
       );
       if (!res.ok) return { events: [] };
       return res.json();
@@ -146,7 +147,7 @@ export default function AlumniNoticeboard() {
   const { data: jobsData } = useQuery({
     queryKey: ['noticeboard-jobs'],
     queryFn: async () => {
-      const res = await fetch('/api/alumni/jobs?limit=3&page=1');
+      const res = await apiFetch('/alumni/jobs?limit=3&page=1');
       if (!res.ok) return { jobs: [] };
       return res.json();
     },
@@ -157,7 +158,7 @@ export default function AlumniNoticeboard() {
   const { data: startupsData } = useQuery({
     queryKey: ['noticeboard-startups'],
     queryFn: async () => {
-      const res = await fetch('/api/alumni/startups?limit=4&page=1&sort=Newest');
+      const res = await apiFetch('/alumni/startups?limit=4&page=1&sort=Newest');
       if (!res.ok) return { startups: [] };
       return res.json();
     },

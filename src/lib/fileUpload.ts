@@ -111,7 +111,8 @@ export async function uploadFile(
   // Save to disk
   await fs.writeFile(filePath, buffer);
 
-  const relativeUrl = `/uploads/${subfolder}/${filename}`;
+  const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const relativeUrl = `${BASE_PATH}/uploads/${subfolder}/${filename}`;
 
   return {
     secure_url: relativeUrl,
@@ -122,8 +123,14 @@ export async function uploadFile(
 export async function deleteFile(relativeUrl: string | null | undefined): Promise<void> {
   if (!relativeUrl) return;
 
-  if (relativeUrl.startsWith('/uploads/')) {
-    const subPath = relativeUrl.substring('/uploads/'.length);
+  // Strip BASE_PATH prefix if present (e.g. /alumni/uploads/... → /uploads/...)
+  const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const normalizedUrl = BASE_PATH && relativeUrl.startsWith(BASE_PATH)
+    ? relativeUrl.slice(BASE_PATH.length)
+    : relativeUrl;
+
+  if (normalizedUrl.startsWith('/uploads/')) {
+    const subPath = normalizedUrl.substring('/uploads/'.length);
     const filePath = path.join(UPLOAD_DIR, subPath);
 
     try {

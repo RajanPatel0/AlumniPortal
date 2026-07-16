@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt'
 import { verifyAccessToken } from '@/lib/auth/jwt'
+import { BASE_PATH } from '@/lib/api'
 
 const protectedRoutes = [
   '/alumni/feed',
@@ -39,13 +40,13 @@ export function alumniMiddleware(request: NextRequest) {
   const refreshToken = request.cookies.get('alumniRefreshToken')?.value
 
   const redirectToLogin = () => {
-    const url = new URL('/alumni/login', request.url)
+    const url = new URL(`${BASE_PATH}/alumni/login`, request.url)
     url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
 
   const redirectToRefresh = () => {
-    const url = new URL('/api/alumni/auth-refresh', request.url)
+    const url = new URL(`${BASE_PATH}/api/alumni/auth-refresh`, request.url)
     url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
@@ -78,13 +79,13 @@ export function alumniMiddleware(request: NextRequest) {
   if (isAuthRoute && accessToken) {
     try {
       verifyAlumniAccessToken(accessToken)
-      return NextResponse.redirect(new URL('/alumni/feed', request.url))
+      return NextResponse.redirect(new URL(`${BASE_PATH}/alumni/feed`, request.url))
     } catch {
       // If access token invalid, but we have refresh token, send to refresh first
       if (refreshToken) {
         return NextResponse.redirect(
           new URL(
-            `/api/alumni/auth-refresh?callbackUrl=/alumni/feed`,
+            `${BASE_PATH}/api/alumni/auth-refresh?callbackUrl=${BASE_PATH}/alumni/feed`,
             request.url
           )
         )

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BASE_PATH } from '@/lib/api';
 
 export default function HomeLoader() {
   const [mounted, setMounted] = useState(false);
@@ -39,7 +40,7 @@ export default function HomeLoader() {
       <div className="relative flex flex-col items-center max-w-sm px-6 text-center space-y-6 z-10">
         {/* Pulsing Shield */}
         <div className="relative w-28 h-28 rounded-3xl bg-white flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.15)] border-2 border-white/20 p-4 transition-transform hover:scale-105 duration-300">
-          <img src="/icon.png" alt="IKGPTU Logo" className="w-18 h-18 object-contain" />
+          <img src={`${BASE_PATH}/icon.png`} alt="IKGPTU Logo" className="w-18 h-18 object-contain" />
           <div className="absolute inset-0 rounded-3xl border-2 border-[#C41E3A] animate-ping opacity-60" />
         </div>
 

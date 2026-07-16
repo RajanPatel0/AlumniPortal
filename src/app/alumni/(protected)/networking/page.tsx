@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
 
@@ -55,7 +56,7 @@ export default function NetworkingPage() {
         search: searchVal,
         branch: branchVal,
       });
-      const res = await fetch(`/api/alumni/directory?${params}`);
+      const res = await apiFetch(`/alumni/directory?${params}`);
       if (res.ok) {
         const data = await res.json();
         setAlumni(data.alumni || []);

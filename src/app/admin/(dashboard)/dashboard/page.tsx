@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -59,7 +60,7 @@ export default function DashboardPage() {
   const { data: campuses = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ['campuses'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/campuses');
+      const res = await apiFetch('/admin/campuses');
       if (!res.ok) return [];
       return res.json();
     },
@@ -76,9 +77,9 @@ export default function DashboardPage() {
     queryKey: ['admin-dashboard-stats', selectedCampusId],
     queryFn: async () => {
       const url = selectedCampusId 
-        ? `/api/admin/dashboard?campusId=${encodeURIComponent(selectedCampusId)}`
-        : '/api/admin/dashboard';
-      const res = await fetch(url);
+        ? `/admin/dashboard?campusId=${encodeURIComponent(selectedCampusId)}`
+        : '/admin/dashboard';
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Failed to load dashboard metrics');
       return res.json();
     },

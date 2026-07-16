@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import axios from 'axios';
+import { apiFetch, BASE_PATH } from '@/lib/api';
 
 export default function OAuthSuccessPage() {
   const { data: session, status } = useSession();
@@ -27,21 +27,24 @@ export default function OAuthSuccessPage() {
 
     if (status === 'authenticated' && userId) {
       ran.current = true;
-      axios
-        .post('/api/alumni/create-session', { alumniId: userId })
+      apiFetch('/alumni/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alumniId: userId }),
+      })
         .then(() => {
           try {
             document.cookie = 'invite_token=; path=/; max-age=0';
           } catch {
             /* ignore */
           }
-          router.replace('/alumni/feed');
+          router.replace(`${BASE_PATH}/alumni/feed`);
         })
         .catch(() => {
           const resolvedToken = token || getCookieValue('invite_token');
           const failUrl = resolvedToken
-            ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
-            : '/alumni/login?error=oauth_failed';
+            ? `${BASE_PATH}/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+            : `${BASE_PATH}/alumni/login?error=oauth_failed`;
           router.replace(failUrl);
         });
       return;
@@ -51,8 +54,8 @@ export default function OAuthSuccessPage() {
       ran.current = true;
       const resolvedToken = token || getCookieValue('invite_token');
       const failUrl = resolvedToken
-        ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
-        : '/alumni/login?error=oauth_failed';
+        ? `${BASE_PATH}/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+        : `${BASE_PATH}/alumni/login?error=oauth_failed`;
       router.replace(failUrl);
     }
   }, [status, session, router, token]);

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -81,13 +82,13 @@ export default function AlumniFeed() {
     queryKey: ['alumni-profile-me'],
     queryFn: async () => {
       // Try alumni session first
-      const res = await fetch('/api/alumni/me');
+      const res = await apiFetch('/alumni/me');
       if (res.ok) {
         const data = await res.json();
         return data.user as AlumniProfile;
       }
       // Fall back to admin session (when admin browses the alumni portal)
-      const adminRes = await fetch('/api/admin/me');
+      const adminRes = await apiFetch('/admin/me');
       if (adminRes.ok) {
         const data = await adminRes.json();
         return {
@@ -116,7 +117,7 @@ export default function AlumniFeed() {
   } = useQuery<{ posts: FeedPost[] }>({
     queryKey: ['alumni-feed-posts'],
     queryFn: async () => {
-      const res = await fetch('/api/alumni/posts');
+      const res = await apiFetch('/alumni/posts');
       if (!res.ok) throw new Error('Failed to fetch feed');
       return res.json();
     },
@@ -137,7 +138,7 @@ export default function AlumniFeed() {
       formData.append('file', file);
       formData.append('folder', 'alumni_posts');
 
-      const res = await fetch('/api/upload', {
+      const res = await apiFetch('/upload', {
         method: 'POST',
         body: formData,
       });
@@ -162,7 +163,7 @@ export default function AlumniFeed() {
     if (!shareText.trim() && !uploadedImageUrl) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/alumni/posts', {
+      const res = await apiFetch('/alumni/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

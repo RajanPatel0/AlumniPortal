@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch, BASE_PATH } from "@/lib/api";
 import { useRouter, useSearchParams } from 'next/navigation';
 import bcrypt from 'bcryptjs';
 import Link from 'next/link';
@@ -53,13 +54,13 @@ export default function SelfRegisterPage() {
 
   useEffect(() => {
     // Fetch campuses
-    fetch('/api/campuses')
+    apiFetch('/campuses')
       .then((res) => res.json())
       .then((data) => setCampuses(Array.isArray(data) ? data : []))
       .catch(() => {});
 
     // Fetch autocomplete options
-    fetch('/api/alumni/options')
+    apiFetch('/alumni/options')
       .then((res) => res.json())
       .then((data) => {
         if (data) {
@@ -122,7 +123,7 @@ export default function SelfRegisterPage() {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(formData.password, salt);
 
-      const res = await fetch('/api/alumni/new-register', {
+      const res = await apiFetch('/alumni/new-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -173,7 +174,7 @@ export default function SelfRegisterPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group transition-transform duration-200 active:scale-95">
             <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
-              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+              <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-none mb-1 group-hover:text-[#003D7A] transition-colors">

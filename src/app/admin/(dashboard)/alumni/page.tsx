@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch, BASE_PATH } from "@/lib/api";
 import Link from 'next/link';
 import { 
   Search, Filter, Download, Eye, Mail, 
@@ -72,7 +73,7 @@ export default function AlumniPage() {
   const [assignedCampusName, setAssignedCampusName] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/me')
+    apiFetch('/admin/me')
       .then((res) => res.json())
       .then((data) => {
         setUserRole(data.user?.role ?? null);
@@ -80,7 +81,7 @@ export default function AlumniPage() {
       })
       .catch(() => {});
 
-    fetch('/api/admin/campuses')
+    apiFetch('/admin/campuses')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setCampuses(Array.isArray(data) ? data : []))
       .catch(() => {});
@@ -99,7 +100,7 @@ export default function AlumniPage() {
     if (userRole === 'ADMIN' && campusFilter) params.set('campusId', campusFilter);
 
     try {
-      const res = await fetch(`/api/admin/alumni/all?${params.toString()}`);
+      const res = await apiFetch(`/admin/alumni/all?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       const alumniData = data.data as AlumniData[];
@@ -520,7 +521,7 @@ export default function AlumniPage() {
                 {/* Footer Buttons */}
                 <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-100">
                   <a
-                    href={`/alumni/profile/${selectedAlumni.id}`}
+                    href={`${BASE_PATH}/alumni/profile/${selectedAlumni.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 text-center py-2.5 bg-[#012140] hover:bg-[#012140]/90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-2"
@@ -528,7 +529,7 @@ export default function AlumniPage() {
                     <ExternalLink size={13}/> View Full Profile
                   </a>
                   <a
-                    href="/alumni/feed"
+                    href={`${BASE_PATH}/alumni/feed`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 text-center py-2.5 bg-gradient-to-r from-[#1a4ea3] to-[#003D7A] hover:opacity-90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-2"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import { 
   Plus, X, Trash2, ImageIcon, FileText, BookImage, 
   Loader2, Upload, Send, ChevronDown, RefreshCw
@@ -54,7 +55,7 @@ function InlineImageUploader({
       formData.append('file', file);
       formData.append('folder', folder);
 
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const res = await apiFetch('/upload', { method: 'POST', body: formData });
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || 'Upload failed');
@@ -132,7 +133,7 @@ function AlbumImagesUploader({
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', 'admin_gallery');
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await apiFetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok) uploaded.push({ url: data.url, caption: '' });
       } catch {
@@ -219,7 +220,7 @@ export default function AdminPostsPage() {
   const fetchItems = async () => {
     setLoadingItems(true);
     try {
-      const res = await fetch('/api/admin/posts');
+      const res = await apiFetch('/admin/posts');
       if (res.ok) {
         const data = await res.json();
         setMyPosts(data.posts || []);
@@ -241,7 +242,7 @@ export default function AdminPostsPage() {
     }
     setSubmittingPost(true);
     try {
-      const res = await fetch('/api/admin/posts', {
+      const res = await apiFetch('/admin/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'post', content: postContent, imageUrl: postImageUrl }),
@@ -275,7 +276,7 @@ export default function AdminPostsPage() {
     }
     setSubmittingAlbum(true);
     try {
-      const res = await fetch('/api/admin/posts', {
+      const res = await apiFetch('/admin/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -306,7 +307,7 @@ export default function AdminPostsPage() {
   const handleDeletePost = async (id: string) => {
     if (!confirm('Delete this post? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/admin/posts?deleteType=post&id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/admin/posts?deleteType=post&id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Post deleted');
         setMyPosts(prev => prev.filter(p => p.id !== id));
@@ -322,7 +323,7 @@ export default function AdminPostsPage() {
   const handleDeleteAlbum = async (id: string) => {
     if (!confirm('Delete this album? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/admin/posts?deleteType=album&id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/admin/posts?deleteType=album&id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Album deleted');
         setMyAlbums(prev => prev.filter(a => a.id !== id));

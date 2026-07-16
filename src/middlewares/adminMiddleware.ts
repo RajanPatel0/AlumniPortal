@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyAccessToken } from '@/lib/auth/jwt'
+import { BASE_PATH } from '@/lib/api'
 
 //Add all protected admin page routes here
 const protectedRoutes = [
@@ -29,13 +30,13 @@ export function adminMiddleware(request: NextRequest) {
   const refreshToken = request.cookies.get('refreshToken')?.value
 
   const redirectToLogin = () => {
-    const url = new URL('/admin/auth/login', request.url)
+    const url = new URL(`${BASE_PATH}/admin/auth/login`, request.url)
     url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
 
   const redirectToRefresh = () => {
-    const url = new URL('/api/admin/auth-refresh', request.url)
+    const url = new URL(`${BASE_PATH}/api/admin/auth-refresh`, request.url)
     url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
@@ -68,13 +69,13 @@ export function adminMiddleware(request: NextRequest) {
   if (isAuthRoute && accessToken) {
     try {
       verifyAccessToken(accessToken)
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+      return NextResponse.redirect(new URL(`${BASE_PATH}/admin/dashboard`, request.url))
     } catch {
       // If access token invalid, but we have refresh token, send to refresh first
       if (refreshToken) {
         return NextResponse.redirect(
           new URL(
-            `/api/admin/auth-refresh?callbackUrl=/admin/dashboard`,
+            `${BASE_PATH}/api/admin/auth-refresh?callbackUrl=${BASE_PATH}/admin/dashboard`,
             request.url
           )
         )

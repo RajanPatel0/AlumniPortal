@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
 import { use } from 'react';
 import {
@@ -77,7 +78,7 @@ export default function YearbookAlumniPage({
         limit: '12',
         ...(searchVal ? { search: searchVal } : {}),
       });
-      const res = await fetch(`/api/yearbook/alumni?${params}`);
+      const res = await apiFetch(`/yearbook/alumni?${params}`);
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       setAlumni(data.alumni || []);

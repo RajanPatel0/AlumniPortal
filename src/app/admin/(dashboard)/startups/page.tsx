@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import { apiFetch } from "@/lib/api";
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -78,7 +79,7 @@ function AdminStartupsClient() {
       p.set('sort', sort);
       p.set('page', String(page));
       p.set('limit', '10');
-      const res = await fetch(`/api/admin/startups?${p.toString()}`);
+      const res = await apiFetch(`/admin/startups?${p.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -87,7 +88,7 @@ function AdminStartupsClient() {
   // ── Delete ────────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch('/api/admin/startups', {
+      const res = await apiFetch('/admin/startups', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),

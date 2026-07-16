@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosClient from '@/lib/axios-client';
+import { BASE_PATH } from '@/lib/api';
 
 interface AdminUser {
   id: string;
@@ -33,7 +34,7 @@ export function useAdminAuth() {
       console.error('Logout error', error);
     } finally {
       queryClient.setQueryData(['admin-user'], null);
-      window.location.href = '/admin/auth/login';
+      window.location.href = `${BASE_PATH}/admin/auth/login`;
     }
   };
 

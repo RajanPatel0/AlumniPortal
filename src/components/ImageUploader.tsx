@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ImagePlus, X, Loader2, Upload } from 'lucide-react';
+import { apiFetch } from "@/lib/api";
 
 interface ImageUploaderProps {
   /** Current image/file URL (controlled value) */
@@ -46,7 +47,7 @@ export function ImageUploader({
       formData.append('file', file);
       formData.append('folder', folder);
 
-      const res = await fetch('/api/upload', {
+      const res = await apiFetch('/upload', {
         method: 'POST',
         body: formData,
       });

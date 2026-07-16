@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, Calendar, Briefcase, User, LogOut, Bell, BookOpen, ArrowLeftCircle } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
+import { apiFetch, BASE_PATH } from "@/lib/api";
 
 const navItems = [
   { name: 'Feed', href: '/alumni/feed', icon: Home },
@@ -24,7 +25,7 @@ function AlumniBottomNavInner() {
 
   useEffect(() => {
     // Check if current user is an admin/staff browsing the alumni portal
-    fetch('/api/admin/me')
+    apiFetch('/admin/me')
       .then(res => {
         if (res.ok) setIsAdmin(true);
       })
@@ -32,12 +33,12 @@ function AlumniBottomNavInner() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch('/api/alumni/logout', { method: 'POST' });
-    window.location.href = '/alumni/login';
+    await apiFetch('/alumni/logout', { method: 'POST' });
+    window.location.href = `${BASE_PATH}/alumni/login`;
   };
 
   const handleExitToAdmin = () => {
-    window.location.href = '/admin/dashboard';
+    window.location.href = `${BASE_PATH}/admin/dashboard`;
   };
 
   // Build the profile link: for admin, if viewing a specific alumni, keep that context

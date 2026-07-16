@@ -5,6 +5,8 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
+import { BASE_PATH } from './api';
+
 const axiosClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || '',
   withCredentials: true, //sends cookies automatically
@@ -26,9 +28,14 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
-// Request interceptor – no manual token attachment (cookies handle auth)
+// Request interceptor – automatically prepends BASE_PATH to relative /api/ requests
 axiosClient.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    if (config.url && config.url.startsWith('/api/')) {
+      config.url = `${BASE_PATH}${config.url}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 
@@ -56,7 +63,7 @@ axiosClient.interceptors.response.use(
       try {
         // Call the refresh endpoint (it will set new cookies)
         await axios.post(
-          '/api/admin/refresh',
+          `${BASE_PATH}/api/admin/refresh`,
           {},
           { withCredentials: true }
         );
@@ -68,7 +75,7 @@ axiosClient.interceptors.response.use(
         processQueue(refreshError as Error);
         // Redirect to login page
         if (typeof window !== 'undefined') {
-          window.location.href = '/admin/auth/login';
+          window.location.href = `${BASE_PATH}/admin/auth/login`;
         }
         return Promise.reject(refreshError);
       } finally {
