@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '@/lib/prisma';
+import { BASE_PATH } from '@/lib/api';
 
 type OAuthUser = { email?: string | null; name?: string | null; image?: string | null };
 
@@ -197,7 +198,7 @@ export const alumniAuthConfig: NextAuthOptions = {
       return session;
     },
   },
-  pages: { signIn: '/alumni/login' },
+  pages: { signIn: `${BASE_PATH}/alumni/login` },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
 };
