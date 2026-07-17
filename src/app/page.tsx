@@ -174,7 +174,7 @@ export default async function HomePage() {
             {data.news.map((item: any) => (
               <a
                 key={item.id}
-                href="https://ptu.ac.in/news-events"
+                href={item.linkTo || "https://ptu.ac.in/news-events"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto cursor-pointer"

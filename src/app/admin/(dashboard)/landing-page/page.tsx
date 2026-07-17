@@ -129,6 +129,7 @@ export default function WebUpdatePage() {
     author: 'Media Relations Cell',
     publishedDate: new Date().toISOString().split('T')[0],
     campusTag: 'Main Campus',
+    linkTo: '',
     featured: false,
     isActive: true
   });
@@ -229,6 +230,7 @@ export default function WebUpdatePage() {
       author: 'Media Relations Cell',
       publishedDate: new Date().toISOString().split('T')[0],
       campusTag: 'Main Campus',
+      linkTo: '',
       featured: false,
       isActive: true
     });
@@ -543,6 +545,7 @@ export default function WebUpdatePage() {
         author: item.author,
         publishedDate: item.publishedDate,
         campusTag: item.campusTag,
+        linkTo: item.linkTo || '',
         featured: item.featured ?? false,
         isActive: item.isActive ?? true
       });
@@ -1311,6 +1314,18 @@ export default function WebUpdatePage() {
                             className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">External Link (optional)</label>
+                        <input
+                          type="url"
+                          value={newsForm.linkTo}
+                          onChange={(e) => setNewsForm((prev) => ({ ...prev, linkTo: e.target.value }))}
+                          placeholder="https://ptu.ac.in/news-events"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Where this news card links to on the public site. Leave blank to use the default news page.</p>
                       </div>
 
                       <div className="flex gap-6 pb-2">

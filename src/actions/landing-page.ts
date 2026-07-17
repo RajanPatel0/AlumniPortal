@@ -301,6 +301,7 @@ export async function createNewsAction(data: {
   author: string;
   publishedDate: string;
   campusTag: string;
+  linkTo?: string;
   featured?: boolean;
   isActive?: boolean;
 }) {
@@ -316,6 +317,7 @@ export async function createNewsAction(data: {
         author: data.author,
         publishedDate: data.publishedDate,
         campusTag: data.campusTag,
+        linkTo: data.linkTo || null,
         featured: data.featured ?? false,
         isActive: data.isActive ?? true,
       },
@@ -338,6 +340,7 @@ export async function updateNewsAction(
     author: string;
     publishedDate: string;
     campusTag: string;
+    linkTo?: string;
     featured?: boolean;
     isActive?: boolean;
   }
@@ -355,6 +358,7 @@ export async function updateNewsAction(
         author: data.author,
         publishedDate: data.publishedDate,
         campusTag: data.campusTag,
+        linkTo: data.linkTo || null,
         featured: data.featured ?? false,
         isActive: data.isActive ?? true,
       },

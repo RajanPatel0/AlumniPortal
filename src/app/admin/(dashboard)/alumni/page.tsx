@@ -101,7 +101,10 @@ export default function AlumniPage() {
 
     try {
       const res = await apiFetch(`/admin/alumni/all?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch');
+      }
       const data = await res.json();
       const alumniData = data.data as AlumniData[];
       setAlumni(alumniData);
@@ -112,8 +115,8 @@ export default function AlumniPage() {
         setAvailableCourses(data.filterOptions.courses || []);
         setAvailableYears(data.filterOptions.years || []);
       }
-    } catch (err) {
-      toast.error('Failed to load alumni data');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load alumni data');
       console.error(err);
     } finally {
       setLoading(false);
