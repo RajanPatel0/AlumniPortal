@@ -24,6 +24,14 @@ export async function POST(
 
   const { batchId } = await params;
 
+  let alumniId: string | undefined;
+  try {
+    const body = await req.json();
+    alumniId = typeof body?.alumniId === 'string' ? body.alumniId : undefined;
+  } catch {
+    // no JSON body sent — send to the whole batch
+  }
+
   let scopedCampusId: string | null;
   try {
     scopedCampusId = resolveCampusScope(staff, null);
@@ -48,6 +56,7 @@ export async function POST(
             not: 'REGISTERED',
           },
           ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
+          ...(alumniId ? { id: alumniId } : {}),
         },
       },
     },
@@ -55,6 +64,10 @@ export async function POST(
 
   if (!batch) {
     return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+  }
+
+  if (alumniId && !batch.alumni.length) {
+    return NextResponse.json({ error: 'Alumni record not found in this batch' }, { status: 404 });
   }
 
   if (!batch.alumni.length) {
@@ -133,7 +146,9 @@ export async function POST(
   await prisma.invitationBatch.update({
     where: { id: batchId },
     data: {
-      status: sent > 0 ? ('INVITED' as any) : ('UPLOADED' as any),
+      // A single-alumni reminder can only ever promote the batch to INVITED,
+      // never downgrade it back to UPLOADED if the rest of the batch already went out.
+      status: sent > 0 ? ('INVITED' as any) : alumniId ? undefined : ('UPLOADED' as any),
       sentCount: { increment: sent },
       failedCount: { increment: failed },
     },

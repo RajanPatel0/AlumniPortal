@@ -234,6 +234,25 @@ export default function ImportPage() {
     }
   };
 
+  const [remindingAlumniId, setRemindingAlumniId] = useState<string | null>(null);
+
+  const handleSendReminder = async (row: AlumniRow) => {
+    if (!selectedBatch) return;
+    setRemindingAlumniId(row.id);
+    setModalError('');
+    try {
+      await axiosClient.post(`/api/admin/invitation-batches/${selectedBatch.id}/send-invites`, {
+        alumniId: row.id,
+      });
+      fetchBatchAlumni(selectedBatch.id, modalPage, modalStatus);
+      fetchBatches();
+    } catch (err: any) {
+      setModalError(err.response?.data?.error || 'Failed to send reminder');
+    } finally {
+      setRemindingAlumniId(null);
+    }
+  };
+
   const handleSendInvites = async (batch: BatchRow) => {
     setSendingBatchId(batch.id);
     setError('');
@@ -675,12 +694,13 @@ export default function ImportPage() {
                       <th className="px-4 py-3 font-semibold text-gray-700">Course</th>
                       <th className="px-4 py-3 font-semibold text-gray-700">Enrollment No</th>
                       <th className="px-4 py-3 font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {modalLoading ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                        <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                           <div className="flex justify-center items-center gap-2">
                             <div className="w-4 h-4 border-2 border-t-transparent border-[#012140] rounded-full animate-spin"></div>
                             <span>Loading records...</span>
@@ -689,7 +709,7 @@ export default function ImportPage() {
                       </tr>
                     ) : modalRows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-500">No alumni rows found matching selected filters.</td>
+                        <td colSpan={9} className="px-4 py-8 text-center text-slate-500">No alumni rows found matching selected filters.</td>
                       </tr>
                     ) : (
                       modalRows.map((row) => (
@@ -711,6 +731,19 @@ export default function ImportPage() {
                             }`}>
                               {row.displayStatus}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {row.displayStatus === 'PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => handleSendReminder(row)}
+                                disabled={remindingAlumniId === row.id}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[#012140]/10 bg-[#012140] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#012140]/90 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Send size={12} />
+                                {remindingAlumniId === row.id ? 'Sending...' : 'Remind'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
