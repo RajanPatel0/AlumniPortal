@@ -20,7 +20,7 @@ interface SubAdmin {
   campus: { id: string; name: string } | null;
   modules: string[];
   createdAt: string;
-  createdBy: { name: string; email: string };
+  createdBy: { name: string; email: string } | null;
 }
 
 const availableModules = [

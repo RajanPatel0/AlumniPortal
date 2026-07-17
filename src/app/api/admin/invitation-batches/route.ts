@@ -9,17 +9,18 @@ import {
 
 type DisplayInviteStatus = 'PENDING' | 'INVITED' | 'REGISTERED';
 
+// Derived purely from per-alumnus aggregate counts, never from the raw batch.status
+// enum: a single-alumnus reminder only touches one row's inviteStatus, so basing
+// this on batch.status would mislabel the whole batch after just one reminder.
 function computeDisplayInviteStatus(
-  batchStatus: string,
-  alumni: Array<{ inviteStatus: string; isRegistered: boolean }>
+  totalCount: number,
+  registeredCount: number,
+  contactedCount: number // isRegistered || inviteStatus in INVITED/REGISTERED/BOUNCED
 ): DisplayInviteStatus {
-  if (
-    alumni.length > 0 &&
-    alumni.every((a) => a.isRegistered || a.inviteStatus === 'REGISTERED')
-  ) {
-    return 'REGISTERED';
-  }
-  return batchStatus === 'INVITED' ? 'INVITED' : 'PENDING';
+  if (totalCount === 0) return 'PENDING';
+  if (registeredCount === totalCount) return 'REGISTERED';
+  if (contactedCount === totalCount) return 'INVITED';
+  return 'PENDING';
 }
 
 export async function GET(req: NextRequest) {
@@ -71,12 +72,12 @@ export async function GET(req: NextRequest) {
               : true,
           },
         },
+        // Just one representative row for the campus name — batches target a single
+        // campus, so no need to pull every alumnus to find one with a campus set.
         alumni: {
           where: scopedCampusId ? { campusId: scopedCampusId } : undefined,
+          take: 1,
           select: {
-            inviteStatus: true,
-            isRegistered: true,
-            campusId: true,
             campus: { select: { id: true, name: true } },
           },
         },
@@ -88,14 +89,45 @@ export async function GET(req: NextRequest) {
     prisma.invitationBatch.count({ where }),
   ]);
 
+  const batchIds = batches.map((b) => b.id);
+  const statusGroups = batchIds.length
+    ? await prisma.alumni.groupBy({
+        by: ['batchId', 'inviteStatus', 'isRegistered'],
+        where: {
+          batchId: { in: batchIds },
+          ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
+        },
+        _count: { _all: true },
+      })
+    : [];
+
+  const statsByBatch = new Map<
+    string,
+    { total: number; registered: number; contacted: number; invitedOrRegistered: number }
+  >();
+  for (const group of statusGroups) {
+    const stats =
+      statsByBatch.get(group.batchId) ??
+      { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0 };
+    stats.total += group._count._all;
+    const isRegisteredState = group.isRegistered || group.inviteStatus === 'REGISTERED';
+    if (isRegisteredState) stats.registered += group._count._all;
+    if (isRegisteredState || group.inviteStatus === 'INVITED') {
+      stats.invitedOrRegistered += group._count._all;
+    }
+    if (isRegisteredState || group.inviteStatus === 'INVITED' || group.inviteStatus === 'BOUNCED') {
+      stats.contacted += group._count._all;
+    }
+    statsByBatch.set(group.batchId, stats);
+  }
+
   const data = batches.map((batch) => {
-    const campusName =
-      batch.alumni.find((a) => a.campus)?.campus?.name ?? null;
+    const campusName = batch.alumni[0]?.campus?.name ?? null;
+    const stats =
+      statsByBatch.get(batch.id) ?? { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0 };
 
     return {
-      invitedCount: batch.alumni.filter(
-        (a) => a.inviteStatus === 'INVITED' || a.inviteStatus === 'REGISTERED'
-      ).length,
+      invitedCount: stats.invitedOrRegistered,
       id: batch.id,
       label: batch.label,
       csvFilename: batch.csvFilename,
@@ -103,7 +135,7 @@ export async function GET(req: NextRequest) {
       sentCount: batch.sentCount,
       failedCount: batch.failedCount,
       dbStatus: batch.status,
-      inviteStatus: computeDisplayInviteStatus(batch.status, batch.alumni),
+      inviteStatus: computeDisplayInviteStatus(stats.total, stats.registered, stats.contacted),
       alumniCount: batch._count.alumni,
       campusName,
       createdAt: batch.createdAt,
