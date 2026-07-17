@@ -33,7 +33,7 @@ type BatchRow = {
   sentCount: number;
   failedCount: number;
   dbStatus: 'PROCESSING' | 'UPLOADED' | 'INVITED' | 'COMPLETED' | 'PARTIAL_FAILED';
-  inviteStatus: 'PENDING' | 'COMPLETED';
+  inviteStatus: 'PENDING' | 'INVITED' | 'REGISTERED';
   invitedCount: number;
   alumniCount: number;
   campusName?: string | null;
@@ -162,7 +162,7 @@ export default function ImportPage() {
       const sheetData = allRows.map((batch) => ({
         'Upload Label': batch.label,
         Campus: batch.campusName || '-',
-        'Invite Status': batch.inviteStatus === 'PENDING' ? 'UPLOADED' : 'INVITED',
+        'Invite Status': batch.inviteStatus === 'PENDING' ? 'UPLOADED' : batch.inviteStatus === 'INVITED' ? 'INVITED' : 'COMPLETED',
         Rows: batch.totalCount,
         Invited: batch.invitedCount,
         Success: batch.sentCount,
@@ -277,7 +277,8 @@ export default function ImportPage() {
   const statusPillClass = useMemo(
     () => ({
       PENDING: 'bg-amber-50 text-amber-700 ring-amber-600/10',
-      COMPLETED: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
+      INVITED: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+      REGISTERED: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
     }),
     []
   );
@@ -563,7 +564,7 @@ export default function ImportPage() {
                     )}
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset ${statusPillClass[batch.inviteStatus]}`}>
-                        {batch.inviteStatus === 'PENDING' ? 'UPLOADED' : 'INVITED'}
+                        {batch.inviteStatus === 'PENDING' ? 'UPLOADED' : batch.inviteStatus === 'INVITED' ? 'INVITED' : 'COMPLETED'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-700 font-semibold">{batch.totalCount}</td>
@@ -578,16 +579,16 @@ export default function ImportPage() {
                           onClick={() => handleSendInvites(batch)}
                           disabled={sendingBatchId === batch.id}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                            batch.inviteStatus === 'COMPLETED'
+                            batch.inviteStatus !== 'PENDING'
                               ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
                               : 'border-[#012140]/10 bg-[#012140] text-white hover:bg-[#012140]/90 shadow-sm'
                           }`}
                         >
                           <Send size={12} />
-                          {sendingBatchId === batch.id 
-                            ? 'Sending...' 
-                            : batch.inviteStatus === 'COMPLETED' 
-                              ? 'Resend' 
+                          {sendingBatchId === batch.id
+                            ? 'Sending...'
+                            : batch.inviteStatus !== 'PENDING'
+                              ? 'Resend'
                               : 'Send'}
                         </button>
                         <button

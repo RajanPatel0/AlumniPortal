@@ -7,10 +7,19 @@ import {
   CampusScopeError,
 } from '@/lib/auth/staff-auth';
 
-type InviteStatusFilter = 'PENDING' | 'COMPLETED';
+type DisplayInviteStatus = 'PENDING' | 'INVITED' | 'REGISTERED';
 
-function mapInviteStatus(batchStatus: string): InviteStatusFilter {
-  return batchStatus === 'INVITED' ? 'COMPLETED' : 'PENDING';
+function computeDisplayInviteStatus(
+  batchStatus: string,
+  alumni: Array<{ inviteStatus: string; isRegistered: boolean }>
+): DisplayInviteStatus {
+  if (
+    alumni.length > 0 &&
+    alumni.every((a) => a.isRegistered || a.inviteStatus === 'REGISTERED')
+  ) {
+    return 'REGISTERED';
+  }
+  return batchStatus === 'INVITED' ? 'INVITED' : 'PENDING';
 }
 
 export async function GET(req: NextRequest) {
@@ -66,6 +75,7 @@ export async function GET(req: NextRequest) {
           where: scopedCampusId ? { campusId: scopedCampusId } : undefined,
           select: {
             inviteStatus: true,
+            isRegistered: true,
             campusId: true,
             campus: { select: { id: true, name: true } },
           },
@@ -93,7 +103,7 @@ export async function GET(req: NextRequest) {
       sentCount: batch.sentCount,
       failedCount: batch.failedCount,
       dbStatus: batch.status,
-      inviteStatus: mapInviteStatus(batch.status),
+      inviteStatus: computeDisplayInviteStatus(batch.status, batch.alumni),
       alumniCount: batch._count.alumni,
       campusName,
       createdAt: batch.createdAt,
