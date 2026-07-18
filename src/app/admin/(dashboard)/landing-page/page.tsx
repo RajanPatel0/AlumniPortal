@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ImageUploader } from '@/components/ImageUploader';
+import { BASE_PATH } from '@/lib/api';
 
 // Import server actions
 import {
@@ -620,7 +621,7 @@ export default function WebUpdatePage() {
         </div>
         <div className="flex gap-3">
           <a
-            href="/"
+            href={`${BASE_PATH}/`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[#003D7A] border border-[#003D7A]/20 hover:bg-slate-550 rounded-xl transition"

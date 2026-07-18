@@ -326,7 +326,7 @@ export default function SubAdminsPage() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
+                    className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
                   />
                 </div>
                 <div>
@@ -336,7 +336,7 @@ export default function SubAdminsPage() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
+                    className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
                   />
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function SubAdminsPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required={!editingSubAdmin}
                     minLength={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
+                    className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
                   />
                 </div>
                 <div>
@@ -397,7 +397,7 @@ export default function SubAdminsPage() {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     required={!editingSubAdmin || !!formData.password}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
+                    className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012140] focus:border-[#012140] transition"
                   />
                 </div>
               </div>
@@ -440,4 +440,4 @@ export default function SubAdminsPage() {
       )}
     </div>
   );
-}
+}

@@ -51,6 +51,7 @@ type AlumniRow = {
   course: string | null;
   enrollmentNo: string | null;
   phone: string | null;
+  inviteStatus: 'PENDING' | 'INVITED' | 'REGISTERED' | 'BOUNCED';
   displayStatus: 'PENDING' | 'INVITED' | 'REGISTERED';
 };
 
@@ -70,6 +71,7 @@ export default function ImportPage() {
   const [pages, setPages] = useState(1);
   const [selectedBatch, setSelectedBatch] = useState<BatchRow | null>(null);
   const [sendingBatchId, setSendingBatchId] = useState<string | null>(null);
+  const [remindingBatchId, setRemindingBatchId] = useState<string | null>(null);
   const [modalRows, setModalRows] = useState<AlumniRow[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
@@ -240,14 +242,18 @@ export default function ImportPage() {
     if (!selectedBatch) return;
     setRemindingAlumniId(row.id);
     setModalError('');
+    const mode = row.inviteStatus === 'INVITED' ? 'remind' : 'invite';
     try {
       await axiosClient.post(`/api/admin/invitation-batches/${selectedBatch.id}/send-invites`, {
         alumniId: row.id,
+        mode,
+      }, {
+        timeout: 300000,
       });
       fetchBatchAlumni(selectedBatch.id, modalPage, modalStatus);
       fetchBatches();
     } catch (err: any) {
-      setModalError(err.response?.data?.error || 'Failed to send reminder');
+      setModalError(err.response?.data?.error || 'Failed to send invite');
     } finally {
       setRemindingAlumniId(null);
     }
@@ -257,7 +263,11 @@ export default function ImportPage() {
     setSendingBatchId(batch.id);
     setError('');
     try {
-      const res = await axiosClient.post(`/api/admin/invitation-batches/${batch.id}/send-invites`);
+      const res = await axiosClient.post(`/api/admin/invitation-batches/${batch.id}/send-invites`, {
+        mode: 'invite',
+      }, {
+        timeout: 300000,
+      });
       setResult({
         success: res.data.sent || 0,
         failed: res.data.failed || 0,
@@ -271,6 +281,31 @@ export default function ImportPage() {
       setError(err.response?.data?.error || 'Failed to send invites');
     } finally {
       setSendingBatchId(null);
+    }
+  };
+
+  const handleSendBatchReminder = async (batch: BatchRow) => {
+    setRemindingBatchId(batch.id);
+    setError('');
+    try {
+      const res = await axiosClient.post(`/api/admin/invitation-batches/${batch.id}/send-invites`, {
+        mode: 'remind',
+      }, {
+        timeout: 300000,
+      });
+      setResult({
+        success: res.data.sent || 0,
+        failed: res.data.failed || 0,
+        errors: [],
+      });
+      fetchBatches();
+      if (selectedBatch?.id === batch.id) {
+        fetchBatchAlumni(batch.id, modalPage, modalStatus);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to send reminders');
+    } finally {
+      setRemindingBatchId(null);
     }
   };
 
@@ -560,7 +595,7 @@ export default function ImportPage() {
                   <tr key={batch.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{batch.label}</td>
                     {userRole === 'ADMIN' && (
-                      <td className="px-6 py-4 text-gray-650">{batch.campusName || '-'}</td>
+                      <td className="px-6 py-4 text-black">{batch.campusName || '-'}</td>
                     )}
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset ${statusPillClass[batch.inviteStatus]}`}>
@@ -577,7 +612,7 @@ export default function ImportPage() {
                         <button
                           type="button"
                           onClick={() => handleSendInvites(batch)}
-                          disabled={sendingBatchId === batch.id}
+                          disabled={sendingBatchId === batch.id || remindingBatchId === batch.id}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
                             batch.inviteStatus !== 'PENDING'
                               ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
@@ -588,8 +623,17 @@ export default function ImportPage() {
                           {sendingBatchId === batch.id
                             ? 'Sending...'
                             : batch.inviteStatus !== 'PENDING'
-                              ? 'Resend'
-                              : 'Send'}
+                              ? 'Resend Invites'
+                              : 'Send Invites'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSendBatchReminder(batch)}
+                          disabled={sendingBatchId === batch.id || remindingBatchId === batch.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
+                        >
+                          <Send size={12} />
+                          {remindingBatchId === batch.id ? 'Reminding...' : 'Remind'}
                         </button>
                         <button
                           type="button"
@@ -599,7 +643,7 @@ export default function ImportPage() {
                             setModalStatus('ALL');
                             fetchBatchAlumni(batch.id, 1, 'ALL');
                           }}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-755 hover:bg-gray-50 shadow-sm transition"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-50 shadow-sm transition"
                         >
                           <Eye size={12} /> View
                         </button>
@@ -734,7 +778,7 @@ export default function ImportPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            {row.displayStatus === 'PENDING' && (
+                            {row.inviteStatus !== 'REGISTERED' && (
                               <button
                                 type="button"
                                 onClick={() => handleSendReminder(row)}
@@ -742,7 +786,11 @@ export default function ImportPage() {
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[#012140]/10 bg-[#012140] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#012140]/90 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <Send size={12} />
-                                {remindingAlumniId === row.id ? 'Sending...' : 'Remind'}
+                                {remindingAlumniId === row.id
+                                  ? 'Sending...'
+                                  : row.inviteStatus === 'INVITED'
+                                    ? 'Remind'
+                                    : 'Send Invite'}
                               </button>
                             )}
                           </td>

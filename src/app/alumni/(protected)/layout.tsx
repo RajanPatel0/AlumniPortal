@@ -75,7 +75,7 @@ export default async function ProtectedAlumniLayout({
               </Link>
               {isStaff && (
                 <a
-                  href="/admin/dashboard"
+                  href={`${BASE_PATH}/admin/dashboard`}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#012140] to-[#1a4ea3] hover:from-[#0f2e75] hover:to-[#2558c4] text-white text-xs font-bold rounded-full transition shadow-sm"
                 >
                   <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />

@@ -43,6 +43,10 @@ function getSmtpTransporter(): nodemailer.Transporter {
     tls: {
       rejectUnauthorized: false,
     },
+    pool: true,
+    maxConnections: 1,
+    maxMessages: Infinity,
+    requireTLS: port === 587,
   })
 
   return cachedTransporter

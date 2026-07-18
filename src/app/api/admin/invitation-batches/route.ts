@@ -103,17 +103,24 @@ export async function GET(req: NextRequest) {
 
   const statsByBatch = new Map<
     string,
-    { total: number; registered: number; contacted: number; invitedOrRegistered: number }
+    { total: number; registered: number; contacted: number; invitedOrRegistered: number; sent: number; failed: number }
   >();
   for (const group of statusGroups) {
+    if (!group.batchId) continue;
     const stats =
       statsByBatch.get(group.batchId) ??
-      { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0 };
+      { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0, sent: 0, failed: 0 };
     stats.total += group._count._all;
     const isRegisteredState = group.isRegistered || group.inviteStatus === 'REGISTERED';
     if (isRegisteredState) stats.registered += group._count._all;
     if (isRegisteredState || group.inviteStatus === 'INVITED') {
       stats.invitedOrRegistered += group._count._all;
+    }
+    if (group.inviteStatus === 'INVITED' || isRegisteredState) {
+      stats.sent += group._count._all;
+    }
+    if (group.inviteStatus === 'BOUNCED') {
+      stats.failed += group._count._all;
     }
     if (isRegisteredState || group.inviteStatus === 'INVITED' || group.inviteStatus === 'BOUNCED') {
       stats.contacted += group._count._all;
@@ -124,7 +131,7 @@ export async function GET(req: NextRequest) {
   const data = batches.map((batch) => {
     const campusName = batch.alumni[0]?.campus?.name ?? null;
     const stats =
-      statsByBatch.get(batch.id) ?? { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0 };
+      statsByBatch.get(batch.id) ?? { total: 0, registered: 0, contacted: 0, invitedOrRegistered: 0, sent: 0, failed: 0 };
 
     return {
       invitedCount: stats.invitedOrRegistered,
@@ -132,8 +139,8 @@ export async function GET(req: NextRequest) {
       label: batch.label,
       csvFilename: batch.csvFilename,
       totalCount: scopedCampusId ? batch._count.alumni : batch.totalCount,
-      sentCount: batch.sentCount,
-      failedCount: batch.failedCount,
+      sentCount: stats.sent,
+      failedCount: stats.failed,
       dbStatus: batch.status,
       inviteStatus: computeDisplayInviteStatus(stats.total, stats.registered, stats.contacted),
       alumniCount: batch._count.alumni,

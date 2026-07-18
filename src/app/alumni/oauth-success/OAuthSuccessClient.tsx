@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch, BASE_PATH } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 export default function OAuthSuccessPage() {
   const { data: session, status } = useSession();
@@ -38,13 +38,13 @@ export default function OAuthSuccessPage() {
           } catch {
             /* ignore */
           }
-          router.replace(`${BASE_PATH}/alumni/feed`);
+          router.replace('/alumni/feed');
         })
         .catch(() => {
           const resolvedToken = token || getCookieValue('invite_token');
           const failUrl = resolvedToken
-            ? `${BASE_PATH}/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
-            : `${BASE_PATH}/alumni/login?error=oauth_failed`;
+            ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+            : '/alumni/login?error=oauth_failed';
           router.replace(failUrl);
         });
       return;
@@ -54,8 +54,8 @@ export default function OAuthSuccessPage() {
       ran.current = true;
       const resolvedToken = token || getCookieValue('invite_token');
       const failUrl = resolvedToken
-        ? `${BASE_PATH}/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
-        : `${BASE_PATH}/alumni/login?error=oauth_failed`;
+        ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+        : '/alumni/login?error=oauth_failed';
       router.replace(failUrl);
     }
   }, [status, session, router, token]);

@@ -25,11 +25,15 @@ export async function POST(
   const { batchId } = await params;
 
   let alumniId: string | undefined;
+  let mode: 'invite' | 'remind' = 'invite';
   try {
     const body = await req.json();
     alumniId = typeof body?.alumniId === 'string' ? body.alumniId : undefined;
+    if (body?.mode === 'remind') {
+      mode = 'remind';
+    }
   } catch {
-    // no JSON body sent — send to the whole batch
+    // no JSON body sent — send to the whole batch with default invite mode
   }
 
   let scopedCampusId: string | null;
@@ -47,14 +51,14 @@ export async function POST(
     return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
   }
 
+  const statusFilter = mode === 'remind' ? 'INVITED' : { in: ['PENDING', 'BOUNCED'] as any };
+
   const batch = await prisma.invitationBatch.findUnique({
     where: { id: batchId },
     include: {
       alumni: {
         where: {
-          inviteStatus: {
-            not: 'REGISTERED',
-          },
+          inviteStatus: statusFilter,
           ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
           ...(alumniId ? { id: alumniId } : {}),
         },
@@ -80,77 +84,82 @@ export async function POST(
 
   let sent = 0;
   let failed = 0;
-  const concurrencyLimit = 10;
   const alumniList = batch.alumni;
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  for (let i = 0; i < alumniList.length; i += concurrencyLimit) {
-    const chunk = alumniList.slice(i, i + concurrencyLimit);
-    const results = await Promise.all(
-      chunk.map(async (alumni) => {
-        const inviteLink = getInviteLink(alumni.inviteToken || '', req.nextUrl.origin);
-        if (!alumni.inviteToken) {
-          return { id: alumni.id, success: false };
-        }
+  for (let i = 0; i < alumniList.length; i++) {
+    const alumni = alumniList[i];
+    const inviteLink = getInviteLink(alumni.inviteToken || '', req.nextUrl.origin);
+    if (!alumni.inviteToken) {
+      failed++;
+      continue;
+    }
 
-        const emailResult = await sendEmail({
-          to: [{ email: alumni.email, name: alumni.name }],
-          subject: 'PTU Alumni Invitation',
-          htmlContent: `
-            <div style="font-family:Arial,sans-serif;line-height:1.6;">
-              <h2 style="color:#12388f;margin-bottom:8px;">Welcome to PTU Alumni Connect</h2>
-              <p>Hello ${alumni.name},</p>
-              <p>You are invited to complete your alumni registration profile.</p>
-              <p>
-                <a href="${inviteLink}" style="display:inline-block;padding:10px 16px;background:#12388f;color:#fff;text-decoration:none;border-radius:8px;">
-                  Complete Registration
-                </a>
-              </p>
-              <p>If the button does not work, copy this URL:</p>
-              <p>${inviteLink}</p>
-            </div>
-          `,
-          textContent: `Hello ${alumni.name}, complete your PTU alumni registration: ${inviteLink}`,
-          tags: ['alumni-invitation', `batch-${batchId}`],
-        });
+    const emailSubject = mode === 'remind' ? 'Reminder: Complete Your PTU Alumni Registration' : 'PTU Alumni Invitation';
+    const emailBodySentence = mode === 'remind'
+      ? 'This is a reminder to complete your alumni registration profile.'
+      : 'You are invited to complete your alumni registration profile.';
 
-        if (emailResult.ok) {
-          await prisma.alumni.update({
-            where: { id: alumni.id },
-            data: {
-              inviteStatus: 'INVITED',
-              invitedAt: new Date(),
-            },
-          });
-          return { id: alumni.id, success: true };
-        } else {
-          await prisma.alumni.update({
-            where: { id: alumni.id },
-            data: {
-              inviteStatus: 'BOUNCED',
-            },
-          });
-          return { id: alumni.id, success: false };
-        }
-      })
-    );
+    const emailResult = await sendEmail({
+      to: [{ email: alumni.email, name: alumni.name }],
+      subject: emailSubject,
+      htmlContent: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;">
+          <h2 style="color:#12388f;margin-bottom:8px;">Welcome to PTU Alumni Connect</h2>
+          <p>Hello ${alumni.name},</p>
+          <p>${emailBodySentence}</p>
+          <p>
+            <a href="${inviteLink}" style="display:inline-block;padding:10px 16px;background:#12388f;color:#fff;text-decoration:none;border-radius:8px;">
+              Complete Registration
+            </a>
+          </p>
+          <p>If the button does not work, copy this URL:</p>
+          <p>${inviteLink}</p>
+        </div>
+      `,
+      textContent: `Hello ${alumni.name}, ${emailBodySentence} Link: ${inviteLink}`,
+      tags: ['alumni-invitation', `batch-${batchId}`],
+    });
 
-    for (const res of results) {
-      if (res.success) {
-        sent++;
-      } else {
-        failed++;
-      }
+    if (emailResult.ok) {
+      await prisma.alumni.update({
+        where: { id: alumni.id },
+        data: {
+          inviteStatus: 'INVITED',
+          invitedAt: new Date(),
+        },
+      });
+      sent++;
+    } else {
+      await prisma.alumni.update({
+        where: { id: alumni.id },
+        data: {
+          inviteStatus: 'BOUNCED',
+        },
+      });
+      failed++;
+    }
+
+    if (i < alumniList.length - 1) {
+      await delay(2100);
     }
   }
+
+  const pendingOrBouncedCount = await prisma.alumni.count({
+    where: {
+      batchId,
+      inviteStatus: {
+        in: ['PENDING', 'BOUNCED'],
+      },
+    },
+  });
+
+  const nextStatus = pendingOrBouncedCount === 0 ? 'INVITED' : 'PARTIAL_FAILED';
 
   await prisma.invitationBatch.update({
     where: { id: batchId },
     data: {
-      // A single-alumni reminder can only ever promote the batch to INVITED,
-      // never downgrade it back to UPLOADED if the rest of the batch already went out.
-      status: sent > 0 ? ('INVITED' as any) : alumniId ? undefined : ('UPLOADED' as any),
-      sentCount: { increment: sent },
-      failedCount: { increment: failed },
+      status: nextStatus as any,
     },
   });
 
