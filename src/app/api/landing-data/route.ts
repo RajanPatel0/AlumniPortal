@@ -175,6 +175,7 @@ export async function GET() {
           author: n.author,
           publishedDate: n.publishedDate,
           campusTag: n.campusTag,
+          linkTo: n.linkTo || null,
           featured: n.featured,
         }))
       : [

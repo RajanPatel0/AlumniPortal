@@ -43,13 +43,13 @@ export async function GET(
     where.campusId = scopedCampusId;
   }
   if (status === 'PENDING') {
-    where.inviteStatus = 'PENDING';
     where.isRegistered = false;
+    where.inviteStatus = { in: ['PENDING', 'BOUNCED'] };
   } else if (status === 'INVITED') {
-    where.inviteStatus = 'INVITED';
     where.isRegistered = false;
+    where.inviteStatus = 'INVITED';
   } else if (status === 'REGISTERED') {
-    where.isRegistered = true;
+    where.OR = [{ isRegistered: true }, { inviteStatus: 'REGISTERED' }];
   }
 
   const [rows, total] = await Promise.all([

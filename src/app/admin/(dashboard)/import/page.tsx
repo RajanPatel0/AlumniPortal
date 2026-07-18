@@ -2,6 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import axiosClient from '@/lib/axios-client';
+import { BASE_PATH } from '@/lib/api';
+import * as XLSX from 'xlsx';
+import { 
+  CloudUpload, 
+  FileSpreadsheet, 
+  Download, 
+  Eye, 
+  Send, 
+  CheckCircle2, 
+  XCircle, 
+  Plus, 
+  X, 
+  Info, 
+  Check,
+  FileDown
+} from 'lucide-react';
 
 type ImportResult = {
   success: number;
@@ -17,7 +33,7 @@ type BatchRow = {
   sentCount: number;
   failedCount: number;
   dbStatus: 'PROCESSING' | 'UPLOADED' | 'INVITED' | 'COMPLETED' | 'PARTIAL_FAILED';
-  inviteStatus: 'PENDING' | 'COMPLETED';
+  inviteStatus: 'PENDING' | 'INVITED' | 'REGISTERED';
   invitedCount: number;
   alumniCount: number;
   campusName?: string | null;
@@ -48,6 +64,7 @@ export default function ImportPage() {
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [labelFilter, setLabelFilter] = useState('');
+  const [debouncedLabelFilter, setDebouncedLabelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -82,7 +99,7 @@ export default function ImportPage() {
     setTableError('');
     try {
       const params: Record<string, string | number> = {
-        label: labelFilter,
+        label: debouncedLabelFilter,
         status: statusFilter,
         page,
         limit: 8,
@@ -104,17 +121,102 @@ export default function ImportPage() {
     if (userRole === null) return;
     fetchBatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, historyCampusFilter, userRole]);
+  }, [page, statusFilter, historyCampusFilter, debouncedLabelFilter, userRole]);
 
   useEffect(() => {
-    if (userRole === null) return;
     const timer = setTimeout(() => {
+      setDebouncedLabelFilter(labelFilter);
       setPage(1);
-      fetchBatches();
     }, 350);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labelFilter, userRole]);
+  }, [labelFilter]);
+
+  const [exportingBatches, setExportingBatches] = useState(false);
+  const [exportingAlumni, setExportingAlumni] = useState(false);
+
+  const handleExportBatches = async () => {
+    setExportingBatches(true);
+    try {
+      const params: Record<string, string | number> = {
+        label: debouncedLabelFilter,
+        status: statusFilter,
+        page: 1,
+        limit: 50,
+      };
+      if (userRole === 'ADMIN' && historyCampusFilter) {
+        params.campusId = historyCampusFilter;
+      }
+
+      const allRows: BatchRow[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+      do {
+        const res = await axiosClient.get('/api/admin/invitation-batches', {
+          params: { ...params, page: currentPage },
+        });
+        allRows.push(...(res.data.data || []));
+        totalPages = res.data.pagination?.pages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPages);
+
+      const sheetData = allRows.map((batch) => ({
+        'Upload Label': batch.label,
+        Campus: batch.campusName || '-',
+        'Invite Status': batch.inviteStatus === 'PENDING' ? 'UPLOADED' : batch.inviteStatus === 'INVITED' ? 'INVITED' : 'COMPLETED',
+        Rows: batch.totalCount,
+        Invited: batch.invitedCount,
+        Success: batch.sentCount,
+        Failed: batch.failedCount,
+        'Uploaded On': new Date(batch.createdAt).toLocaleString(),
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Upload History');
+      XLSX.writeFile(workbook, `upload-history-${Date.now()}.xlsx`);
+    } catch (err: any) {
+      setTableError(err.response?.data?.error || 'Failed to export upload history');
+    } finally {
+      setExportingBatches(false);
+    }
+  };
+
+  const handleExportAlumni = async (batch: BatchRow) => {
+    setExportingAlumni(true);
+    try {
+      const allRows: AlumniRow[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+      do {
+        const res = await axiosClient.get(`/api/admin/invitation-batches/${batch.id}/alumni`, {
+          params: { page: currentPage, limit: 50, status: modalStatus },
+        });
+        allRows.push(...(res.data.data || []));
+        totalPages = res.data.pagination?.pages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPages);
+
+      const sheetData = allRows.map((row) => ({
+        Name: row.name,
+        Email: row.email,
+        'Batch Year': row.batchYear,
+        Branch: row.branch,
+        College: row.college,
+        Course: row.course || '-',
+        'Enrollment No': row.enrollmentNo || '-',
+        Status: row.displayStatus,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Alumni');
+      XLSX.writeFile(workbook, `${batch.label.replace(/[^a-z0-9]+/gi, '-')}-alumni-${Date.now()}.xlsx`);
+    } catch (err: any) {
+      setModalError(err.response?.data?.error || 'Failed to export alumni rows');
+    } finally {
+      setExportingAlumni(false);
+    }
+  };
 
   const fetchBatchAlumni = async (batchId: string, pageNo = 1, status = modalStatus) => {
     setModalLoading(true);
@@ -129,6 +231,25 @@ export default function ImportPage() {
       setModalError(err.response?.data?.error || 'Failed to fetch alumni rows');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const [remindingAlumniId, setRemindingAlumniId] = useState<string | null>(null);
+
+  const handleSendReminder = async (row: AlumniRow) => {
+    if (!selectedBatch) return;
+    setRemindingAlumniId(row.id);
+    setModalError('');
+    try {
+      await axiosClient.post(`/api/admin/invitation-batches/${selectedBatch.id}/send-invites`, {
+        alumniId: row.id,
+      });
+      fetchBatchAlumni(selectedBatch.id, modalPage, modalStatus);
+      fetchBatches();
+    } catch (err: any) {
+      setModalError(err.response?.data?.error || 'Failed to send reminder');
+    } finally {
+      setRemindingAlumniId(null);
     }
   };
 
@@ -155,8 +276,9 @@ export default function ImportPage() {
 
   const statusPillClass = useMemo(
     () => ({
-      PENDING: 'bg-amber-100 text-amber-700 border-amber-200',
-      COMPLETED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      PENDING: 'bg-amber-50 text-amber-700 ring-amber-600/10',
+      INVITED: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+      REGISTERED: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
     }),
     []
   );
@@ -202,118 +324,149 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 pb-6">
-      <div className="relative overflow-hidden rounded-3xl border border-[#2f5dbf] bg-gradient-to-r from-[#0f2e75] via-[#1f46a3] to-[#cc1f4a] p-6 text-white shadow-xl">
-        <div className="absolute -left-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -bottom-12 right-10 h-44 w-44 rounded-full bg-red-300/20 blur-3xl" />
-        <h1 className="relative text-2xl font-bold tracking-tight md:text-3xl">Alumni Import Center</h1>
-        <p className="relative mt-2 max-w-4xl text-sm text-blue-50 md:text-base">
-          Upload CSV/Excel Files, Validate Data Quality, and Track each Invitation Batch in One Place.
+    <div className="mx-auto w-full max-w-7xl space-y-6 pb-6 px-4 sm:px-6 lg:px-8 py-4">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#012140] p-6 text-white shadow-md border border-gray-800">
+        <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-white/5 blur-xl" />
+        <div className="absolute -bottom-10 right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-2xl" />
+        <h1 className="relative text-2xl font-extrabold tracking-tight md:text-3xl">Alumni Import Center</h1>
+        <p className="relative mt-2 max-w-4xl text-sm text-gray-300">
+          Upload alumni lists in CSV/Excel formats, configure invitation batches, and monitor database population.
         </p>
         {userRole === 'SUB_ADMIN' && assignedCampusName && (
-          <p className="relative mt-2 text-sm text-blue-100">
-            Your campus: <span className="font-semibold">{assignedCampusName}</span>
+          <p className="relative mt-3 text-xs inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-full text-blue-200">
+            <Info size={12} /> Campus Scope: <span className="font-semibold">{assignedCampusName}</span>
           </p>
         )}
-        <div className="relative mt-4 flex items-center gap-2 text-xs text-blue-100">
-          <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-green-300" />
-        </div>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-12">
+      <div className="grid items-start gap-6 lg:grid-cols-12">
+        {/* Upload Form */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl xl:col-span-8"
+          className="space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-8"
         >
-          <div className="grid gap-4 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-800">Upload Label</label>
+          <h2 className="text-lg font-bold text-[#012140] border-b border-gray-100 pb-3">Import Invitation Batch</h2>
+          
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700">Upload Label *</label>
               <input
                 type="text"
                 value={batchLabel}
                 onChange={(e) => setBatchLabel(e.target.value)}
-                placeholder="e.g., CSE 2019 Batch"
+                placeholder="e.g., B.Tech CSE 2019-2023"
                 required
-                className="mt-2 w-full rounded-xl border text-slate-800 border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
               />
             </div>
             
             {userRole === 'ADMIN' && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-800">Select Campus *</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700">Select Campus *</label>
                 <select
                   value={campusId}
                   onChange={(e) => setCampusId(e.target.value)}
                   required
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-800 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+                  className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
                 >
-                  <option value="">-- Select Campus --</option>
+                  <option value="">Select Target Campus</option>
                   {campuses.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
             )}
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-semibold text-slate-800">Data File</label>
-              <label className="mt-2 flex min-h-[84px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-[#4671c9] bg-gradient-to-r from-[#edf3ff] to-[#fff1f5] px-4 py-3 transition duration-300 hover:border-[#cc1f4a]">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{file ? file.name : 'Choose CSV/XLSX file'}</p>
-                  <p className="text-xs text-slate-500">Supports .csv, .xlsx, .xls</p>
-                </div>
-                <span className="rounded-lg bg-[#1f46a3] px-3 py-1.5 text-xs font-semibold text-white">Browse</span>
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  required
-                  className="hidden"
-                />
-              </label>
-            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">
-              Required columns: <span className="font-medium text-slate-700">Name, Email, Batch-Year, Branch, Course, College</span>
-            </p>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data File *</label>
+            <label className="flex flex-col items-center justify-center min-h-[140px] cursor-pointer rounded-xl border-2 border-dashed border-gray-300 hover:border-[#012140] bg-gray-50 hover:bg-[#012140]/5 transition duration-300 p-6 text-center group">
+              <CloudUpload className="w-10 h-10 text-gray-400 group-hover:text-[#012140] transition mb-2" />
+              <p className="text-sm font-semibold text-gray-700">{file ? file.name : 'Choose CSV / XLSX file'}</p>
+              <p className="text-xs text-gray-500 mt-1">Supports .csv, .xlsx, .xls</p>
+              {file && (
+                <span className="mt-3 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200">
+                  Ready to Import
+                </span>
+              )}
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                required
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#12388f] to-[#cc1f4a] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#012140] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#012140]/90 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? 'Importing...' : 'Upload & Import'}
             </button>
           </div>
         </form>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-4">
-          <h2 className="text-base font-semibold text-slate-900">Template Checklist</h2>
-          <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
-            <li>Required: <span className="font-medium text-slate-800">Name</span></li>
-            <li>Required: <span className="font-medium text-slate-800">Email</span></li>
-            <li>Required: <span className="font-medium text-slate-800">Batch-Year</span></li>
-            <li>Required: <span className="font-medium text-slate-800">Branch, Course</span></li>
-            <li>Required: <span className="font-medium text-slate-800">College</span></li>
-            <li>Optional: Enrollment-No, Phone</li>
-          </ul>
+        {/* Sidebar Info */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-4 space-y-4">
+          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <FileSpreadsheet className="text-[#012140] w-5 h-5" /> File Specifications
+          </h2>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Required Columns</h3>
+            <ul className="space-y-1.5 text-xs text-gray-600">
+              <li className="flex items-center gap-2"><Check className="text-emerald-600 w-3.5 h-3.5" /> <span className="font-semibold text-gray-800">Name</span> (Full name)</li>
+              <li className="flex items-center gap-2"><Check className="text-emerald-600 w-3.5 h-3.5" /> <span className="font-semibold text-gray-800">Email</span> (Unique address)</li>
+              <li className="flex items-center gap-2"><Check className="text-emerald-600 w-3.5 h-3.5" /> <span className="font-semibold text-gray-800">Batch-Year</span> (e.g. 2022)</li>
+              <li className="flex items-center gap-2"><Check className="text-emerald-600 w-3.5 h-3.5" /> <span className="font-semibold text-gray-800">Branch</span> (e.g. CSE)</li>
+              <li className="flex items-center gap-2"><Check className="text-emerald-600 w-3.5 h-3.5" /> <span className="font-semibold text-gray-800">College</span> (Campus acronym)</li>
+            </ul>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mt-4 mb-2">Optional Columns</h3>
+            <p className="text-xs text-gray-500">Course, Enrollment-No, Phone</p>
+          </div>
+
+          <a
+            href={`${BASE_PATH}/example.xlsx`}
+            download
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition"
+          >
+            <Download size={16} /> Download Sample Template
+          </a>
         </div>
       </div>
 
-      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      
+      {/* Import Result Notification */}
       {result && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Import Result</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">Success: {result.success}</div>
-            <div className="rounded-xl bg-rose-50 p-3 text-rose-700">Failed: {result.failed}</div>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-gray-900">Import Process Finished</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 flex items-center gap-3">
+              <CheckCircle2 className="text-emerald-600 w-6 h-6 shrink-0" />
+              <div>
+                <p className="text-xs text-emerald-800 font-medium">Successfully Imported</p>
+                <p className="text-lg font-bold text-emerald-900">{result.success} Rows</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-rose-50 border border-rose-100 p-4 flex items-center gap-3">
+              <XCircle className="text-rose-600 w-6 h-6 shrink-0" />
+              <div>
+                <p className="text-xs text-rose-800 font-medium">Validation Failures</p>
+                <p className="text-lg font-bold text-rose-900">{result.failed} Rows</p>
+              </div>
+            </div>
           </div>
           {result.errors.length > 0 && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium text-rose-700">
-                View errors ({result.errors.length})
+            <details className="group border border-gray-150 rounded-lg overflow-hidden">
+              <summary className="cursor-pointer bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 select-none hover:bg-gray-100/70 transition">
+                View Error Logs ({result.errors.length})
               </summary>
-              <pre className="mt-2 max-h-60 overflow-auto rounded-lg bg-slate-100 p-3 text-xs text-slate-700">
+              <pre className="border-t border-gray-100 max-h-60 overflow-auto bg-gray-50 p-4 text-xs font-mono text-gray-600">
                 {JSON.stringify(result.errors, null, 2)}
               </pre>
             </details>
@@ -321,9 +474,10 @@ export default function ImportPage() {
         </div>
       )}
 
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Upload History</h2>
+      {/* Upload History list */}
+      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100 pb-4">
+          <h2 className="text-lg font-bold text-gray-900">Upload History</h2>
           <div className="flex flex-wrap items-center gap-2">
             {userRole === 'ADMIN' && (
               <select
@@ -332,7 +486,7 @@ export default function ImportPage() {
                   setHistoryCampusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border text-slate-800 border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition text-slate-800"
               >
                 <option value="">All Campuses</option>
                 {campuses.map((c) => (
@@ -344,8 +498,8 @@ export default function ImportPage() {
               type="text"
               value={labelFilter}
               onChange={(e) => setLabelFilter(e.target.value)}
-              placeholder="Filter by Upload Label"
-              className="w-52 rounded-lg border text-slate-800 border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+              placeholder="Search by batch label"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition text-slate-800"
             />
             <select
               value={statusFilter}
@@ -353,78 +507,88 @@ export default function ImportPage() {
                 setStatusFilter(e.target.value as 'ALL' | 'PENDING' | 'COMPLETED');
                 setPage(1);
               }}
-              className="rounded-lg border text-slate-800 border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition text-slate-800"
             >
-              <option value="ALL">All Invite Status</option>
+              <option value="ALL">All Status</option>
               <option value="PENDING">Uploaded</option>
               <option value="COMPLETED">Invited</option>
             </select>
+            <button
+              type="button"
+              onClick={handleExportBatches}
+              disabled={exportingBatches}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100/75 hover:border-emerald-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileDown size={16} /> Export
+            </button>
           </div>
         </div>
 
         {tableError && <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">{tableError}</div>}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-900 text-xs uppercase tracking-wide text-slate-100">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3">Upload Label</th>
-                {userRole === 'ADMIN' && <th className="px-4 py-3">Campus</th>}
-                <th className="px-4 py-3">Invite Status</th>
-                <th className="px-4 py-3">Rows</th>
-                <th className="px-4 py-3">Invited</th>
-                <th className="px-4 py-3">Success</th>
-                <th className="px-4 py-3">Failed</th>
-                <th className="px-4 py-3">Uploaded On</th>
-                <th className="px-4 py-3 text-center">Action</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Upload Label</th>
+                {userRole === 'ADMIN' && <th className="px-6 py-4 font-semibold text-gray-700">Campus</th>}
+                <th className="px-6 py-4 font-semibold text-gray-700">Invite Status</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Rows</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Invited</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Success</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Failed</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">Uploaded On</th>
+                <th className="px-6 py-4 font-semibold text-gray-700 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {tableLoading ? (
                 <tr>
-                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-4 py-6 text-center text-slate-500">Loading batches...</td>
+                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-6 py-8 text-center text-slate-500">
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-t-transparent border-[#012140] rounded-full animate-spin"></div>
+                      <span>Loading upload history...</span>
+                    </div>
+                  </td>
                 </tr>
               ) : batches.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-4 py-6 text-center text-slate-500">No uploads found for current filters.</td>
+                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-6 py-8 text-center text-slate-500">No uploads found matching current filters.</td>
                 </tr>
               ) : (
                 batches.map((batch) => (
-                  <tr key={batch.id} className="border-t border-slate-100 hover:bg-slate-50/70">
-                    <td className="px-4 py-3 font-medium text-slate-800">{batch.label}</td>
+                  <tr key={batch.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{batch.label}</td>
                     {userRole === 'ADMIN' && (
-                      <td className="px-4 py-3 text-slate-600">{batch.campusName || '-'}</td>
+                      <td className="px-6 py-4 text-gray-650">{batch.campusName || '-'}</td>
                     )}
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusPillClass[batch.inviteStatus]}`}>
-                        {batch.inviteStatus === 'PENDING' ? 'UPLOADED' : 'INVITED'}
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset ${statusPillClass[batch.inviteStatus]}`}>
+                        {batch.inviteStatus === 'PENDING' ? 'UPLOADED' : batch.inviteStatus === 'INVITED' ? 'INVITED' : 'COMPLETED'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{batch.totalCount}</td>
-                    <td className="px-4 py-3 text-blue-700">{batch.invitedCount}</td>
-                    <td className="px-4 py-3 text-emerald-700">{batch.sentCount}</td>
-                    <td className="px-4 py-3 text-rose-700">{batch.failedCount}</td>
-                    <td className="px-4 py-3 text-slate-600">{new Date(batch.createdAt).toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-6 py-4 text-gray-700 font-semibold">{batch.totalCount}</td>
+                    <td className="px-6 py-4 text-blue-600 font-medium">{batch.invitedCount}</td>
+                    <td className="px-6 py-4 text-emerald-600 font-medium">{batch.sentCount}</td>
+                    <td className="px-6 py-4 text-rose-600 font-medium">{batch.failedCount}</td>
+                    <td className="px-6 py-4 text-gray-500">{new Date(batch.createdAt).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleSendInvites(batch)}
                           disabled={sendingBatchId === batch.id}
-                          className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                            batch.inviteStatus === 'COMPLETED'
-                              ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-500 hover:bg-amber-100'
-                              : 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-500 hover:bg-rose-100'
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                            batch.inviteStatus !== 'PENDING'
+                              ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+                              : 'border-[#012140]/10 bg-[#012140] text-white hover:bg-[#012140]/90 shadow-sm'
                           }`}
-                          aria-label={`Send invites for ${batch.label}`}
                         >
-                          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current">
-                            <path d="M2.5 4.5A1.5 1.5 0 014 3h12a1.5 1.5 0 011.5 1.5v11A1.5 1.5 0 0116 17H4a1.5 1.5 0 01-1.5-1.5v-11zm2.1-.5L10 8.2 15.4 4H4.6zM16 5.2l-5.7 4.4a.5.5 0 01-.6 0L4 5.2v10.3a.5.5 0 00.5.5h11a.5.5 0 00.5-.5V5.2z" />
-                          </svg>
-                          {sendingBatchId === batch.id 
-                            ? 'Sending...' 
-                            : batch.inviteStatus === 'COMPLETED' 
-                              ? 'Send Again' 
+                          <Send size={12} />
+                          {sendingBatchId === batch.id
+                            ? 'Sending...'
+                            : batch.inviteStatus !== 'PENDING'
+                              ? 'Resend'
                               : 'Send'}
                         </button>
                         <button
@@ -435,10 +599,9 @@ export default function ImportPage() {
                             setModalStatus('ALL');
                             fetchBatchAlumni(batch.id, 1, 'ALL');
                           }}
-                          className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-500 hover:bg-blue-100"
-                          aria-label={`View ${batch.label}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-755 hover:bg-gray-50 shadow-sm transition"
                         >
-                          View
+                          <Eye size={12} /> View
                         </button>
                       </div>
                     </td>
@@ -449,46 +612,58 @@ export default function ImportPage() {
           </table>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
+        {/* Pagination */}
+        <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40"
+            className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"
           >
             Previous
           </button>
-          <span className="text-xs text-slate-600">Page {page} of {pages}</span>
+          <span className="text-xs text-gray-500 font-medium">Page {page} of {pages}</span>
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(pages, p + 1))}
             disabled={page >= pages}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40"
+            className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"
           >
             Next
           </button>
         </div>
       </div>
 
+      {/* Batch Details overlay Modal */}
       {selectedBatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3">
-          <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#12388f] to-[#cc1f4a] px-5 py-3 text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-xl bg-white shadow-2xl border border-gray-200 flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
               <div>
-                <h3 className="text-base font-semibold">Batch Details: {selectedBatch.label}</h3>
-                <p className="text-xs text-blue-100">Showing uploaded alumni rows for this batch</p>
+                <h3 className="text-lg font-bold text-[#012140]">Batch Details: {selectedBatch.label}</h3>
+                <p className="text-xs text-gray-500">Review imported alumni records scoped to this upload batch.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBatch(null)}
-                className="rounded-md border border-white/40 px-2.5 py-1 text-xs font-medium text-white hover:bg-white/10"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleExportAlumni(selectedBatch)}
+                  disabled={exportingAlumni}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition"
+                >
+                  <FileDown size={14} /> {exportingAlumni ? 'Exporting...' : 'Export list'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBatch(null)}
+                  className="text-gray-400 hover:text-gray-600 transition p-1.5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-3 p-4">
-              <div className="flex items-center justify-between">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <select
                   value={modalStatus}
                   onChange={(e) => {
@@ -497,7 +672,7 @@ export default function ImportPage() {
                     setModalPage(1);
                     fetchBatchAlumni(selectedBatch.id, 1, nextStatus);
                   }}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
                 >
                   <option value="ALL">All Status</option>
                   <option value="PENDING">Pending Invite</option>
@@ -508,43 +683,68 @@ export default function ImportPage() {
 
               {modalError && <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">{modalError}</div>}
 
-              <div className="max-h-[58vh] overflow-auto rounded-xl border border-slate-200">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-slate-900 text-xs uppercase tracking-wide text-slate-100">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-3 py-2.5">Name</th>
-                      <th className="px-3 py-2.5">Email</th>
-                      <th className="px-3 py-2.5">Branch</th>
-                      <th className="px-3 py-2.5">College</th>
-                      <th className="px-3 py-2.5">Status</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Name</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Email</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Batch Year</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Branch</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">College</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Course</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Enrollment No</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-3 font-semibold text-gray-700 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {modalLoading ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center text-slate-500">Loading alumni...</td>
+                        <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                          <div className="flex justify-center items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-t-transparent border-[#012140] rounded-full animate-spin"></div>
+                            <span>Loading records...</span>
+                          </div>
+                        </td>
                       </tr>
                     ) : modalRows.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center text-slate-500">No alumni rows for selected filter.</td>
+                        <td colSpan={9} className="px-4 py-8 text-center text-slate-500">No alumni rows found matching selected filters.</td>
                       </tr>
                     ) : (
                       modalRows.map((row) => (
-                        <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50/70">
-                          <td className="px-3 py-2.5 font-medium text-slate-800">{row.name}</td>
-                          <td className="px-3 py-2.5 text-slate-700">{row.email}</td>
-                          <td className="px-3 py-2.5 text-slate-700">{row.branch}</td>
-                          <td className="px-3 py-2.5 text-slate-700">{row.college}</td>
-                          <td className="px-3 py-2.5">
-                            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-gray-900">{row.name}</td>
+                          <td className="px-4 py-3 text-gray-600">{row.email}</td>
+                          <td className="px-4 py-3 text-gray-700">{row.batchYear}</td>
+                          <td className="px-4 py-3 text-gray-700">{row.branch}</td>
+                          <td className="px-4 py-3 text-gray-700">{row.college}</td>
+                          <td className="px-4 py-3 text-gray-700">{row.course || '-'}</td>
+                          <td className="px-4 py-3 text-gray-700">{row.enrollmentNo || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset ${
                               row.displayStatus === 'REGISTERED'
-                                ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                                ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/10'
                                 : row.displayStatus === 'INVITED'
-                                  ? 'border-blue-200 bg-blue-100 text-blue-700'
-                                  : 'border-amber-200 bg-amber-100 text-amber-700'
+                                  ? 'bg-blue-50 text-blue-700 ring-blue-700/10'
+                                  : 'bg-amber-50 text-amber-700 ring-amber-600/10'
                             }`}>
                               {row.displayStatus}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {row.displayStatus === 'PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => handleSendReminder(row)}
+                                disabled={remindingAlumniId === row.id}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[#012140]/10 bg-[#012140] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#012140]/90 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Send size={12} />
+                                {remindingAlumniId === row.id ? 'Sending...' : 'Remind'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -553,7 +753,8 @@ export default function ImportPage() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-end gap-2">
+              {/* Modal Pagination */}
+              <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -562,11 +763,11 @@ export default function ImportPage() {
                     fetchBatchAlumni(selectedBatch.id, next, modalStatus);
                   }}
                   disabled={modalPage <= 1}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40"
+                  className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"
                 >
                   Previous
                 </button>
-                <span className="text-xs text-slate-600">Page {modalPage} of {modalPages}</span>
+                <span className="text-xs text-gray-500 font-medium">Page {modalPage} of {modalPages}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -575,7 +776,7 @@ export default function ImportPage() {
                     fetchBatchAlumni(selectedBatch.id, next, modalStatus);
                   }}
                   disabled={modalPage >= modalPages}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40"
+                  className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"
                 >
                   Next
                 </button>
