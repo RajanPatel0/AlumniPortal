@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { GET } from '@/app/api/landing-data/route';
@@ -40,47 +41,66 @@ export default async function HomePage() {
   const data = await getLandingData();
 
   // Static campuses list as requested
-  const staticCampuses = [
+    const staticCampuses = [
     {
       id: 'mohali-1',
       name: 'Mohali-I Campus',
       location: 'Mohali, Punjab',
       iconName: 'Building',
-      description: 'Pioneering specialized computer applications, professional management modules, and emerging science labs.',
+      description: 'Specializing in computer applications, management education, and emerging sciences through industry-focused learning and innovation.',
       alumniCount: '1,200+',
+      url: 'https://mohali.ptu.ac.in',
+      image: '/campus/m1.png',
     },
     {
       id: 'mohali-2',
       name: 'Mohali-II Campus',
       location: 'Mohali, Punjab',
       iconName: 'Building2',
-      description: 'Advanced center of technology studies, computer sciences, software incubation cells, and startups.',
+      description: 'Advancing technology education with modern computing, software innovation, startup incubation, and applied research.',
       alumniCount: '800+',
+      url: 'https://mohalicampus.ptu.ac.in',
+      image: '/campus/m2.png',
     },
     {
       id: 'amritsar',
       name: 'Amritsar Campus',
       location: 'Amritsar, Punjab',
       iconName: 'GraduationCap',
-      description: 'Nurturing foundational technology pathways, mechanical designs, computer networking, and placements.',
+      description: 'Delivering quality education in engineering, computer networking, and technical disciplines with strong career development support.',
       alumniCount: '1,500+',
+      url: 'https://amritsar.ptu.ac.in',
+      image: '/campus/amritsir.png',
     },
     {
       id: 'hoshiarpur',
       name: 'Hoshiarpur Campus',
       location: 'Hoshiarpur, Punjab',
       iconName: 'School',
-      description: 'Fostering core engineering practices, local industrial trades, and foundational sciences research.',
+      description: 'Strengthening engineering education through industrial training, applied sciences, and hands-on technical learning.',
       alumniCount: '1,100+',
+      url: 'https://hoshiarpur.ptu.ac.in',
+      image: '/campus/hoshiarpur.png',
     },
     {
       id: 'batala',
       name: 'Batala Campus',
       location: 'Batala, Punjab',
       iconName: 'Library',
-      description: 'Promoting vocational technical excellence, manufacturing trades, and local community startups.',
+      description: 'Empowering students with vocational excellence, manufacturing technologies, and entrepreneurship-driven education.',
       alumniCount: '700+',
-    }
+      url: 'https://ptu.ac.in/batala-campus/',
+      image: '/campus/Batala.png',
+    },
+    {
+      id: 'main-campus',
+      name: 'Main Campus',
+      location: 'Kapurthala, Punjab',
+      iconName: 'Building3',
+      description: 'The flagship campus of IKGPTU, driving excellence in engineering, management, computer applications, applied sciences, research, innovation, and industry collaboration.',
+      url: 'https://ptu.ac.in',
+      image: '/campus/kpt.png',
+    },
   ];
 
   return (
@@ -326,34 +346,39 @@ export default async function HomePage() {
             </p>
           </div>
 
-          {/* Horizontal scroll support for campuses on mobile */}
-          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 lg:grid-cols-5 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+          {/* Horizontal scroll support for campuses on mobile / 6-column grid on laptops */}
+          <div className="flex overflow-x-auto gap-4 md:grid md:grid-cols-3 lg:grid-cols-6 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
             {staticCampuses.map((campus) => {
               const IconComp = (LucideIcons as any)[campus.iconName] || LucideIcons.School;
               return (
                 <div 
                   key={campus.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[260px] flex-shrink-0 md:w-auto"
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[240px] flex-shrink-0 md:w-auto"
                 >
-                  {/* Elegant Gradient Image Placeholder */}
-                  <div className="h-36 w-full bg-gradient-to-br from-[#003D7A]/15 to-[#C41E3A]/15 flex flex-col items-center justify-center p-4 border-b border-slate-100 relative group">
-                    <div className="p-3 bg-white/95 rounded-2xl shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
-                      <IconComp size={24} />
+                  {/* Elegant Campus Image */}
+                  <div className="h-28 w-full relative group overflow-hidden border-b border-slate-100 bg-slate-100">
+                    <Image 
+                      src={campus.image} 
+                      alt={campus.name} 
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 15vw"
+                      className="object-cover group-hover:scale-110 transition-all duration-500" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent"></div>
+                    <div className="absolute top-2.5 right-2.5 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
+                      <IconComp size={15} />
                     </div>
-                    <span className="text-[9px] uppercase tracking-widest text-[#003D7A] font-extrabold mt-3">
-                      [ Image Placeholder ]
-                    </span>
                   </div>
 
-                  <div className="p-6 flex flex-col flex-grow">
-                    <h4 className="text-base font-extrabold text-gray-900 mb-1">{campus.name}</h4>
-                    <p className="text-[10px] font-bold text-[#C41E3A] uppercase tracking-wider mb-3">📍 {campus.location}</p>
-                    <p className="text-gray-500 text-xs leading-relaxed mb-4 font-light flex-grow">
+                  <div className="p-4 flex flex-col flex-grow">
+                    <h4 className="text-sm font-extrabold text-gray-900 mb-1 leading-tight line-clamp-1">{campus.name}</h4>
+                    <p className="text-[9px] font-bold text-[#C41E3A] uppercase tracking-wider mb-2">📍 {campus.location}</p>
+                    <p className="text-slate-600 text-xs leading-relaxed mb-3 font-normal flex-grow">
                       {campus.description}
                     </p>
-                    <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-[11px] font-bold text-gray-700">
+                    <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[10px] font-bold text-gray-700 mt-auto">
                       <span>{campus.alumniCount} Alumni</span>
-                      <span className="text-slate-400 font-medium">IKGPTU Org</span>
+                      <a href={campus.url} target="_blank" rel="noopener noreferrer" className="text-[#C41E3A] font-medium hover:text-[#003D7A] transition-colors">Visit</a>
                     </div>
                   </div>
                 </div>
