@@ -7,7 +7,8 @@ import {
   Search, Filter, Download, Eye, Mail, 
   ChevronLeft, ChevronRight, RefreshCw, 
   Users, GraduationCap, MapPin, Briefcase,
-  CheckCircle, Clock, XCircle, UserCheck, UserX, X, ExternalLink
+  CheckCircle, Clock, XCircle, UserCheck, UserX, X, ExternalLink,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -126,6 +127,29 @@ export default function AlumniPage() {
   useEffect(() => {
     fetchAlumni();
   }, [fetchAlumni]);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/admin/alumni/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete');
+      }
+
+      toast.success(`${name} has been deleted successfully.`);
+      fetchAlumni();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete alumni');
+      console.error(err);
+    }
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.pages) {
@@ -427,16 +451,25 @@ export default function AlumniPage() {
                         : alum.currentRole || alum.currentCompany || '-'}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => {
-                          setSelectedAlumni(alum);
-                          setShowModal(true);
-                        }}
-                        className="p-1.5 text-[#012140] hover:bg-[#012140]/10 rounded-lg transition"
-                        title="View Details"
-                      >
-                        <Eye size={18}/>
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setSelectedAlumni(alum);
+                            setShowModal(true);
+                          }}
+                          className="p-1.5 text-[#012140] hover:bg-[#012140]/10 rounded-lg transition"
+                          title="View Details"
+                        >
+                          <Eye size={18}/>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(alum.id, alum.name)}
+                          className="p-1.5 text-[#C41E3A] hover:bg-[#C41E3A]/10 rounded-lg transition"
+                          title="Delete Alumni"
+                        >
+                          <Trash2 size={18}/>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
