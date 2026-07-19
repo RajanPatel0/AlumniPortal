@@ -13,6 +13,9 @@ import TestimonialsSection from '@/components/landing/TestimonialsSection';
 import GalleryMasonry from '@/components/landing/GalleryMasonry';
 import NewsletterSignup from '@/components/landing/NewsletterSignup';
 import LandingNav from '@/components/landing/LandingNav';
+import NewsSection from '@/components/landing/NewsSection';
+import VideosSection from '@/components/landing/VideosSection';
+import SpotlightSection from '@/components/landing/SpotlightSection';
 
 async function getLandingData() {
   const res = await GET();
@@ -176,159 +179,17 @@ export default async function HomePage() {
 
       {/* 4. Upcoming Events Section */}
       <EventsSection events={data.events} />
-
       {/* 5. News & Campus Updates Section */}
-      <section id="news" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Stay Updated</h3>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">News & Campus Updates</h2>
-            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
-              Read about student placements, faculty breakthroughs, and alumni milestones.
-            </p>
-          </div>
-
-          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
-          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
-            {data.news.map((item: any) => (
-              <a
-                key={item.id}
-                href={item.linkTo || "https://ptu.ac.in/news-events"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto cursor-pointer"
-              >
-                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                  <img 
-                    src={item.coverImage} 
-                    alt={item.title} 
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                  />
-                  {item.featured && (
-                    <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
-                      ★ Featured
-                    </span>
-                  )}
-                  <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded">
-                    {item.category}
-                  </span>
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">
-                    {item.publishedDate} • By {item.author}
-                  </div>
-                  <h4 className="text-base font-extrabold text-gray-900 mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
-                    {item.title}
-                  </h4>
-                  <p className="text-gray-600 text-xs leading-relaxed line-clamp-3 mb-6">
-                    {item.summary}
-                  </p>
-                  <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-semibold text-[#003D7A]">
-                    <span>Read Full Story →</span>
-                    <span className="text-slate-400 font-medium">📍 {item.campusTag}</span>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
+      <NewsSection news={data.news} />
 
       {/* 6. Gallery / Memories Section */}
       <GalleryMasonry items={data.gallery} />
 
       {/* 6.5 Alumni Videos Section */}
-      <section id="videos" className="py-24 bg-gradient-to-b from-slate-50/50 to-white scroll-mt-16 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Watch & Relive</h3>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Videos</h2>
-            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
-              Explore event diaries, campus tours, and guest lectures from our distinguished alumni community.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-            {data.videos && data.videos.map((video: any) => (
-              <div 
-                key={video.id}
-                className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col h-full group"
-              >
-                <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
-                  <video 
-                    src={video.videoUrl} 
-                    controls
-                    preload="metadata"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <h4 className="text-base font-extrabold text-gray-900 mb-2 leading-snug">
-                    {video.title}
-                  </h4>
-                  {video.description && (
-                    <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">
-                      {video.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <VideosSection videos={data.videos} />
 
       {/* 7. Notable Alumni / Spotlight Section */}
-      <section id="spotlight" className="py-24 bg-gradient-to-b from-white via-blue-50/15 to-white scroll-mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Hall of Fame</h3>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Spotlight</h2>
-            <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
-              Celebrating our distinguished alumni leading global enterprise domains and pathbreaking research cells.
-            </p>
-          </div>
-
-          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
-          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
-            {data.notableAlumni.map((alum: any) => (
-              <div 
-                key={alum.id}
-                className="bg-white rounded-3xl border border-slate-100 p-6 shadow-md hover:shadow-xl hover:shadow-[#003D7A]/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col text-center w-[285px] flex-shrink-0 md:w-auto"
-              >
-                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-200 bg-slate-50 relative p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A]">
-                  <img 
-                    src={alum.photo} 
-                    alt={alum.name} 
-                    className="w-full h-full object-cover rounded-full bg-white"
-                  />
-                </div>
-                <h4 className="text-base font-bold text-gray-900">{alum.name}</h4>
-                <p className="text-xs font-medium text-[#C41E3A] uppercase tracking-wider mt-0.5">
-                  Class of {alum.batch} | {alum.branch}
-                </p>
-                <div className="my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-semibold text-gray-700">
-                  {alum.designation} @ <span className="text-[#003D7A]">{alum.company}</span>
-                </div>
-                <p className="text-gray-605 text-xs leading-relaxed font-light my-4 line-clamp-3">
-                  "{alum.bio}"
-                </p>
-                <a 
-                  href={alum.linkedIn}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-auto pt-4 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition-colors flex items-center justify-center gap-1.5"
-                >
-                  Connect on LinkedIn ↗
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <SpotlightSection notableAlumni={data.notableAlumni} />
 
       {/* 8. Testimonials Section */}
       <TestimonialsSection initialTestimonials={data.testimonials} />
@@ -389,7 +250,7 @@ export default async function HomePage() {
       </section>
 
       {/* 10. Partner/Affiliated Colleges strip */}
-      <section className="py-16 bg-white border-t border-b border-slate-100">
+      {/* <section className="py-16 bg-white border-t border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-8">
             Partner / Affiliated Institutions
@@ -407,7 +268,7 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* 11. Newsletter Capture Form */}
       <NewsletterSignup />

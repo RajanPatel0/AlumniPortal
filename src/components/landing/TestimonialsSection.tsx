@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Testimonial {
   id: string;
@@ -20,6 +21,18 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
   const [quote, setQuote] = useState('');
   const [rating, setRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' 
+        ? scrollLeft - clientWidth * 0.75 
+        : scrollLeft + clientWidth * 0.75;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   const approvedTestimonials = testimonials.filter((t) => t.status === 'approved');
 
@@ -65,44 +78,110 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
         </div>
 
         {/* Testimonials Grid */}
-        <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 md:gap-8 pb-4 mb-12 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
-          {approvedTestimonials.map((t) => (
-            <div
-              key={t.id}
-              className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] flex-shrink-0 md:w-auto"
+        {approvedTestimonials.length > 4 ? (
+          <div className="relative group/scroll px-1 mb-12">
+            {/* Scroll Buttons */}
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              aria-label="Scroll left"
             >
-              <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
-                “
-              </div>
-              <div className="mb-6">
-                {/* Rating */}
-                {t.rating && (
-                  <div className="flex gap-1 mb-4 text-amber-400">
-                    {Array.from({ length: t.rating }).map((_, i) => (
-                      <span key={i}>★</span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-gray-650 italic text-sm leading-relaxed relative z-10">
-                  "{t.quote}"
-                </p>
-              </div>
+              <ChevronLeft size={20} className="stroke-[2.5]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={20} className="stroke-[2.5]" />
+            </button>
 
-              {/* Profile Card */}
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                <img
-                  src={t.photo}
-                  alt={t.name}
-                  className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                />
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
-                  <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
+            {/* Horizontal Scroll Grid (2 rows, col flow) */}
+            <div
+              ref={scrollRef}
+              className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {approvedTestimonials.map((t) => (
+                <div
+                  key={t.id}
+                  className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] md:w-[480px] flex-shrink-0"
+                >
+                  <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
+                    “
+                  </div>
+                  <div className="mb-6">
+                    {/* Rating */}
+                    {t.rating && (
+                      <div className="flex gap-1 mb-4 text-amber-400">
+                        {Array.from({ length: t.rating }).map((_, i) => (
+                          <span key={i}>★</span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-gray-650 italic text-sm leading-relaxed relative z-10">
+                      "{t.quote}"
+                    </p>
+                  </div>
+
+                  {/* Profile Card */}
+                  <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
+                    <img
+                      src={t.photo}
+                      alt={t.name}
+                      className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                    />
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
+                      <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 md:gap-8 pb-4 mb-12 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+            {approvedTestimonials.map((t) => (
+              <div
+                key={t.id}
+                className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] flex-shrink-0 md:w-auto"
+              >
+                <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
+                  “
+                </div>
+                <div className="mb-6">
+                  {/* Rating */}
+                  {t.rating && (
+                    <div className="flex gap-1 mb-4 text-amber-400">
+                      {Array.from({ length: t.rating }).map((_, i) => (
+                        <span key={i}>★</span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-gray-650 italic text-sm leading-relaxed relative z-10">
+                    "{t.quote}"
+                  </p>
+                </div>
+
+                {/* Profile Card */}
+                <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
+                  <img
+                    src={t.photo}
+                    alt={t.name}
+                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                  />
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
+                    <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Action Button */}
         <div className="text-center">

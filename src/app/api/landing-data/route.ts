@@ -345,11 +345,11 @@ export async function GET() {
       }
     ];
 
-    const affiliatedColleges = [
-      { id: 'ac-1', name: 'DAV Institute of Engineering & Technology', logo: '🎓', status: 'active' },
-      { id: 'ac-2', name: 'Guru Nanak Dev Engineering College', logo: '🎓', status: 'active' },
-      { id: 'ac-3', name: 'Lyallpur Khalsa College of Engineering', logo: '🎓', status: 'active' },
-    ];
+    // const affiliatedColleges = [
+    //   { id: 'ac-1', name: 'DAV Institute of Engineering & Technology', logo: '🎓', status: 'active' },
+    //   { id: 'ac-2', name: 'Guru Nanak Dev Engineering College', logo: '🎓', status: 'active' },
+    //   { id: 'ac-3', name: 'Lyallpur Khalsa College of Engineering', logo: '🎓', status: 'active' },
+    // ];
 
     const videos = dbVideos.length > 0
       ? dbVideos.map(v => ({
@@ -384,7 +384,7 @@ export async function GET() {
       gallery,
       videos,
       campuses,
-      affiliatedColleges,
+      // affiliatedColleges,
     });
   } catch (error: any) {
     console.error('[API_GET_LANDING_DATA_ERROR]', error);
