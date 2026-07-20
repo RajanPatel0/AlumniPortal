@@ -43,6 +43,9 @@ interface AlumniProfile {
   currentRole?: string;
   currentCompany?: string;
   city?: string;
+  country?: string;
+  pincode?: string;
+  mapVisibility?: 'PUBLIC' | 'ALUMNI_ONLY' | 'HIDDEN';
   avatarUrl?: string;
   isRegistered?: boolean;
   education?: EducationItem[];
@@ -99,6 +102,49 @@ function ProfilePageClient() {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // Auto-resolve city name from pincode to prevent spelling anomalies
+  useEffect(() => {
+    if (!editingMode) return;
+    const pin = formData?.pincode?.trim();
+    const cntry = formData?.country?.trim() || 'India';
+
+    if (pin && pin.length >= 5) {
+      const controller = new AbortController();
+      const delayDebounce = setTimeout(async () => {
+        try {
+          const res = await apiFetch(
+            `/alumni/geocode-pincode?pincode=${encodeURIComponent(pin)}&country=${encodeURIComponent(cntry)}`,
+            { signal: controller.signal }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.city || data.country) {
+              setFormData((prev) => {
+                if (!prev) return null;
+                const nextData = { ...prev };
+                if (data.city) nextData.city = data.city;
+                if (data.country) nextData.country = data.country;
+                return nextData;
+              });
+              
+              const locationParts = [data.city, data.country].filter(Boolean).join(', ');
+              toast.success(`Resolved Location: ${locationParts}`);
+            }
+          }
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.error('Failed to auto-resolve location:', err);
+          }
+        }
+      }, 700);
+
+      return () => {
+        clearTimeout(delayDebounce);
+        controller.abort();
+      };
+    }
+  }, [formData?.pincode, formData?.country, editingMode]);
 
   const handleSave = async () => {
     if (!formData) return;
@@ -360,10 +406,16 @@ function ProfilePageClient() {
                 </p>
 
                 <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 mt-3 text-xs font-semibold text-slate-500">
-                  {profile?.city && (
+                  {(profile?.city || profile?.country) && (
                     <span className="flex items-center gap-1">
                       <MapPin size={14} className="text-slate-400" />
-                      {profile.city}
+                      {[profile.city, profile.country].filter(Boolean).join(', ')}
+                      {profile.pincode ? ` (${profile.pincode})` : ''}
+                    </span>
+                  )}
+                  {profile?.mapVisibility && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 uppercase">
+                      🗺️ Map: {profile.mapVisibility.replace('_', ' ')}
                     </span>
                   )}
                   <span className="flex items-center gap-1">
@@ -431,9 +483,9 @@ function ProfilePageClient() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">City / Location</label>
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">City</label>
                     <input
                       type="text"
                       value={formData?.city || ''}
@@ -442,6 +494,41 @@ function ProfilePageClient() {
                       className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Country</label>
+                    <input
+                      type="text"
+                      value={formData?.country || ''}
+                      onChange={(e) => handleInputChange('country', e.target.value)}
+                      placeholder="e.g. India"
+                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Pincode</label>
+                    <input
+                      type="text"
+                      value={formData?.pincode || ''}
+                      onChange={(e) => handleInputChange('pincode', e.target.value)}
+                      placeholder="e.g. 160012"
+                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Map Visibility</label>
+                    <select
+                      value={formData?.mapVisibility || 'PUBLIC'}
+                      onChange={(e) => handleInputChange('mapVisibility', e.target.value)}
+                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A] bg-white"
+                    >
+                      <option value="PUBLIC">Public</option>
+                      <option value="ALUMNI_ONLY">Alumni Only</option>
+                      <option value="HIDDEN">Hidden</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Branch</label>
                     <input

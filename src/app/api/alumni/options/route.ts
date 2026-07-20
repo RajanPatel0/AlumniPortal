@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const [branchRows, courseRows, companyRows] = await Promise.all([
+    const [branchRows, courseRows, companyRows, countryRows] = await Promise.all([
       prisma.alumni.findMany({
         select: { branch: true },
         distinct: ['branch'],
@@ -31,12 +31,24 @@ export async function GET() {
         distinct: ['currentCompany'],
         orderBy: { currentCompany: 'asc' },
       }),
+      prisma.pincodeLocation.findMany({
+        where: {
+          status: 'FOUND',
+          country: {
+            not: '',
+          },
+        },
+        select: { country: true },
+        distinct: ['country'],
+        orderBy: { country: 'asc' },
+      }),
     ]);
 
     return NextResponse.json({
       branches: branchRows.map((r) => r.branch).filter(Boolean),
       courses: courseRows.map((r) => r.course).filter(Boolean),
       companies: companyRows.map((r) => r.currentCompany).filter(Boolean),
+      countries: countryRows.map((r) => r.country).filter(Boolean),
     });
   } catch (error) {
     console.error('[GET_ALUMNI_OPTIONS_ERROR]', error);

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, Calendar, Briefcase, User, LogOut, Bell, BookOpen, ArrowLeftCircle } from 'lucide-react';
+import { Home, Calendar, Briefcase, User, LogOut, Bell, BookOpen, ArrowLeftCircle, Map } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
 import { apiFetch, BASE_PATH } from "@/lib/api";
 
@@ -10,6 +10,7 @@ const navItems = [
   { name: 'Feed', href: '/alumni/feed', icon: Home },
   { name: 'Noticeboard', href: '/alumni/noticeboard', icon: Bell },
   { name: 'Yearbook', href: '/alumni/yearbook', icon: BookOpen },
+  { name: 'Map', href: '/alumni/map', icon: Map },
   { name: 'Events', href: '/alumni/events', icon: Calendar },
   { name: 'Jobs', href: '/alumni/jobs', icon: Briefcase },
   { name: 'Profile', href: '/alumni/profile', icon: User },
@@ -47,7 +48,7 @@ function AlumniBottomNavInner() {
     : '/alumni/profile';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-[1050]">
       <div className="flex justify-around items-center max-w-lg mx-auto px-2 pb-[env(safe-area-inset-bottom,16px)] pt-2">
         {navItems.map((item) => {
           // For profile link, use the admin-aware href
@@ -98,7 +99,7 @@ function AlumniBottomNavInner() {
 export default function AlumniBottomNav() {
   return (
     <Suspense fallback={
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50 h-[60px]" />
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-[1050] h-[60px]" />
     }>
       <AlumniBottomNavInner />
     </Suspense>

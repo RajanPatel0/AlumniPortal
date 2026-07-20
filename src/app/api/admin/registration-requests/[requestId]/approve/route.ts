@@ -3,6 +3,7 @@ import { StaffRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedStaff, CampusScopeError } from '@/lib/auth/staff-auth';
 import { sendEmail } from '@/lib/brevo';
+import { resolveLocation } from '@/lib/geocoding';
 
 export async function POST(
   req: NextRequest,
@@ -81,6 +82,16 @@ export async function POST(
       );
     }
 
+    // Pre-resolve location if request contains pincode details
+    let resolvedLocation: { locationId: string | null; city?: string | null; country?: string | null } | null = null;
+    if (existingRequest.pincode) {
+      try {
+        resolvedLocation = await resolveLocation("India", existingRequest.pincode, undefined, existingRequest.city || undefined);
+      } catch (err) {
+        console.error("Failed to resolve location during approval:", err);
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const updatedRequest = await tx.registrationRequest.update({
         where: { id: requestId },
@@ -111,6 +122,10 @@ export async function POST(
           passwordHash: existingRequest.authProvider === 'MANUAL' ? existingRequest.passwordHash : null,
           currentRole: existingRequest.currentRole,
           currentCompany: existingRequest.currentCompany,
+          pincode: existingRequest.pincode,
+          city: resolvedLocation?.city || existingRequest.city || null,
+          country: resolvedLocation?.country || "India",
+          locationId: resolvedLocation?.locationId || null,
         },
       });
 
