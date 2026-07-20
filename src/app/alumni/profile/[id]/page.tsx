@@ -81,6 +81,7 @@ export default async function PublicProfilePage({ params }: Props) {
                       src={alumni.avatarUrl} 
                       alt={alumni.name} 
                       className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <span className="text-slate-400 font-extrabold text-5xl">{initial}</span>
@@ -335,18 +336,6 @@ export default async function PublicProfilePage({ params }: Props) {
                     </a>
                   </div>
                 </div>
-
-                {alumni.phone && (
-                  <div className="flex gap-3">
-                    <span className="text-slate-400 shrink-0 text-md">📞</span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Phone</p>
-                      <p className="text-sm font-semibold text-slate-700">
-                        {alumni.phone}
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {alumni.city && (
                   <div className="flex gap-3">

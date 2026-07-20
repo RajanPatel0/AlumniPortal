@@ -91,10 +91,10 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 flex-shrink-0">
           <h3 className="font-bold text-gray-900 text-sm">Post an opportunity</h3>
           <button 
             onClick={onClose}
@@ -105,7 +105,8 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
         </div>
 
         {/* Modal Body / Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Opportunity Title *</label>
             <input 
@@ -289,12 +290,14 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
             </div>
           </div>
 
+          </div>
+
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-3 border-t border-slate-100">
+          <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
             <button 
               type="button" 
               onClick={onClose}
-              className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition"
+              className="flex-1 py-2.5 border border-slate-200 bg-white text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition"
             >
               Cancel
             </button>

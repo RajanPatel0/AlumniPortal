@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 // Static Subcomponents
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilters } from '@/components/jobs/JobFilters';
-import { getJobsAction, toggleJobStatusAction, applyToJobAction } from '@/actions/jobs';
+import { getJobsAction, toggleJobStatusAction, applyToJobAction, deleteJobAction } from '@/actions/jobs';
 import { type JobsApiResponse, DEFAULT_FILTER_OPTIONS, withAll } from '@/types/jobs';
 
 // Dynamically imported Modal (Lazy Loaded client-side to save bundle size)
@@ -104,12 +104,32 @@ function JobsPageClient() {
     },
   });
 
+  // React Query Mutation for deleting a job post
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteJobAction(id),
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success('Opportunity deleted successfully!');
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      } else {
+        toast.error(result.error || 'Failed to delete opportunity');
+      }
+    },
+    onError: () => {
+      toast.error('Something went wrong');
+    },
+  });
+
   const handleToggleStatus = (id: string, isActive: boolean) => {
     toggleStatusMutation.mutate({ id, isActive });
   };
 
   const handleApply = (id: string) => {
     applyMutation.mutate(id);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   // Get dynamic unique filters from API filters metadata (fallback to shared defaults)
@@ -218,6 +238,7 @@ function JobsPageClient() {
                     job={job} 
                     onToggleStatus={handleToggleStatus} 
                     onApply={handleApply}
+                    onDelete={handleDelete}
                   />
                 ))}
 

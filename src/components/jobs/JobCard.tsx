@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { MapPin, Briefcase, DollarSign, Lock, Unlock, ExternalLink, Calendar, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { getJobApplicantsExportDataAction } from '@/actions/jobs';
+import { exportCandidatesToExcel } from '@/lib/export-utils';
 
 export interface JobItemType {
   id: string;
@@ -43,6 +46,29 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelete }: JobCardProps) {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await getJobApplicantsExportDataAction(job.id);
+      if (res.success) {
+        if (res.data) {
+          exportCandidatesToExcel(job.title, res.data);
+        } else {
+          toast.error('No candidate data available to export.');
+        }
+      } else {
+        toast.error(res.error || 'Failed to export candidates');
+      }
+    } catch (err: any) {
+      console.error('[JobCard export error]', err);
+      toast.error('An error occurred during export.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name ? name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2) : 'J';
   };
@@ -141,8 +167,8 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
             </button>
           )}
 
-          {/* Admin controls: Delete Job */}
-          {isAdmin && onDelete && (
+          {/* Owner/Admin controls: Delete Job */}
+          {(isAdmin || job.postedByMe) && onDelete && (
             <button
               onClick={() => {
                 if (confirm('Are you sure you want to delete this opportunity?')) {
@@ -193,20 +219,36 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
       {/* Lister candidates view list */}
       {(job.postedByMe || isAdmin) && job.applicantsProfiles && job.applicantsProfiles.length > 0 && (
         <div className="mt-2.5 pt-2.5 border-t border-slate-100 space-y-1.5">
-          <h4 className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-            Interested Candidates ({job.applicantsProfiles.length})
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+              Interested Candidates ({job.applicantsProfiles.length})
+            </h4>
+            {isAdmin && (
+              <button
+                disabled={isExporting}
+                onClick={handleExport}
+                className="text-[9px] font-bold text-[#003D7A] hover:text-[#002b56] disabled:text-slate-400 transition flex items-center gap-1 cursor-pointer select-none"
+              >
+                {isExporting ? 'Exporting...' : 'Export List (Excel)'}
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {job.applicantsProfiles.map((candidate: any) => (
               <Link 
                 key={candidate.id}
-                href={`/alumni/profile?id=${candidate.id}`}
+                href={`/alumni/profile/${candidate.id}`}
                 title={`View ${candidate.name}'s Profile (${candidate.email})`}
                 className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-slate-300 rounded-full pl-1 pr-2.5 py-1 text-[9px] font-semibold text-slate-700 transition cursor-pointer"
               >
                 <div className="w-4 h-4 rounded-full bg-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center text-[7px] font-bold border border-slate-100">
                   {candidate.avatarUrl ? (
-                    <img src={candidate.avatarUrl} alt={candidate.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={candidate.avatarUrl} 
+                      alt={candidate.name} 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
                   ) : (
                     getInitials(candidate.name)
                   )}

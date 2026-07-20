@@ -370,7 +370,12 @@ function ProfilePageClient() {
           {/* Avatar container with instant Cloudinary upload */}
           <div className="relative w-36 h-36 rounded-full border-4 border-white bg-gradient-to-tr from-[#003D7A] to-[#C41E3A] text-white flex items-center justify-center font-black text-4xl shadow-lg overflow-hidden group flex-shrink-0">
             {formData?.avatarUrl ? (
-              <img src={formData.avatarUrl} alt={formData.name} className="w-full h-full object-cover" />
+              <img 
+                src={formData.avatarUrl} 
+                alt={formData.name} 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer"
+              />
             ) : (
               getInitials(formData?.name || '')
             )}
