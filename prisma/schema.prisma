@@ -191,6 +191,10 @@ model Alumni {
   gender         Gender?
   addressLine    String?
   pincode        String?
+  country        String?
+  locationId     String?
+  location       PincodeLocation? @relation(fields: [locationId], references: [id])
+  mapVisibility  MapVisibility    @default(PUBLIC)
 
   // Campus assignment – each alumni belongs to one campus
   campusId     String // alumni must belong to a campus (foreign key)
@@ -236,6 +240,7 @@ model Alumni {
   @@index([currentCompany])
   @@index([currentRole])
   @@index([gender])
+  @@index([locationId])
   @@map("alumni")
 }
 
@@ -654,5 +659,38 @@ model LandingVideo {
   updatedAt    DateTime @updatedAt
 
   @@map("landing_videos")
+}
+
+enum LocationStatus {
+  FOUND
+  NOT_FOUND
+}
+
+enum MapVisibility {
+  PUBLIC
+  ALUMNI_ONLY
+  HIDDEN
+}
+
+model PincodeLocation {
+  id             String         @id @default(cuid())
+  country        String
+  pincode        String
+  city           String?
+  state          String?
+  countryCode    String?
+  displayName    String?        @db.Text
+  latitude       Float?
+  longitude      Float?
+  status         LocationStatus @default(FOUND)
+  source         String         @default("Nominatim")
+  lastVerifiedAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  alumni Alumni[]
+
+  @@unique([country, pincode])
+  @@index([latitude, longitude])
 }
 

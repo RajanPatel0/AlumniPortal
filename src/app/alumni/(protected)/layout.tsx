@@ -47,7 +47,7 @@ export default async function ProtectedAlumniLayout({
   return (
     <div className="min-h-screen bg-slate-50/60 pb-28 antialiased selection:bg-[#C41E3A]/10">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-[1050] w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2.5 sm:gap-3.5">
               {/* Refined Institutional Crest Wrapper */}
@@ -72,6 +72,12 @@ export default async function ProtectedAlumniLayout({
                 className="group flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#003D7A]/20 bg-[#003D7A]/5 hover:bg-[#003D7A]/10 hover:border-[#003D7A]/40 transition-all duration-200"
               >
                 <span className="text-xs font-bold text-[#003D7A] tracking-wide">Yearbook</span>
+              </Link>
+              <Link
+                href="/alumni/map"
+                className="group flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C41E3A]/20 bg-[#C41E3A]/5 hover:bg-[#C41E3A]/10 hover:border-[#C41E3A]/40 transition-all duration-200"
+              >
+                <span className="text-xs font-bold text-[#C41E3A] tracking-wide">Alumni Map</span>
               </Link>
               {isStaff && (
                 <a

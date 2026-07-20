@@ -450,12 +450,32 @@ export async function toggleAdminJobStatusAction(id: string, isActive: boolean):
 
 export async function deleteJobAction(id: string): Promise<ActionResult> {
   try {
-    const staff = await getAuthenticatedStaff();
-    if (!staff) return { success: false, error: 'Unauthorized' };
+    const identity = await getCurrentAlumniOrStaff();
+    if (!identity) return { success: false, error: 'Unauthorized' };
 
-    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
-    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
-      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    const job = await prisma.job.findUnique({
+      where: { id },
+      select: { postedByAlumniId: true, postedByStaffId: true },
+    });
+    if (!job) return { success: false, error: 'Opportunity not found' };
+
+    if (identity.isAdmin) {
+      // Caller is staff, check if they have module permission
+      const staff = await prisma.staff.findUnique({
+        where: { id: identity.staffId },
+        select: { role: true, modules: true },
+      });
+      if (!staff) return { success: false, error: 'Unauthorized' };
+
+      const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+      if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+        return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+      }
+    } else {
+      // Caller is alumni, they can only delete if they posted it
+      if (job.postedByAlumniId !== identity.alumni.id) {
+        return { success: false, error: 'Permission denied' };
+      }
     }
 
     await prisma.job.delete({ where: { id } });
@@ -465,4 +485,42 @@ export async function deleteJobAction(id: string): Promise<ActionResult> {
     return { success: false, error: error.message || 'Failed to delete opportunity' };
   }
 }
+
+export async function getJobApplicantsExportDataAction(id: string): Promise<ActionResult<any[]>> {
+  try {
+    const staff = await getAuthenticatedStaff();
+    if (!staff) return { success: false, error: 'Unauthorized' };
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    }
+
+    const job = await prisma.job.findUnique({ where: { id }, select: { metadata: true } });
+    if (!job) return { success: false, error: 'Opportunity not found' };
+
+    const meta = normalizeMetadata(job.metadata);
+    if (meta.applicants.length === 0) return { success: true, data: [] };
+
+    const applicants = await prisma.alumni.findMany({
+      where: { id: { in: meta.applicants } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        enrollmentNo: true,
+        college: true,
+        course: true,
+        branch: true,
+        batchYear: true,
+      },
+    });
+
+    return { success: true, data: applicants };
+  } catch (error: any) {
+    console.error('[getJobApplicantsExportDataAction]', error);
+    return { success: false, error: error.message || 'Failed to fetch applicants details' };
+  }
+}
+
 

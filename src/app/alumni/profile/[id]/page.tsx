@@ -5,6 +5,7 @@ import {
   Mail, Briefcase, MapPin, Calendar, ExternalLink, 
   GraduationCap, Globe, ShieldCheck, Building, Award, Rocket
 } from 'lucide-react';
+import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -24,6 +25,7 @@ function formatDate(date: Date | string | null) {
 
 export default async function PublicProfilePage({ params }: Props) {
   const { id } = await params;
+  const staff = await getAuthenticatedStaff();
 
   const alumni = await prisma.alumni.findUnique({
     where: { id },
@@ -81,6 +83,7 @@ export default async function PublicProfilePage({ params }: Props) {
                       src={alumni.avatarUrl} 
                       alt={alumni.name} 
                       className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <span className="text-slate-400 font-extrabold text-5xl">{initial}</span>
@@ -336,7 +339,7 @@ export default async function PublicProfilePage({ params }: Props) {
                   </div>
                 </div>
 
-                {alumni.phone && (
+                {staff && alumni.phone && (
                   <div className="flex gap-3">
                     <span className="text-slate-400 shrink-0 text-md">📞</span>
                     <div className="min-w-0">

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { 
   User, Mail, Phone, Lock, GraduationCap, School, 
   Briefcase, Building, ChevronRight, ChevronLeft, 
-  CheckCircle, ShieldAlert, Award, Calendar, BookOpen
+  CheckCircle, ShieldAlert, Award, Calendar, BookOpen, MapPin
 } from 'lucide-react';
 
 type Campus = { id: string; name: string; code: string };
@@ -39,7 +39,44 @@ export default function SelfRegisterPage() {
     password: '',
     currentRole: '',
     currentCompany: '',
+    pincode: '',
+    city: '',
+    country: '',
   });
+
+  // Client-side auto-resolution of City and Country when Pincode changes
+  useEffect(() => {
+    const pin = formData.pincode.trim();
+    const cntry = formData.country.trim() || 'India';
+
+    if (pin.length >= 5) {
+      const controller = new AbortController();
+      const delayDebounce = setTimeout(async () => {
+        try {
+          const res = await apiFetch(
+            `/alumni/geocode-pincode?pincode=${encodeURIComponent(pin)}&country=${encodeURIComponent(cntry)}`,
+            { signal: controller.signal }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setFormData((prev) => {
+              const nextData = { ...prev };
+              if (data.city) nextData.city = data.city;
+              if (data.country) nextData.country = data.country;
+              return nextData;
+            });
+          }
+        } catch (err) {
+          console.error('Failed to resolve pincode location:', err);
+        }
+      }, 700);
+
+      return () => {
+        clearTimeout(delayDebounce);
+        controller.abort();
+      };
+    }
+  }, [formData.pincode, formData.country]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -476,6 +513,43 @@ export default function SelfRegisterPage() {
                             <option key={c} value={c} />
                           ))}
                         </datalist>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Current Pincode</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. 144603"
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
+                          value={formData.pincode}
+                          onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">City</label>
+                        <input
+                          type="text"
+                          placeholder="Resolved City"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Country</label>
+                        <input
+                          type="text"
+                          placeholder="Resolved Country"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        />
                       </div>
                     </div>
                   </div>
