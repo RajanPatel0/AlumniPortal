@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Map, Search, SlidersHorizontal } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const AlumniMap = dynamic(() => import('@/components/AlumniMap'), {
   ssr: false,
@@ -31,7 +32,7 @@ export default function MapPage() {
   // Load initial dropdown list data on mount
   useEffect(() => {
     // Fetch available years from yearbook endpoint
-    fetch('/api/yearbook/years')
+    apiFetch('/yearbook/years')
       .then((res) => res.json())
       .then((data) => {
         if (data.years) setAvailableYears(data.years);
@@ -39,7 +40,7 @@ export default function MapPage() {
       .catch((err) => console.error('Failed to load years:', err));
 
     // Fetch branches, companies, and countries from options endpoint
-    fetch('/api/alumni/options')
+    apiFetch('/alumni/options')
       .then((res) => res.json())
       .then((data) => {
         if (data.branches) setAvailableBranches(data.branches);
@@ -52,7 +53,7 @@ export default function MapPage() {
   // Update available branches dynamically based on selected batch year
   useEffect(() => {
     if (batchYear) {
-      fetch(`/api/yearbook/branches?year=${batchYear}`)
+      apiFetch(`/yearbook/branches?year=${batchYear}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.branches) {
@@ -62,7 +63,7 @@ export default function MapPage() {
         .catch((err) => console.error('Failed to load dynamic branches:', err));
     } else {
       // Re-fetch all unique branches from options
-      fetch('/api/alumni/options')
+      apiFetch('/alumni/options')
         .then((res) => res.json())
         .then((data) => {
           if (data.branches) setAvailableBranches(data.branches);

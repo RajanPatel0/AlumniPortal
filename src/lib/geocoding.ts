@@ -33,10 +33,16 @@ export async function resolveLocation(
 
   if (existing) {
     if (existing.status === 'NOT_FOUND') {
-      // Delete the stale NOT_FOUND cache record to retry with fallback logic
-      await prisma.pincodeLocation.delete({
-        where: { id: existing.id },
-      });
+      // Check if the record is older than 24 hours before retrying geocoding
+      const staleThreshold = 24 * 60 * 60 * 1000; // 24 hours
+      const age = Date.now() - new Date(existing.updatedAt).getTime();
+      if (age > staleThreshold) {
+        await prisma.pincodeLocation.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        return emptyResult;
+      }
     } else {
       return {
         locationId: existing.id,

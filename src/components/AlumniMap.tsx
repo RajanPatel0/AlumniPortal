@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mail, Briefcase, MapPin, ExternalLink } from 'lucide-react';
 import L from 'leaflet';
+import { apiFetch, BASE_PATH } from '@/lib/api';
 
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
@@ -118,7 +119,7 @@ export default function AlumniMap({ filters }: AlumniMapProps) {
         if (filters.company) queryParams.append('company', filters.company);
         if (filters.country) queryParams.append('country', filters.country);
 
-        const res = await fetch(`/api/alumni/map?${queryParams.toString()}`);
+        const res = await apiFetch(`/alumni/map?${queryParams.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setAlumni(data.alumni || []);
@@ -213,7 +214,7 @@ export default function AlumniMap({ filters }: AlumniMapProps) {
               : ''
             }
             <div class="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2.5">
-              <a href="/alumni/profile?id=${person.id}" class="flex-1 py-2 bg-[#003D7A] hover:bg-[#002f5e] text-white text-center text-xs font-bold rounded-xl transition decoration-none block shadow-sm shadow-blue-900/10">
+              <a href="${BASE_PATH}/alumni/profile?id=${person.id}" class="flex-1 py-2 bg-[#003D7A] hover:bg-[#002f5e] text-white text-center text-xs font-bold rounded-xl transition decoration-none block shadow-sm shadow-blue-900/10">
                 View Profile
               </a>
               ${person.linkedinUrl 
@@ -281,7 +282,7 @@ export default function AlumniMap({ filters }: AlumniMapProps) {
                       ${person.currentCompany ? `<p class="text-[9px] text-slate-400 font-semibold truncate mt-0.5">${person.currentRole || 'Alumni'} at ${person.currentCompany}</p>` : ''}
                     </div>
                   </div>
-                  <a href="/alumni/profile?id=${person.id}" class="py-1.5 px-3 bg-[#003D7A] hover:bg-[#002f5e] text-white text-center text-[10px] font-extrabold rounded-lg transition decoration-none whitespace-nowrap shadow-sm">
+                  <a href="${BASE_PATH}/alumni/profile?id=${person.id}" class="py-1.5 px-3 bg-[#003D7A] hover:bg-[#002f5e] text-white text-center text-[10px] font-extrabold rounded-lg transition decoration-none whitespace-nowrap shadow-sm">
                     View
                   </a>
                 </div>

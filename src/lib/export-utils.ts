@@ -3,7 +3,14 @@ import { BASE_PATH, APP_URL } from '@/lib/api';
 
 export function exportCandidatesToExcel(title: string, candidates: any[]) {
   const sheetData = candidates.map(row => {
-    const profileUrl = `${APP_URL}${BASE_PATH}/alumni/profile/${row.id}`;
+    let baseUrl = typeof window !== 'undefined' ? window.location.origin : (APP_URL || '');
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    if (BASE_PATH && baseUrl.endsWith(BASE_PATH)) {
+      baseUrl = baseUrl.slice(0, -BASE_PATH.length);
+    }
+    const profileUrl = `${baseUrl}${BASE_PATH}/alumni/profile/${row.id}`;
 
     return {
       Name: row.name,

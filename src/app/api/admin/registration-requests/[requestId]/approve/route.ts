@@ -146,7 +146,7 @@ export async function POST(
     });
 
     // Send registration approval notification email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/+$/, '');
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; color: #1f2937;">
         <div style="text-align: center; margin-bottom: 24px;">
