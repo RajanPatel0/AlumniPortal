@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
-    if (!name?.trim() || !normalizedEmail || !batchYear || !branch?.trim() || !college?.trim() || !course?.trim()) {
+    if (!name?.trim() || !normalizedEmail || !batchYear || !branch?.trim() || !college?.trim() || !course?.trim() || !pincode?.trim()) {
       return NextResponse.json({ error: 'Please fill in all required fields' }, { status: 400 });
     }
 

@@ -3,10 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mail, Briefcase, MapPin, ExternalLink } from 'lucide-react';
 import L from 'leaflet';
+import { extendLeaflet } from '@india-boundary-corrector/leaflet-layer';
 import { apiFetch, BASE_PATH } from '@/lib/api';
 
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
+
+// NOTE: For a more robust, long-term solution, consider transitioning to Mappls (MapmyIndia) SDK.
+if (typeof window !== 'undefined') {
+  extendLeaflet(L);
+}
 
 // Custom Marker Icon definition using CDN links to bypass Webpack loader issues
 const defaultIcon = typeof window !== 'undefined' ? L.icon({
@@ -76,9 +82,18 @@ export default function AlumniMap({ filters }: AlumniMapProps) {
       zoom: 6,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // @ts-ignore - tileLayer.indiaBoundaryCorrected is added dynamically by extendLeaflet
+    const correctedLayer = L.tileLayer.indiaBoundaryCorrected('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+      pmtilesUrl: '/india_boundary_corrections.pmtiles',
+    });
+
+    // @ts-ignore
+    correctedLayer.on('correctionerror', (e: any) => {
+      console.error('[AlumniMap] Boundary correction failed:', e.error, 'Coords:', e.coords, 'URL:', e.tileUrl);
+    });
+
+    correctedLayer.addTo(map);
 
     mapRef.current = map;
 

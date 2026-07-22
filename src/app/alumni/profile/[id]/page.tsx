@@ -55,7 +55,7 @@ export default async function PublicProfilePage({ params }: Props) {
         {/* Breadcrumb / Back Navigation */}
         <div className="flex items-center justify-between">
           <Link 
-            href="/"
+            href="/alumni/feed"
             className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-[#003D7A] transition"
           >
             ← Back to Portal
