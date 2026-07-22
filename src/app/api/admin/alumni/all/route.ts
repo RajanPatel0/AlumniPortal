@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const limit = Math.min(100, parseInt(searchParams.get('limit') || '15', 10));
   const skip = (page - 1) * limit;
+  const isExport = searchParams.get('export') === 'true';
 
   const search = searchParams.get('search') || '';
   const batchYear = searchParams.get('batchYear') || '';
@@ -35,34 +36,35 @@ export async function GET(req: NextRequest) {
     throw err;
   }
 
-  const where: Record<string, unknown> = {
+  const whereWithoutStatus: Record<string, any> = {
     ...alumniCampusWhere(scopedCampusId),
   };
 
   if (search) {
-    where.OR = [
+    whereWithoutStatus.OR = [
       { name: { contains: search } },
       { email: { contains: search } },
       { enrollmentNo: { contains: search } },
       { phone: { contains: search } },
     ];
   }
-  if (batchYear) where.batchYear = parseInt(batchYear);
-  if (branch) where.branch = { contains: branch };
-  if (course) where.course = { contains: course };
+  if (batchYear) whereWithoutStatus.batchYear = parseInt(batchYear);
+  if (branch) whereWithoutStatus.branch = { contains: branch };
+  if (course) whereWithoutStatus.course = { contains: course };
+
+  const where = { ...whereWithoutStatus };
   if (status) {
     if (status === 'REGISTERED') where.isRegistered = true;
-    else if (status === 'PENDING') where.inviteStatus = 'PENDING';
+    else if (status === 'PENDING') where.inviteStatus = { in: ['PENDING', 'BOUNCED'] };
     else if (status === 'INVITED') where.inviteStatus = 'INVITED';
   }
 
   const filterBaseWhere = alumniCampusWhere(scopedCampusId);
 
-  const [alumni, total, branchRows, courseRows, yearRows] = await Promise.all([
+  const [alumni, total, branchRows, courseRows, yearRows, statusGroups] = await Promise.all([
     prisma.alumni.findMany({
       where,
-      skip,
-      take: limit,
+      ...(isExport ? {} : { skip, take: limit }),
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -91,25 +93,51 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.alumni.count({ where }),
-    prisma.alumni.findMany({
+    isExport ? Promise.resolve([]) : prisma.alumni.findMany({
       where: filterBaseWhere,
       select: { branch: true },
       distinct: ['branch'],
       orderBy: { branch: 'asc' },
     }),
-    prisma.alumni.findMany({
+    isExport ? Promise.resolve([]) : prisma.alumni.findMany({
       where: { ...filterBaseWhere, course: { not: null } },
       select: { course: true },
       distinct: ['course'],
       orderBy: { course: 'asc' },
     }),
-    prisma.alumni.findMany({
+    isExport ? Promise.resolve([]) : prisma.alumni.findMany({
       where: filterBaseWhere,
       select: { batchYear: true },
       distinct: ['batchYear'],
       orderBy: { batchYear: 'desc' },
     }),
+    prisma.alumni.groupBy({
+      by: ['isRegistered', 'inviteStatus'],
+      where: whereWithoutStatus,
+      _count: { _all: true },
+    }),
   ]);
+
+  let pendingCount = 0;
+  let invitedCount = 0;
+  let registeredCount = 0;
+
+  for (const group of statusGroups) {
+    if (group.isRegistered || group.inviteStatus === 'REGISTERED') {
+      registeredCount += group._count._all;
+    } else if (group.inviteStatus === 'INVITED') {
+      invitedCount += group._count._all;
+    } else {
+      pendingCount += group._count._all;
+    }
+  }
+
+  const overallCounts = {
+    total: pendingCount + invitedCount + registeredCount,
+    pending: pendingCount,
+    invited: invitedCount,
+    registered: registeredCount,
+  };
 
   const processedAlumni = alumni.map((alum) => ({
     ...alum,
@@ -119,11 +147,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     data: processedAlumni,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-    filterOptions: {
+    filterOptions: isExport ? { branches: [], courses: [], years: [] } : {
       branches: branchRows.map((r) => r.branch),
       courses: courseRows.map((r) => r.course).filter(Boolean),
       years: yearRows.map((r) => r.batchYear),
     },
+    overallCounts,
     scope: {
       role: staff.role,
       campusId: scopedCampusId,

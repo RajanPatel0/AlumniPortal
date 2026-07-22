@@ -52,3 +52,5 @@ export function rateLimit({ interval, max }: { interval: number; max: number }) 
 export const loginLimiter = rateLimit({ interval: 60_000, max: 8 });       // 8 attempts / minute
 export const otpLimiter   = rateLimit({ interval: 10 * 60_000, max: 5 });  // 5 attempts / 10 minutes
 export const registerLimiter = rateLimit({ interval: 60_000, max: 5 });    // 5 attempts / minute
+export const forgotPasswordIpLimiter = rateLimit({ interval: 15 * 60_000, max: 5 });    // 5 attempts / 15 minutes per IP
+export const forgotPasswordEmailLimiter = rateLimit({ interval: 15 * 60_000, max: 3 }); // 3 attempts / 15 minutes per email

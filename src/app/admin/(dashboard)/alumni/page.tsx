@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch, BASE_PATH } from "@/lib/api";
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import { 
   Search, Filter, Download, Eye, Mail, 
   ChevronLeft, ChevronRight, RefreshCw, 
@@ -56,6 +57,14 @@ export default function AlumniPage() {
     pages: 0,
   });
   
+  const [counts, setCounts] = useState({
+    total: 0,
+    pending: 0,
+    invited: 0,
+    registered: 0,
+  });
+  const [exporting, setExporting] = useState(false);
+
   // Filter states
   const [search, setSearch] = useState('');
   const [batchYear, setBatchYear] = useState('');
@@ -110,6 +119,10 @@ export default function AlumniPage() {
       const alumniData = data.data as AlumniData[];
       setAlumni(alumniData);
       setPagination(data.pagination);
+
+      if (data.overallCounts) {
+        setCounts(data.overallCounts);
+      }
 
       if (data.filterOptions) {
         setAvailableBranches(data.filterOptions.branches || []);
@@ -171,21 +184,50 @@ export default function AlumniPage() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Enrollment No', 'Batch Year', 'Branch', 'Course', 'Phone', 'Status', 'Current Role', 'Company', 'City'];
-    const rows = alumni.map(a => [
-      a.name, a.email, a.enrollmentNo || '', a.batchYear, a.branch, a.course || '', a.phone || '',
-      a.displayStatus, a.currentRole || '', a.currentCompany || '', a.city || ''
-    ]);
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `alumni_export_${new Date().toISOString().slice(0,19)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Export started');
+  const exportToCSV = async () => {
+    setExporting(true);
+    const params = new URLSearchParams();
+    params.set('export', 'true');
+    if (search) params.set('search', search);
+    if (batchYear) params.set('batchYear', batchYear);
+    if (branch) params.set('branch', branch);
+    if (course) params.set('course', course);
+    if (status) params.set('status', status);
+    if (userRole === 'ADMIN' && campusFilter) params.set('campusId', campusFilter);
+
+    try {
+      const res = await apiFetch(`/admin/alumni/all?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch alumni for export');
+      }
+      const data = await res.json();
+      const allRows = data.data as AlumniData[];
+
+      const sheetData = allRows.map((a) => ({
+        Name: a.name,
+        Email: a.email,
+        'Enrollment No': a.enrollmentNo || '-',
+        'Batch Year': a.batchYear,
+        Branch: a.branch,
+        Course: a.course || '-',
+        Phone: a.phone || '-',
+        Status: a.displayStatus,
+        'Current Role': a.currentRole || '-',
+        Company: a.currentCompany || '-',
+        City: a.city || '-',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Alumni');
+      XLSX.writeFile(workbook, `alumni_export_${Date.now()}.xlsx`);
+      toast.success('Export completed successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to export alumni');
+      console.error(err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -224,9 +266,15 @@ export default function AlumniPage() {
             </Link>
             <button
               onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 border border-white bg-[#012140] text-white rounded-xl hover:bg-[#012140]/90 transition"
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 border border-white bg-[#012140] text-white rounded-xl hover:bg-[#012140]/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download size={18}/> Export CSV
+              {exporting ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Download size={18}/>
+              )}
+              {exporting ? 'Exporting...' : 'Export CSV'}
             </button>
             <button
               onClick={fetchAlumni}
@@ -356,7 +404,7 @@ export default function AlumniPage() {
         <div className="bg-white rounded-xl border-l-4 border-[#012140] p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-[#012140]">{pagination.total}</p>
+              <p className="text-2xl font-bold text-[#012140]">{counts.total}</p>
               <p className="text-xs text-gray-500">Total Alumni</p>
             </div>
             <Users size={28} className="text-[#012140]/30"/>
@@ -365,7 +413,7 @@ export default function AlumniPage() {
         <div className="bg-white rounded-xl border-l-4 border-yellow-500 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-yellow-600">{alumni.filter(a => a.displayStatus === 'PENDING').length}</p>
+              <p className="text-2xl font-bold text-yellow-600">{counts.pending}</p>
               <p className="text-xs text-gray-500">Pending</p>
             </div>
             <Clock size={28} className="text-yellow-500/30"/>
@@ -374,7 +422,7 @@ export default function AlumniPage() {
         <div className="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-blue-600">{alumni.filter(a => a.displayStatus === 'INVITED').length}</p>
+              <p className="text-2xl font-bold text-blue-600">{counts.invited}</p>
               <p className="text-xs text-gray-500">Invited</p>
             </div>
             <Mail size={28} className="text-blue-500/30"/>
@@ -383,7 +431,7 @@ export default function AlumniPage() {
         <div className="bg-white rounded-xl border-l-4 border-green-500 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-green-600">{alumni.filter(a => a.displayStatus === 'REGISTERED').length}</p>
+              <p className="text-2xl font-bold text-green-600">{counts.registered}</p>
               <p className="text-xs text-gray-500">Registered</p>
             </div>
             <UserCheck size={28} className="text-green-500/30"/>

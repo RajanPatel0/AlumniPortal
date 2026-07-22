@@ -22,6 +22,7 @@ export async function GET(
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '10', 10)));
   const skip = (page - 1) * limit;
+  const search = searchParams.get('search')?.trim() || '';
 
   let scopedCampusId: string | null;
   try {
@@ -38,19 +39,36 @@ export async function GET(
     return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
   }
 
-  const where: Record<string, unknown> = { batchId };
+  const conditions: any[] = [{ batchId }];
   if (scopedCampusId) {
-    where.campusId = scopedCampusId;
+    conditions.push({ campusId: scopedCampusId });
   }
   if (status === 'PENDING') {
-    where.isRegistered = false;
-    where.inviteStatus = { in: ['PENDING', 'BOUNCED'] };
+    conditions.push({
+      isRegistered: false,
+      inviteStatus: { in: ['PENDING', 'BOUNCED'] },
+    });
   } else if (status === 'INVITED') {
-    where.isRegistered = false;
-    where.inviteStatus = 'INVITED';
+    conditions.push({
+      isRegistered: false,
+      inviteStatus: 'INVITED',
+    });
   } else if (status === 'REGISTERED') {
-    where.OR = [{ isRegistered: true }, { inviteStatus: 'REGISTERED' }];
+    conditions.push({
+      OR: [{ isRegistered: true }, { inviteStatus: 'REGISTERED' }],
+    });
   }
+
+  if (search) {
+    conditions.push({
+      OR: [
+        { name: { contains: search } },
+        { email: { contains: search } },
+      ],
+    });
+  }
+
+  const where = { AND: conditions };
 
   const [rows, total] = await Promise.all([
     prisma.alumni.findMany({

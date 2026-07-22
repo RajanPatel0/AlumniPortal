@@ -241,7 +241,7 @@ export default function AlumniLoginPage() {
                   {isInviteSetup ? 'Create Password' : 'Password'}
                 </label>
                 {!isInviteSetup && (
-                  <a href="#" className="text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition-colors">Forgot?</a>
+                  <Link href="/alumni/forgot-password" className="text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition-colors">Forgot?</Link>
                 )}
               </div>
               <input

@@ -78,6 +78,8 @@ export default function ImportPage() {
   const [modalPage, setModalPage] = useState(1);
   const [modalPages, setModalPages] = useState(1);
   const [modalStatus, setModalStatus] = useState<'ALL' | 'PENDING' | 'INVITED' | 'REGISTERED'>('ALL');
+  const [modalSearch, setModalSearch] = useState('');
+  const [debouncedModalSearch, setDebouncedModalSearch] = useState('');
   const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
   const [campusId, setCampusId] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -132,6 +134,20 @@ export default function ImportPage() {
     }, 350);
     return () => clearTimeout(timer);
   }, [labelFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedModalSearch(modalSearch);
+      setModalPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [modalSearch]);
+
+  useEffect(() => {
+    if (!selectedBatch) return;
+    fetchBatchAlumni(selectedBatch.id, 1, modalStatus, debouncedModalSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedModalSearch]);
 
   const [exportingBatches, setExportingBatches] = useState(false);
   const [exportingAlumni, setExportingAlumni] = useState(false);
@@ -220,12 +236,12 @@ export default function ImportPage() {
     }
   };
 
-  const fetchBatchAlumni = async (batchId: string, pageNo = 1, status = modalStatus) => {
+  const fetchBatchAlumni = async (batchId: string, pageNo = 1, status = modalStatus, searchVal = debouncedModalSearch) => {
     setModalLoading(true);
     setModalError('');
     try {
       const res = await axiosClient.get(`/api/admin/invitation-batches/${batchId}/alumni`, {
-        params: { page: pageNo, limit: 8, status },
+        params: { page: pageNo, limit: 8, status, search: searchVal },
       });
       setModalRows(res.data.data || []);
       setModalPages(res.data.pagination?.pages || 1);
@@ -250,7 +266,7 @@ export default function ImportPage() {
       }, {
         timeout: 300000,
       });
-      fetchBatchAlumni(selectedBatch.id, modalPage, modalStatus);
+      fetchBatchAlumni(selectedBatch.id, modalPage, modalStatus, debouncedModalSearch);
       fetchBatches();
     } catch (err: any) {
       setModalError(err.response?.data?.error || 'Failed to send invite');
@@ -275,7 +291,7 @@ export default function ImportPage() {
       });
       fetchBatches();
       if (selectedBatch?.id === batch.id) {
-        fetchBatchAlumni(batch.id, modalPage, modalStatus);
+        fetchBatchAlumni(batch.id, modalPage, modalStatus, debouncedModalSearch);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to send invites');
@@ -300,7 +316,7 @@ export default function ImportPage() {
       });
       fetchBatches();
       if (selectedBatch?.id === batch.id) {
-        fetchBatchAlumni(batch.id, modalPage, modalStatus);
+        fetchBatchAlumni(batch.id, modalPage, modalStatus, debouncedModalSearch);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to send reminders');
@@ -641,7 +657,9 @@ export default function ImportPage() {
                             setSelectedBatch(batch);
                             setModalPage(1);
                             setModalStatus('ALL');
-                            fetchBatchAlumni(batch.id, 1, 'ALL');
+                            setModalSearch('');
+                            setDebouncedModalSearch('');
+                            fetchBatchAlumni(batch.id, 1, 'ALL', '');
                           }}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-50 shadow-sm transition"
                         >
@@ -707,14 +725,14 @@ export default function ImportPage() {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3">
                 <select
                   value={modalStatus}
                   onChange={(e) => {
                     const nextStatus = e.target.value as 'ALL' | 'PENDING' | 'INVITED' | 'REGISTERED';
                     setModalStatus(nextStatus);
                     setModalPage(1);
-                    fetchBatchAlumni(selectedBatch.id, 1, nextStatus);
+                    fetchBatchAlumni(selectedBatch.id, 1, nextStatus, debouncedModalSearch);
                   }}
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
                 >
@@ -723,6 +741,13 @@ export default function ImportPage() {
                   <option value="INVITED">Invited</option>
                   <option value="REGISTERED">Registered</option>
                 </select>
+                <input
+                  type="text"
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition text-slate-800 w-64"
+                />
               </div>
 
               {modalError && <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">{modalError}</div>}
@@ -801,14 +826,13 @@ export default function ImportPage() {
                 </table>
               </div>
 
-              {/* Modal Pagination */}
               <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     const next = Math.max(1, modalPage - 1);
                     setModalPage(next);
-                    fetchBatchAlumni(selectedBatch.id, next, modalStatus);
+                    fetchBatchAlumni(selectedBatch.id, next, modalStatus, debouncedModalSearch);
                   }}
                   disabled={modalPage <= 1}
                   className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"
@@ -821,7 +845,7 @@ export default function ImportPage() {
                   onClick={() => {
                     const next = Math.min(modalPages, modalPage + 1);
                     setModalPage(next);
-                    fetchBatchAlumni(selectedBatch.id, next, modalStatus);
+                    fetchBatchAlumni(selectedBatch.id, next, modalStatus, debouncedModalSearch);
                   }}
                   disabled={modalPage >= modalPages}
                   className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-40"

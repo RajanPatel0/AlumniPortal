@@ -83,14 +83,18 @@ export default function AlumniMap({ filters }: AlumniMapProps) {
     });
 
     // @ts-ignore - tileLayer.indiaBoundaryCorrected is added dynamically by extendLeaflet
-    const correctedLayer = L.tileLayer.indiaBoundaryCorrected('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const correctedLayer = (L.tileLayer as any).indiaBoundaryCorrected('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      pmtilesUrl: '/india_boundary_corrections.pmtiles',
+      // Serve the PMTiles file locally to avoid CDN fetch failures
+      pmtilesUrl: `${BASE_PATH}/india_boundary_corrections.pmtiles`,
+      fallbackOnCorrectionFailure: true,
     });
 
-    // @ts-ignore
+    // Listen for correction errors — suppress AbortErrors which are benign cleanup
+    // cancellations triggered by map.remove() or React StrictMode unmount cycle
     correctedLayer.on('correctionerror', (e: any) => {
-      console.error('[AlumniMap] Boundary correction failed:', e.error, 'Coords:', e.coords, 'URL:', e.tileUrl);
+      if (e.error?.name === 'AbortError') return;
+      console.warn('[AlumniMap] Boundary correction failed:', e.error, 'Coords:', e.coords, 'URL:', e.tileUrl);
     });
 
     correctedLayer.addTo(map);
