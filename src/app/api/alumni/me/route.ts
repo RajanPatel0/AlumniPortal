@@ -87,7 +87,9 @@ export async function GET(req: NextRequest) {
 
     if (!alumni) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    return NextResponse.json({ user: alumni, isSelf, isAdmin: isStaff });
+    const { passwordHash, ...alumniWithoutPassword } = alumni;
+
+    return NextResponse.json({ user: alumniWithoutPassword, isSelf, isAdmin: isStaff });
   } catch (error) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }

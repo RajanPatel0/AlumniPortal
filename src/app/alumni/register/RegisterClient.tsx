@@ -127,6 +127,8 @@ export default function SelfRegisterPage() {
       if (!formData.branch.trim()) return 'Branch/Department is required';
       if (!formData.course.trim()) return 'Course is required';
       if (!formData.college.trim()) return 'College is required';
+    } else if (step === 3) {
+      if (!formData.pincode.trim()) return 'Current Pincode is required';
     }
     return '';
   };
@@ -147,10 +149,16 @@ export default function SelfRegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateStep(2);
-    if (err) {
-      setError(err);
+    const err2 = validateStep(2);
+    if (err2) {
+      setError(err2);
       setCurrentStep(2);
+      return;
+    }
+    const err3 = validateStep(3);
+    if (err3) {
+      setError(err3);
+      setCurrentStep(3);
       return;
     }
     setLoading(true);
@@ -283,12 +291,12 @@ export default function SelfRegisterPage() {
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
                   {currentStep === 1 && 'Personal Information'}
                   {currentStep === 2 && 'Academic Details'}
-                  {currentStep === 3 && 'Professional Details (Optional)'}
+                  {currentStep === 3 && 'Professional & Location Details'}
                 </h1>
                 <p className="text-slate-500 text-xs mt-1">
                   {currentStep === 1 && 'Set up your credentials and basic info'}
                   {currentStep === 2 && 'Fill in your education credentials at IKGPTU'}
-                  {currentStep === 3 && 'Tell us what you are doing now'}
+                  {currentStep === 3 && 'Tell us about your current role and location'}
                 </p>
               </div>
 
@@ -389,7 +397,7 @@ export default function SelfRegisterPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Batch Year *</label>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Passout Batch Year *</label>
                         <div className="relative">
                           <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                           <input
@@ -517,11 +525,12 @@ export default function SelfRegisterPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Current Pincode</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Current Pincode *</label>
                       <div className="relative">
                         <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                         <input
                           type="text"
+                          required
                           placeholder="e.g. 144603"
                           className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
                           value={formData.pincode}
