@@ -327,6 +327,7 @@ model RegistrationRequest {
   // Professional Details
   currentRole    String?
   currentCompany String?
+  linkedinUrl    String?
 
   // Extra Details for staging
   dob             DateTime?

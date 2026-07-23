@@ -46,11 +46,20 @@ interface AlumniProfile {
   country?: string;
   pincode?: string;
   mapVisibility?: 'PUBLIC' | 'ALUMNI_ONLY' | 'HIDDEN';
+  linkedinUrl?: string | null;
   avatarUrl?: string;
   isRegistered?: boolean;
   education?: EducationItem[];
   workExperience?: ExperienceItem[];
   campus?: { id: string; name: string } | null;
+}
+
+function LinkedinIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.25V10.9H6.46M7.86 6.6a1.4 1.4 0 1 0 1.4 1.4 1.4 1.4 0 0 0-1.4-1.4z"/>
+    </svg>
+  );
 }
 
 function ProfilePageClient() {
@@ -69,9 +78,47 @@ function ProfilePageClient() {
   const [expModalOpen, setExpModalOpen] = useState(false);
   const [selectedExp, setSelectedExp] = useState<Partial<ExperienceItem> | null>(null);
 
+  // Modal state for LinkedIn URL prompt
+  const [linkedinModalOpen, setLinkedinModalOpen] = useState(false);
+  const [linkedinInput, setLinkedinInput] = useState('');
+  const [savingLinkedin, setSavingLinkedin] = useState(false);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+
+  const handleOpenLinkedinModal = () => {
+    setLinkedinInput(profile?.linkedinUrl || '');
+    setLinkedinModalOpen(true);
+  };
+
+  const handleSaveLinkedin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingLinkedin(true);
+    let url = linkedinInput.trim();
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    try {
+      const res = await apiFetch('/alumni/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkedinUrl: url }),
+      });
+      if (!res.ok) throw new Error('Failed to update LinkedIn URL');
+      const data = await res.json();
+      const updatedUrl = data.user?.linkedinUrl ?? url;
+      setProfile(prev => prev ? { ...prev, linkedinUrl: updatedUrl } : null);
+      setFormData(prev => prev ? { ...prev, linkedinUrl: updatedUrl } : null);
+      toast.success('LinkedIn profile URL updated!');
+      setLinkedinModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save LinkedIn URL');
+    } finally {
+      setSavingLinkedin(false);
+    }
+  };
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -103,9 +150,14 @@ function ProfilePageClient() {
     fetchProfile();
   }, [fetchProfile]);
 
-  // Auto-resolve city name from pincode to prevent spelling anomalies
+  // Auto-resolve city name from pincode to prevent spelling anomalies when user edits pincode/country
   useEffect(() => {
     if (!editingMode) return;
+
+    const pincodeChanged = (formData?.pincode || '') !== (profile?.pincode || '');
+    const countryChanged = (formData?.country || '') !== (profile?.country || '');
+    if (!pincodeChanged && !countryChanged) return;
+
     const pin = formData?.pincode?.trim();
     const cntry = formData?.country?.trim() || 'India';
 
@@ -144,7 +196,7 @@ function ProfilePageClient() {
         controller.abort();
       };
     }
-  }, [formData?.pincode, formData?.country, editingMode]);
+  }, [formData?.pincode, formData?.country, editingMode, profile?.pincode, profile?.country]);
 
   const handleSave = async () => {
     if (!formData) return;
@@ -332,38 +384,62 @@ function ProfilePageClient() {
           <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#ffffff_1.2px,transparent_1.2px)] [background-size:20px_20px]" />
         </div>
 
-        {/* Edit mode toggle button overlay on banner corner */}
-        {isSelf && (
-          <div className="absolute top-4 right-4 z-10">
-            {editingMode ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition"
-                >
-                  <Save size={14} />
-                  <span>{saving ? 'Saving...' : 'Save'}</span>
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
-                >
-                  <X size={14} />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            ) : (
+        {/* Action buttons overlay on banner corner */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          {isSelf ? (
+            <>
               <button
-                onClick={() => setEditingMode(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#003D7A] rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
+                onClick={handleOpenLinkedinModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white/90 hover:bg-white text-[#0077B5] rounded-xl text-xs font-bold shadow-md transition border border-slate-100"
+                title={profile?.linkedinUrl ? "Edit LinkedIn Profile URL" : "Add LinkedIn Profile URL"}
               >
-                <Edit3 size={14} />
-                <span>Edit Profile</span>
+                <LinkedinIcon size={16} className="text-[#0077B5]" />
+                <span>{profile?.linkedinUrl ? 'LinkedIn' : '+ Add LinkedIn'}</span>
               </button>
-            )}
-          </div>
-        )}
+
+              {editingMode ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition"
+                  >
+                    <Save size={14} />
+                    <span>{saving ? 'Saving...' : 'Save'}</span>
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
+                  >
+                    <X size={14} />
+                    <span>Cancel</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditingMode(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#003D7A] rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
+                >
+                  <Edit3 size={14} />
+                  <span>Edit Profile</span>
+                </button>
+              )}
+            </>
+          ) : (
+            profile?.linkedinUrl && (
+              <a
+                href={profile.linkedinUrl.startsWith('http') ? profile.linkedinUrl : `https://${profile.linkedinUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0077B5] hover:bg-[#006399] text-white rounded-xl text-xs font-bold shadow-md transition"
+                title="Visit LinkedIn Profile"
+              >
+                <LinkedinIcon size={16} />
+                <span>LinkedIn</span>
+              </a>
+            )
+          )}
+        </div>
 
         {/* Profile details wrapper */}
         <div className="px-8 pb-8 relative flex flex-col md:flex-row md:items-end gap-6 -mt-16">
@@ -533,7 +609,7 @@ function ProfilePageClient() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Branch</label>
                     <input
@@ -549,6 +625,16 @@ function ProfilePageClient() {
                       type="number"
                       value={formData?.batchYear || ''}
                       onChange={(e) => handleInputChange('batchYear', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">LinkedIn URL</label>
+                    <input
+                      type="text"
+                      value={formData?.linkedinUrl || ''}
+                      onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
+                      placeholder="https://linkedin.com/in/username"
                       className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
                     />
                   </div>
@@ -954,6 +1040,62 @@ function ProfilePageClient() {
                   Save
                 </button>
                 <button type="button" onClick={() => setEduModalOpen(false)} className="flex-1 py-2 border rounded-lg text-xs font-bold text-slate-600">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* LinkedIn URL Modal for isSelf */}
+      {linkedinModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-base font-bold text-[#003D7A] flex items-center gap-2">
+                <LinkedinIcon size={20} className="text-[#0077B5]" />
+                <span>LinkedIn Profile URL</span>
+              </h3>
+              <button 
+                onClick={() => setLinkedinModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLinkedin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Your LinkedIn Profile Link
+                </label>
+                <input
+                  type="url"
+                  value={linkedinInput}
+                  onChange={(e) => setLinkedinInput(e.target.value)}
+                  placeholder="https://www.linkedin.com/in/username"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/20 font-medium"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Provide your full LinkedIn profile URL so fellow alumni can visit your profile and connect with you.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingLinkedin}
+                  className="flex-1 py-2.5 bg-[#0077B5] hover:bg-[#006399] text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  {savingLinkedin ? 'Saving...' : 'Save LinkedIn URL'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkedinModalOpen(false)}
+                  className="px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                >
                   Cancel
                 </button>
               </div>

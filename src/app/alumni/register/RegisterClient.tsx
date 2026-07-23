@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { 
   User, Mail, Phone, Lock, GraduationCap, School, 
   Briefcase, Building, ChevronRight, ChevronLeft, 
-  CheckCircle, ShieldAlert, Award, Calendar, BookOpen, MapPin
+  CheckCircle, ShieldAlert, Award, Calendar, BookOpen, MapPin, Globe
 } from 'lucide-react';
 
 type Campus = { id: string; name: string; code: string };
@@ -39,6 +39,7 @@ export default function SelfRegisterPage() {
     password: '',
     currentRole: '',
     currentCompany: '',
+    linkedinUrl: '',
     pincode: '',
     city: '',
     country: '',
@@ -66,8 +67,10 @@ export default function SelfRegisterPage() {
               return nextData;
             });
           }
-        } catch (err) {
-          console.error('Failed to resolve pincode location:', err);
+        } catch (err: any) {
+          if (err?.name !== 'AbortError') {
+            console.error('Failed to resolve pincode location:', err);
+          }
         }
       }, 700);
 
@@ -521,6 +524,20 @@ export default function SelfRegisterPage() {
                             <option key={c} value={c} />
                           ))}
                         </datalist>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">LinkedIn Profile URL</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                        <input
+                          type="url"
+                          placeholder="https://linkedin.com/in/username"
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
+                          value={formData.linkedinUrl}
+                          onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
+                        />
                       </div>
                     </div>
 

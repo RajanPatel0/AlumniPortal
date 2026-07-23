@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       passwordHash,
       currentRole,
       currentCompany,
+      linkedinUrl,
       pincode,
       city,
     } = body;
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         passwordHash: passwordHash || null,
         currentRole: currentRole?.trim() || null,
         currentCompany: currentCompany?.trim() || null,
+        linkedinUrl: linkedinUrl?.trim() || null,
         pincode: pincode?.trim() || null,
         city: city?.trim() || null,
       },

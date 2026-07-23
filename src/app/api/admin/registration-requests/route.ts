@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { RequestStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedStaff, resolveCampusScope, CampusScopeError } from '@/lib/auth/staff-auth';
 
@@ -24,7 +25,10 @@ export async function GET() {
       throw err;
     }
 
-    const where: Record<string, unknown> = { status: 'PENDING' };
+    const where: { status: RequestStatus; campusId?: string } = {
+      status: RequestStatus.PENDING,
+    };
+
     if (scopedCampusId) {
       where.campusId = scopedCampusId;
     }
@@ -38,8 +42,15 @@ export async function GET() {
     });
 
     return NextResponse.json(requests);
-  } catch (error) {
-    console.error('[ADMIN_REGISTRATION_REQUESTS_GET]', error);
-    return NextResponse.json({ error: 'Failed to fetch registration requests' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[ADMIN_REGISTRATION_REQUESTS_GET_ERROR]', error);
+    const errorMessage = error?.message || 'Failed to fetch registration requests';
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch registration requests',
+        details: errorMessage,
+      },
+      { status: 500 }
+    );
   }
 }

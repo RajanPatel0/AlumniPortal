@@ -23,99 +23,119 @@ export async function PUT(req: NextRequest) {
       phone,
       country,
       pincode,
-      mapVisibility
+      mapVisibility,
+      linkedinUrl
     } = body;
 
-    // Fetch current values to check if country/pincode changed
-    const currentRecord = await prisma.alumni.findUnique({
-      where: { id: alumni.id },
-      select: { country: true, pincode: true, locationId: true }
-    });
+    // Build data object dynamically to support partial updates safely
+    const dataToUpdate: any = {};
 
-    let newLocationId = currentRecord?.locationId || null;
-    let finalCity = city;
-    let finalCountry = country;
-    const countryChanged = (country ?? '') !== (currentRecord?.country ?? '');
-    const pincodeChanged = (pincode ?? '') !== (currentRecord?.pincode ?? '');
+    if (name !== undefined) dataToUpdate.name = name;
+    if (batchYear !== undefined) dataToUpdate.batchYear = batchYear ? Number(batchYear) : undefined;
+    if (branch !== undefined) dataToUpdate.branch = branch;
+    if (college !== undefined) dataToUpdate.college = college;
+    if (course !== undefined) dataToUpdate.course = course;
+    if (currentRole !== undefined) dataToUpdate.currentRole = currentRole;
+    if (currentCompany !== undefined) dataToUpdate.currentCompany = currentCompany;
+    if (phone !== undefined) dataToUpdate.phone = phone;
+    if (mapVisibility !== undefined) dataToUpdate.mapVisibility = mapVisibility;
+    if (linkedinUrl !== undefined) dataToUpdate.linkedinUrl = linkedinUrl || null;
 
-    if (countryChanged || pincodeChanged) {
-      if (country && pincode) {
-        const resolved = await resolveLocation(country, pincode, undefined, city);
-        newLocationId = resolved.locationId;
-        if (resolved.city) {
-          finalCity = resolved.city;
+    // Handle location/country/pincode resolution only if location-related fields are explicitly passed
+    if (country !== undefined || pincode !== undefined || city !== undefined) {
+      const currentRecord = await prisma.alumni.findUnique({
+        where: { id: alumni.id },
+        select: { country: true, pincode: true, locationId: true, city: true }
+      });
+
+      const effectiveCountry = country !== undefined ? country : currentRecord?.country;
+      const effectivePincode = pincode !== undefined ? pincode : currentRecord?.pincode;
+      const effectiveCity = city !== undefined ? city : currentRecord?.city;
+
+      const countryChanged = country !== undefined && (country ?? '') !== (currentRecord?.country ?? '');
+      const pincodeChanged = pincode !== undefined && (pincode ?? '') !== (currentRecord?.pincode ?? '');
+
+      let newLocationId = currentRecord?.locationId || null;
+      let finalCity = effectiveCity;
+      let finalCountry = effectiveCountry;
+
+      if (countryChanged || pincodeChanged) {
+        if (effectiveCountry && effectivePincode) {
+          const resolved = await resolveLocation(effectiveCountry, effectivePincode, undefined, effectiveCity || undefined);
+          newLocationId = resolved.locationId;
+          if (resolved.city) {
+            finalCity = resolved.city;
+          }
+          if (resolved.country) {
+            finalCountry = resolved.country;
+          }
+        } else {
+          newLocationId = null;
         }
-        if (resolved.country) {
-          finalCountry = resolved.country;
-        }
-      } else {
-        newLocationId = null;
+        dataToUpdate.locationId = newLocationId;
+      }
+
+      if (country !== undefined) dataToUpdate.country = finalCountry || null;
+      if (pincode !== undefined) dataToUpdate.pincode = effectivePincode || null;
+      if (city !== undefined || countryChanged || pincodeChanged) {
+        dataToUpdate.city = finalCity || null;
       }
     }
 
     const updated = await prisma.alumni.update({
       where: { id: alumni.id },
-      data: {
-        name,
-        batchYear: batchYear ? Number(batchYear) : undefined,
-        branch,
-        college,
-        course,
-        currentRole,
-        currentCompany,
-        city: finalCity,
-        phone,
-        country: finalCountry || null,
-        pincode: pincode || null,
-        locationId: newLocationId,
-        mapVisibility: mapVisibility || undefined,
-      },
+      data: dataToUpdate,
     });
 
-    // Sync with WorkExperience table
-    const currentExperiences = await prisma.workExperience.findMany({
-      where: { alumniId: alumni.id, isCurrent: true },
-      orderBy: [
-        { startDate: 'desc' },
-        { createdAt: 'desc' }
-      ]
-    });
+    // Sync with WorkExperience table only if currentRole or currentCompany are explicitly passed
+    if (currentRole !== undefined || currentCompany !== undefined) {
+      const currentExperiences = await prisma.workExperience.findMany({
+        where: { alumniId: alumni.id, isCurrent: true },
+        orderBy: [
+          { startDate: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      });
 
-    if (currentRole || currentCompany) {
-      if (currentExperiences.length > 0) {
-        // Update the latest active one
-        await prisma.workExperience.update({
-          where: { id: currentExperiences[0].id },
-          data: {
-            title: currentRole || 'Not Specified',
-            company: currentCompany || 'Not Specified',
-            location: city || null,
-          }
-        });
+      const roleToUse = updated.currentRole;
+      const companyToUse = updated.currentCompany;
+      const cityToUse = updated.city;
+
+      if (roleToUse || companyToUse) {
+        if (currentExperiences.length > 0) {
+          // Update the latest active one
+          await prisma.workExperience.update({
+            where: { id: currentExperiences[0].id },
+            data: {
+              title: roleToUse || 'Not Specified',
+              company: companyToUse || 'Not Specified',
+              location: cityToUse || null,
+            }
+          });
+        } else {
+          // Create a new active one
+          await prisma.workExperience.create({
+            data: {
+              alumniId: alumni.id,
+              title: roleToUse || 'Not Specified',
+              company: companyToUse || 'Not Specified',
+              location: cityToUse || null,
+              startDate: new Date(),
+              isCurrent: true,
+            }
+          });
+        }
       } else {
-        // Create a new active one
-        await prisma.workExperience.create({
-          data: {
-            alumniId: alumni.id,
-            title: currentRole || 'Not Specified',
-            company: currentCompany || 'Not Specified',
-            location: city || null,
-            startDate: new Date(),
-            isCurrent: true,
-          }
-        });
-      }
-    } else {
-      // Both currentRole and currentCompany are empty.
-      // If there are current experiences, set them to isCurrent = false
-      if (currentExperiences.length > 0) {
-        await prisma.workExperience.updateMany({
-          where: { alumniId: alumni.id, isCurrent: true },
-          data: {
-            isCurrent: false,
-            endDate: new Date(),
-          }
-        });
+        // Both currentRole and currentCompany are empty.
+        if (currentExperiences.length > 0) {
+          await prisma.workExperience.updateMany({
+            where: { alumniId: alumni.id, isCurrent: true },
+            data: {
+              isCurrent: false,
+              endDate: new Date(),
+            }
+          });
+        }
       }
     }
 
@@ -137,6 +157,7 @@ export async function PUT(req: NextRequest) {
         country: updated.country,
         pincode: updated.pincode,
         mapVisibility: updated.mapVisibility,
+        linkedinUrl: updated.linkedinUrl,
       },
     });
   } catch (error: any) {
