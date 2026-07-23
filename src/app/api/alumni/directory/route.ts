@@ -36,7 +36,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const branch = searchParams.get('branch') || '';
+    const course = searchParams.get('course') || '';
+    const company = searchParams.get('company') || '';
+    const city = searchParams.get('city') || '';
     const batchYearStr = searchParams.get('batchYear') || '';
+    const sort = searchParams.get('sort') || 'name_asc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '12', 10)));
     const skip = (page - 1) * limit;
@@ -49,7 +53,19 @@ export async function GET(req: NextRequest) {
       where.branch = branch;
     }
 
-    if (batchYearStr) {
+    if (course && course !== 'All') {
+      where.course = course;
+    }
+
+    if (company && company !== 'All') {
+      where.currentCompany = company;
+    }
+
+    if (city && city !== 'All') {
+      where.city = city;
+    }
+
+    if (batchYearStr && batchYearStr !== 'All') {
       const year = parseInt(batchYearStr, 10);
       if (!isNaN(year)) {
         where.batchYear = year;
@@ -63,7 +79,21 @@ export async function GET(req: NextRequest) {
         { currentRole: { contains: keyword } },
         { currentCompany: { contains: keyword } },
         { city: { contains: keyword } },
+        { branch: { contains: keyword } },
       ];
+    }
+
+    let orderBy: Prisma.AlumniOrderByWithRelationInput[] = [{ name: 'asc' }];
+    if (sort === 'newest') {
+      orderBy = [{ registeredAt: 'desc' }, { createdAt: 'desc' }];
+    } else if (sort === 'batch_desc') {
+      orderBy = [{ batchYear: 'desc' }, { name: 'asc' }];
+    } else if (sort === 'batch_asc') {
+      orderBy = [{ batchYear: 'asc' }, { name: 'asc' }];
+    } else if (sort === 'company_asc') {
+      orderBy = [{ currentCompany: 'asc' }, { name: 'asc' }];
+    } else if (sort === 'name_asc') {
+      orderBy = [{ name: 'asc' }];
     }
 
     const [total, alumni] = await Promise.all([
@@ -83,7 +113,7 @@ export async function GET(req: NextRequest) {
           course: true,
           linkedinUrl: true,
         },
-        orderBy: [{ name: 'asc' }],
+        orderBy,
         skip,
         take: limit,
       }),
@@ -100,4 +130,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to load directory' }, { status: 500 });
   }
 }
-
