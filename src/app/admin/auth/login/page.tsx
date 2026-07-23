@@ -134,7 +134,7 @@ export default function LoginPage() {
                 {loading ? 'Signing in...' : 'Sign in to Dashboard'}
               </button>
 
-              <p className="text-center text-xs text-slate-500">
+              {/* <p className="text-center text-xs text-slate-500">
                 New admin?{' '}
                 <button
                   type="button"
@@ -143,7 +143,7 @@ export default function LoginPage() {
                 >
                   Register & verify email
                 </button>
-              </p>
+              </p> */}
             </form>
 
             <p className="mt-6 text-center text-xs text-slate-500">

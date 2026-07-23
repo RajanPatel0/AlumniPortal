@@ -22,21 +22,22 @@ export default function AdminSetupPage() {
     setError('')
 
     try {
-      const res = await apiFetch('/admin/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      })
-      const data = await res.json()
+      // const res = await apiFetch('/admin/register', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ name, email, password }),
+      // })
+      // const data = await res.json()
 
-      if (!res.ok) {
-        setError(data.error)
-        return
-      }
+      // if (!res.ok) {
+      //   setError(data.error)
+      //   return
+      // }
 
-      setOtpToken(data.otpToken)
-      setStep('verify')
-      setSuccess('OTP sent to your email. Please check.')
+      // setOtpToken(data.otpToken)
+      // setStep('verify')
+      // setSuccess('OTP sent to your email. Please check.')
+      alert("This feture is disabled \npls contact admin")
     } catch {
       setError('Network error')
     } finally {

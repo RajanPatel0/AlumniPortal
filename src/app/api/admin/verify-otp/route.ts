@@ -6,6 +6,7 @@ import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    return NextResponse.json({ error: 'Verification is disabled' }, { status: 403 })
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
     const { success } = otpLimiter.check(ip)
     if (!success) {
@@ -34,33 +35,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Staff not found' }, { status: 404 })
     }
 
-    // Check if already verified
-    if (staff.isVerified) {
-      return NextResponse.json({ error: 'Already verified' }, { status: 400 })
-    }
+    // // Check if already verified
+    // if (staff.isVerified) {
+    //   return NextResponse.json({ error: 'Already verified' }, { status: 400 })
+    // }
 
-    // Check OTP expiry
-    if (!staff.otpExpiresAt || staff.otpExpiresAt < new Date()) {
-      return NextResponse.json({ error: 'OTP expired. Please register again.' }, { status: 400 })
-    }
+    // // Check OTP expiry
+    // if (!staff.otpExpiresAt || staff.otpExpiresAt < new Date()) {
+    //   return NextResponse.json({ error: 'OTP expired. Please register again.' }, { status: 400 })
+    // }
 
-    // Verify OTP
-    const isValid = await bcrypt.compare(otp, staff.otpHash!)
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 })
-    }
+    // // Verify OTP
+    // const isValid = await bcrypt.compare(otp, staff.otpHash!)
+    // if (!isValid) {
+    //   return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 })
+    // }
 
-    // Mark as verified and clear OTP fields
-    await prisma.staff.update({
-      where: { id: staff.id },
-      data: {
-        isVerified: true,
-        otpHash: null,
-        otpExpiresAt: null,
-      },
-    })
+    // // Mark as verified and clear OTP fields
+    // await prisma.staff.update({
+    //   where: { id: staff.id },
+    //   data: {
+    //     isVerified: true,
+    //     otpHash: null,
+    //     otpExpiresAt: null,
+    //   },
+    // })
 
-    return NextResponse.json({ message: 'Email verified successfully. You can now login.' })
+    // return NextResponse.json({ message: 'Email verified successfully. You can now login.' })
   } catch (error) {
     console.error('[VERIFY_OTP]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

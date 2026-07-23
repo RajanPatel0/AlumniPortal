@@ -13,12 +13,12 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    return NextResponse.json({ error: 'Registration is disabled' }, { status: 403 })
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
     const { success } = registerLimiter.check(ip)
     if (!success) {
       return NextResponse.json({ error: 'Too many registration requests. Please try again in a minute.' }, { status: 429 })
     }
-
     const { name, email, password } = await req.json()
 
     // 1. Basic validation
