@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from "@/lib/api";
 import { 
   Plus, X, Trash2, ImageIcon, FileText, BookImage, 
-  Loader2, Upload, Send, ChevronDown, RefreshCw
+  Loader2, Upload, Send, ChevronDown, RefreshCw, Users
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -14,6 +14,22 @@ interface AdminPost {
   content: string | null;
   images: string[];
   createdAt: string;
+}
+
+interface CommunityPost {
+  id: string;
+  content: string | null;
+  createdAt: string;
+  media: { type: string; url: string } | null;
+  author: {
+    id: string | null;
+    name: string;
+    batchYear: number;
+    avatarUrl: string | null;
+    currentRole: string;
+    currentCompany: string;
+    isAdmin: boolean;
+  };
 }
 
 interface AlbumImage {
@@ -199,7 +215,7 @@ function AlbumImagesUploader({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminPostsPage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'gallery'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'gallery' | 'community'>('feed');
 
   // Feed post form
   const [postContent, setPostContent] = useState('');
@@ -212,10 +228,14 @@ export default function AdminPostsPage() {
   const [albumImages, setAlbumImages] = useState<{ url: string; caption: string }[]>([]);
   const [submittingAlbum, setSubmittingAlbum] = useState(false);
 
-  // Existing items
+  // Staff-published posts & albums
   const [myPosts, setMyPosts] = useState<AdminPost[]>([]);
   const [myAlbums, setMyAlbums] = useState<AdminAlbum[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
+
+  // Community posts (all alumni-authored posts)
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [loadingCommunity, setLoadingCommunity] = useState(false);
 
   const fetchItems = async () => {
     setLoadingItems(true);
@@ -231,7 +251,38 @@ export default function AdminPostsPage() {
     }
   };
 
+  const fetchCommunityPosts = async () => {
+    setLoadingCommunity(true);
+    try {
+      // GET /api/alumni/posts without ?self=true returns the full community feed.
+      // The admin's accessToken (staffToken) is accepted by this endpoint.
+      const res = await apiFetch('/alumni/posts');
+      if (res.ok) {
+        const data = await res.json();
+        // Filter to alumni-authored posts only (exclude staff/admin posts shown in the Feed tab)
+        const alumniOnly = (data.posts || []).filter(
+          (p: CommunityPost) => p.author && !p.author.isAdmin
+        );
+        setCommunityPosts(alumniOnly);
+      } else {
+        toast.error('Failed to load community posts');
+      }
+    } catch {
+      toast.error('Failed to load community posts');
+    } finally {
+      setLoadingCommunity(false);
+    }
+  };
+
   useEffect(() => { fetchItems(); }, []);
+
+  // Fetch community posts when that tab is first opened
+  useEffect(() => {
+    if (activeTab === 'community') {
+      fetchCommunityPosts();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // ── Create Feed Post ──
   const handleSubmitPost = async (e: React.FormEvent) => {
@@ -303,16 +354,19 @@ export default function AdminPostsPage() {
     }
   };
 
-  // ── Delete Post ──
+  // ── Delete Post (canonical endpoint — handles both staff posts and alumni community posts) ──
   const handleDeletePost = async (id: string) => {
     if (!confirm('Delete this post? This cannot be undone.')) return;
     try {
-      const res = await apiFetch(`/admin/posts?deleteType=post&id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/alumni/posts?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Post deleted');
+        // Remove from whichever list contains this post
         setMyPosts(prev => prev.filter(p => p.id !== id));
+        setCommunityPosts(prev => prev.filter(p => p.id !== id));
       } else {
-        toast.error('Failed to delete post');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to delete post');
       }
     } catch {
       toast.error('Failed to delete post');
@@ -368,6 +422,13 @@ export default function AdminPostsPage() {
         >
           <BookImage size={15} />
           Gallery Album
+        </button>
+        <button
+          onClick={() => setActiveTab('community')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'community' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          <Users size={15} />
+          Community Posts
         </button>
       </div>
 
@@ -472,17 +533,47 @@ export default function AdminPostsPage() {
               </button>
             </form>
           )}
+
+          {/* Community Posts — no form panel needed, just an info card */}
+          {activeTab === 'community' && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-3">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 bg-rose-50 rounded-xl flex items-center justify-center">
+                  <Users size={18} className="text-rose-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Community Post Moderation</h2>
+                  <p className="text-xs text-slate-500">Review and remove inappropriate alumni posts</p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-xs text-rose-700 font-semibold leading-relaxed">
+                Deleting a post here permanently removes it from the alumni feed and cannot be undone.
+              </div>
+              <button
+                onClick={fetchCommunityPosts}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A] text-sm font-semibold transition w-full justify-center"
+              >
+                <RefreshCw size={14} />
+                Refresh Community Posts
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Right: Published Items List ── */}
         <div className="xl:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-900">
-              {activeTab === 'feed' ? `Published Posts (${myPosts.length})` : `Published Albums (${myAlbums.length})`}
+              {activeTab === 'feed'
+              ? `My Published Posts (${myPosts.length})`
+              : activeTab === 'gallery'
+              ? `Published Albums (${myAlbums.length})`
+              : `Community Posts — All Alumni (${communityPosts.length})`
+            }
             </h2>
           </div>
 
-          {loadingItems ? (
+          {(loadingItems && activeTab !== 'community') || (loadingCommunity && activeTab === 'community') ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
                 <div key={i} className="bg-white rounded-xl border border-slate-100 p-5 animate-pulse">
@@ -533,7 +624,7 @@ export default function AdminPostsPage() {
                 ))}
               </div>
             )
-          ) : (
+          ) : activeTab === 'gallery' ? (
             myAlbums.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-xl border border-slate-100 text-slate-400">
                 <BookImage size={32} className="mx-auto mb-3 opacity-40" />
@@ -578,6 +669,66 @@ export default function AdminPostsPage() {
                         onClick={() => handleDeleteAlbum(album.id)}
                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition flex-shrink-0"
                         title="Delete Album"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            // ── Community Posts Tab ──
+            communityPosts.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-100 text-slate-400">
+                <Users size={32} className="mx-auto mb-3 opacity-40" />
+                <p className="font-semibold">No alumni posts found</p>
+                <p className="text-sm mt-1">Alumni haven&apos;t published any posts to the feed yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {communityPosts.map(post => (
+                  <div key={post.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Author info */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#003D7A] to-[#C41E3A] flex items-center justify-center text-white text-[10px] font-extrabold flex-shrink-0 overflow-hidden">
+                            {post.author.avatarUrl ? (
+                              <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
+                            ) : (
+                              post.author.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-gray-900 truncate">{post.author.name}</p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {post.author.currentRole || 'Alumni'}
+                              {post.author.currentCompany ? ` · ${post.author.currentCompany}` : ''}
+                              {post.author.batchYear ? ` · Class of ${post.author.batchYear}` : ''}
+                            </p>
+                          </div>
+                          <span className="ml-auto text-[10px] text-slate-400 flex-shrink-0">{post.createdAt}</span>
+                        </div>
+                        {/* Content */}
+                        {post.content && (
+                          <p className="text-sm text-gray-700 font-medium line-clamp-3 whitespace-pre-line mb-2">
+                            {post.content}
+                          </p>
+                        )}
+                        {/* Image preview */}
+                        {post.media?.url && (
+                          <img
+                            src={post.media.url}
+                            alt="Post media"
+                            className="w-24 h-16 object-cover rounded-lg border border-slate-200"
+                          />
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition flex-shrink-0"
+                        title="Delete Alumni Post"
                       >
                         <Trash2 size={16} />
                       </button>

@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       prisma.alumni.count({ where }),
       prisma.alumni.count({ where: { ...where, isRegistered: true } }),
       prisma.alumni.count({
-        where: { ...where, isRegistered: false, inviteStatus: 'PENDING' },
+        where: { ...where, isRegistered: false, inviteStatus: { in: ['PENDING', 'BOUNCED'] } },
       }),
       prisma.alumni.count({
         where: { ...where, isRegistered: false, inviteStatus: 'INVITED' },

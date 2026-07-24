@@ -3,9 +3,10 @@ import { apiFetch } from "@/lib/api";
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Edit3, Save, X, Mail, Briefcase, MapPin, Plus, Trash2, 
-  Calendar, GraduationCap, Phone, CheckCircle, Camera 
+  Calendar, GraduationCap, Phone, CheckCircle, Camera, FileText, Link2
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -47,6 +48,8 @@ interface AlumniProfile {
   pincode?: string;
   mapVisibility?: 'PUBLIC' | 'ALUMNI_ONLY' | 'HIDDEN';
   avatarUrl?: string;
+  bio?: string;
+  linkedinUrl?: string;
   isRegistered?: boolean;
   education?: EducationItem[];
   workExperience?: ExperienceItem[];
@@ -70,8 +73,10 @@ function ProfilePageClient() {
   const [selectedExp, setSelectedExp] = useState<Partial<ExperienceItem> | null>(null);
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const isEditRequested = searchParams.get('edit') === 'true';
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -81,7 +86,11 @@ function ProfilePageClient() {
       const data = await res.json();
       setProfile(data.user);
       setFormData(data.user);
-      setIsSelf(data.isSelf ?? !id);
+      const userIsSelf = data.isSelf ?? !id;
+      setIsSelf(userIsSelf);
+      if (isEditRequested && userIsSelf) {
+        setEditingMode(true);
+      }
     } catch {
       // Before redirecting to alumni login, check if this is an admin session
       try {
@@ -166,6 +175,7 @@ function ProfilePageClient() {
         ...updated.user,
       }));
       setEditingMode(false);
+      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error(error);
@@ -207,6 +217,7 @@ function ProfilePageClient() {
       if (data.avatarUrl) {
         setProfile(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
         setFormData(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
+        queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
         toast.success('Profile photo updated!', { id: toastId });
       }
     } catch (error) {
@@ -232,6 +243,7 @@ function ProfilePageClient() {
       });
 
       if (!res.ok) throw new Error('Save failed');
+      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
       toast.success(isEdit ? 'Education updated!' : 'Education added!');
       setEduModalOpen(false);
       fetchProfile();
@@ -250,6 +262,7 @@ function ProfilePageClient() {
       });
 
       if (!res.ok) throw new Error('Delete failed');
+      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
       toast.success('Education deleted!');
       fetchProfile();
     } catch (error) {
@@ -275,6 +288,7 @@ function ProfilePageClient() {
       });
 
       if (!res.ok) throw new Error('Save failed');
+      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
       toast.success(isEdit ? 'Experience updated!' : 'Experience added!');
       setExpModalOpen(false);
       fetchProfile();
@@ -327,9 +341,20 @@ function ProfilePageClient() {
 
       {/* LinkedIn style Upper Card */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
-        {/* Banner Graphic background */}
-        <div className="h-44 bg-gradient-to-r from-[#003D7A] via-[#005fb8] to-[#C41E3A] relative">
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#ffffff_1.2px,transparent_1.2px)] [background-size:20px_20px]" />
+        {/* Banner Graphic */}
+        <div className="h-32 md:h-40 bg-gradient-to-br from-blue-50 via-white to-red-50 relative overflow-hidden">
+          {/* Stronger brand-color washes, corner-anchored */}
+          <div className="absolute -top-20 -left-16 w-80 h-80 bg-[#003D7A]/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-24 -right-16 w-96 h-96 bg-[#C41E3A]/20 rounded-full blur-3xl"></div>
+
+          {/* Diagonal center sweep tying the two brand colors together */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#003D7A]/10 via-transparent to-[#C41E3A]/10"></div>
+
+          {/* Dot-grid texture, a touch stronger than before */}
+          <div className="absolute inset-0 opacity-[0.10] bg-[radial-gradient(#003D7A_1px,transparent_1px)] [background-size:18px_18px]"></div>
+
+          {/* Brand accent line along the bottom edge */}
+          <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-[#003D7A] via-[#C41E3A] to-[#003D7A]"></div>
         </div>
 
         {/* Edit mode toggle button overlay on banner corner */}
@@ -439,7 +464,32 @@ function ProfilePageClient() {
                       {profile.phone}
                     </span>
                   )}
+                  {profile?.linkedinUrl && (
+                    <a
+                      href={profile.linkedinUrl.startsWith('http') ? profile.linkedinUrl : `https://${profile.linkedinUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 hover:bg-blue-100 text-[#003D7A] font-bold text-xs transition border border-blue-100 shadow-xs"
+                    >
+                      {/* LinkedIn SVG logo */}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#0077B5" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      <span>LinkedIn Profile</span>
+                      <Link2 size={10} className="text-slate-400" />
+                    </a>
+                  )}
                 </div>
+
+                {profile?.bio && (
+                  <div className="mt-3.5 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-normal">
+                    <p className="font-extrabold text-slate-900 text-[11px] uppercase tracking-wider mb-1 flex items-center gap-1.5 text-[#003D7A]">
+                      <FileText size={13} />
+                      About / Bio
+                    </p>
+                    <p className="whitespace-pre-line">{profile.bio}</p>
+                  </div>
+                )}
               </>
             ) : (
               // Edit inputs for basic info
@@ -486,6 +536,28 @@ function ProfilePageClient() {
                       className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">LinkedIn Profile URL</label>
+                  <input
+                    type="url"
+                    value={formData?.linkedinUrl || ''}
+                    onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
+                    placeholder="e.g. https://linkedin.com/in/username"
+                    className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">About / Bio</label>
+                  <textarea
+                    rows={3}
+                    value={formData?.bio || ''}
+                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    placeholder="Write a brief professional bio about your achievements, interests, or background..."
+                    className="w-full px-3 py-2 text-slate-800 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] resize-none"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -602,7 +674,7 @@ function ProfilePageClient() {
                     </div>
 
                     {isSelf && (
-                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                      <div className="flex gap-1.5 group-hover:opacity-100 transition">
                         <button
                           onClick={() => {
                             setSelectedExp({
@@ -612,13 +684,13 @@ function ProfilePageClient() {
                             });
                             setExpModalOpen(true);
                           }}
-                          className="p-1 hover:bg-slate-100 text-blue-600 rounded"
+                          className="p-1 bg-slate-100 text-blue-600 rounded"
                         >
                           <Edit3 size={13} />
                         </button>
                         <button
                           onClick={() => deleteExperience(exp.id)}
-                          className="p-1 hover:bg-slate-100 text-red-600 rounded"
+                          className="p-1 bg-slate-100 text-red-600 rounded"
                         >
                           <Trash2 size={13} />
                         </button>

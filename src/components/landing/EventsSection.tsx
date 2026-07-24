@@ -81,6 +81,17 @@ export default function EventsSection({ events }: { events: Event[] }) {
           <p className="text-gray-600 max-w-2xl mx-auto font-medium">
             Reconnect in person or tune in virtually to expand your industry insights and mentor networks.
           </p>
+          <div className="mt-5">
+            <a
+              href="https://ptu.ac.in/alumni/alumni-events"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#C41E3A] hover:bg-[#003D7A] text-white hover:text-white text-xs font-bold transition-all duration-300 shadow-xs border border-slate-200"
+            >
+              <span>Previous Alumni Events</span>
+              <span className="text-xs">↗</span>
+            </a>
+          </div>
         </div>
 
         {/* Category Filter Tabs */}

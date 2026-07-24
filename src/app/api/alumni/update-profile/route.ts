@@ -23,7 +23,9 @@ export async function PUT(req: NextRequest) {
       phone,
       country,
       pincode,
-      mapVisibility
+      mapVisibility,
+      bio,
+      linkedinUrl,
     } = body;
 
     // Fetch current values to check if country/pincode changed
@@ -69,6 +71,8 @@ export async function PUT(req: NextRequest) {
         pincode: pincode || null,
         locationId: newLocationId,
         mapVisibility: mapVisibility || undefined,
+        bio: bio !== undefined ? (bio?.trim() || null) : undefined,
+        linkedinUrl: linkedinUrl !== undefined ? (linkedinUrl?.trim() || null) : undefined,
       },
     });
 

@@ -122,6 +122,7 @@ export async function POST(
           passwordHash: existingRequest.authProvider === 'MANUAL' ? existingRequest.passwordHash : null,
           currentRole: existingRequest.currentRole,
           currentCompany: existingRequest.currentCompany,
+          linkedinUrl: existingRequest.linkedinUrl,
           pincode: existingRequest.pincode,
           city: resolvedLocation?.city || existingRequest.city || null,
           country: resolvedLocation?.country || "India",

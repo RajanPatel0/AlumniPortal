@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       currentCompany,
       pincode,
       city,
+      linkedinUrl,
     } = body;
 
     const normalizedEmail = String(email || '').toLowerCase().trim();
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         passwordHash: passwordHash || null,
         currentRole: currentRole?.trim() || null,
         currentCompany: currentCompany?.trim() || null,
+        linkedinUrl: linkedinUrl?.trim() || null,
         pincode: pincode?.trim() || null,
         city: city?.trim() || null,
       },

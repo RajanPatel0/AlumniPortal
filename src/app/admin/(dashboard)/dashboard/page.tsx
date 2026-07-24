@@ -52,9 +52,12 @@ interface DashboardData {
   };
 }
 
+import DistributionModal from './DistributionModal';
+
 export default function DashboardPage() {
   const { user: userData } = useAdminAuth();
   const [selectedCampusId, setSelectedCampusId] = useState<string>('');
+  const [activeModal, setActiveModal] = useState<'branches' | 'companies' | null>(null);
 
   // Fetch campuses list using React Query
   const { data: campuses = [] } = useQuery<{ id: string; name: string }[]>({
@@ -656,9 +659,17 @@ export default function DashboardPage() {
         
         {/* Top Branches Card */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-          <div className="border-b border-slate-100 pb-4 mb-4">
-            <h3 className="text-base font-extrabold text-[#012140]">Top Branches</h3>
-            <p className="text-[11px] text-slate-500">Distribution of alumni by branch / department</p>
+          <div className="border-b border-slate-100 pb-4 mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-extrabold text-[#012140]">Top Branches</h3>
+              <p className="text-[11px] text-slate-500">Distribution of alumni by branch / department</p>
+            </div>
+            <button
+              onClick={() => setActiveModal('branches')}
+              className="px-3.5 py-1.5 bg-[#003D7A]/10 hover:bg-[#003D7A]/20 text-[#003D7A] text-xs font-bold rounded-xl transition"
+            >
+              View All
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -687,9 +698,17 @@ export default function DashboardPage() {
 
         {/* Top Companies Card */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-          <div className="border-b border-slate-100 pb-4 mb-4">
-            <h3 className="text-base font-extrabold text-[#012140]">Top Companies</h3>
-            <p className="text-[11px] text-slate-500">Primary employers representing university alumni</p>
+          <div className="border-b border-slate-100 pb-4 mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-extrabold text-[#012140]">Top Companies</h3>
+              <p className="text-[11px] text-slate-500">Primary employers representing university alumni</p>
+            </div>
+            <button
+              onClick={() => setActiveModal('companies')}
+              className="px-3.5 py-1.5 bg-[#C41E3A]/10 hover:bg-[#C41E3A]/20 text-[#C41E3A] text-xs font-bold rounded-xl transition"
+            >
+              View All
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -717,6 +736,14 @@ export default function DashboardPage() {
         </div>
 
       </section>
+
+      {/* Distribution Detail Modal */}
+      <DistributionModal
+        isOpen={activeModal !== null}
+        onClose={() => setActiveModal(null)}
+        type={activeModal || 'branches'}
+        campusId={selectedCampusId}
+      />
 
     </div>
   );

@@ -124,7 +124,7 @@ export const alumniAuthConfig: NextAuthOptions = {
 
       if (tokenFromUrl) {
         const alumni = await prisma.alumni.findFirst({
-          where: { inviteToken: tokenFromUrl, inviteStatus: { in: ['PENDING', 'INVITED'] } },
+          where: { inviteToken: tokenFromUrl, inviteStatus: { in: ['PENDING', 'INVITED', 'BOUNCED'] } },
         });
         if (!alumni) return false;
         if (!providerAccountId) return false;
@@ -138,7 +138,7 @@ export const alumniAuthConfig: NextAuthOptions = {
 
       if (oauthEmail) {
         const invitedByEmail = await prisma.alumni.findFirst({
-          where: { email: oauthEmail, inviteStatus: { in: ['PENDING', 'INVITED'] }, isRegistered: false },
+          where: { email: oauthEmail, inviteStatus: { in: ['PENDING', 'INVITED', 'BOUNCED'] }, isRegistered: false },
         });
         if (invitedByEmail && providerAccountId) {
           return completeOAuthInviteRegistration(

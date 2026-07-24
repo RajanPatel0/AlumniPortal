@@ -24,6 +24,11 @@ export default function LandingNav() {
     { href: '#gallery', label: 'Gallery' },
   ];
 
+  const externalLinks = [
+    { href: 'https://ptu.ac.in/alumni/distinguished-alumni', label: 'Distinguished Alumni' },
+    { href: 'https://ptu.ac.in/alumni/jobs-for-alumni/', label: 'Jobs for Alumni' },
+  ];
+
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-300 w-full ${
       scrolled 
@@ -52,9 +57,21 @@ export default function LandingNav() {
             <a 
               key={link.href} 
               href={link.href} 
-              className="text-xs font-bold text-slate-300 hover:text-white px-4 py-2 rounded-full transition-all duration-200 uppercase tracking-wider relative hover:bg-white/5 active:scale-95"
+              className="text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all duration-200 uppercase tracking-wider relative hover:bg-white/5 active:scale-95"
             >
               {link.label}
+            </a>
+          ))}
+          {externalLinks.map((link) => (
+            <a 
+              key={link.href} 
+              href={link.href} 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold text-amber-300 hover:text-white px-3 py-1.5 rounded-full transition-all duration-200 uppercase tracking-wider relative hover:bg-white/5 active:scale-95 flex items-center gap-1"
+            >
+              {link.label}
+              <span className="text-[10px]">↗</span>
             </a>
           ))}
         </div>
@@ -90,9 +107,22 @@ export default function LandingNav() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-sm font-semibold text-slate-300 hover:text-white px-4 py-3 rounded-xl hover:bg-white/5 transition-all duration-200 uppercase tracking-wide"
+                className="text-sm font-semibold text-slate-300 hover:text-white px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all duration-200 uppercase tracking-wide"
               >
                 {link.label}
+              </a>
+            ))}
+            {externalLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileOpen(false)}
+                className="text-sm font-bold text-amber-300 hover:text-white px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all duration-200 uppercase tracking-wide flex items-center justify-between"
+              >
+                <span>{link.label}</span>
+                <span className="text-xs">↗</span>
               </a>
             ))}
           </div>

@@ -20,9 +20,12 @@ import {
   GraduationCap, 
   MessageCircle,
   Loader2,
+  Trash2,
   X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ProfileCompletionModal from './ProfileCompletionModal';
+import MyPostsModal from './MyPostsModal';
 
 interface AlumniProfile {
   id?: string;
@@ -74,8 +77,32 @@ export default function AlumniFeed() {
   // Mobile sidebar state
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // Post card dropdown menu state
+  const [activeMenuPostId, setActiveMenuPostId] = useState<string | null>(null);
+
+  // My Posts modal state
+  const [myPostsModalOpen, setMyPostsModalOpen] = useState(false);
+
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm('Delete this post? This action cannot be undone.')) return;
+    try {
+      const res = await apiFetch(`/alumni/posts?id=${postId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Post deleted');
+        queryClient.invalidateQueries({ queryKey: ['alumni-feed-posts'] });
+      } else {
+        toast.error(data.error || 'Failed to delete post');
+      }
+    } catch {
+      toast.error('Failed to delete post');
+    } finally {
+      setActiveMenuPostId(null);
+    }
+  };
 
   // ── Profile query (cached for 10 minutes, resolves alumni OR admin session) ──
   const { data: profile, isLoading: profileLoading } = useQuery<AlumniProfile | null>({
@@ -257,13 +284,26 @@ export default function AlumniFeed() {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-8">
       
       {/* Left Sidebar - Profile & Communities & Quick Links */}
-      <div className="hidden lg:block lg:col-span-4 space-y-6">
+      <div className="hidden lg:block lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start">
         
         {/* Profile Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {/* Banner Graphic */}
-          <div className="h-28 bg-gradient-to-r from-blue-900/10 via-slate-100 to-indigo-900/10 relative flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#003D7A_1px,transparent_1px)] [background-size:16px_16px]"></div>
+          <div className="h-28 bg-gradient-to-br from-blue-50 via-white to-red-50 relative flex items-center justify-center overflow-hidden">
+            {/* Brand-color washes, corner-anchored */}
+            <div className="absolute -top-14 -left-10 w-52 h-52 bg-[#003D7A]/20 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-16 -right-10 w-56 h-56 bg-[#C41E3A]/20 rounded-full blur-3xl"></div>
+
+            {/* Diagonal center sweep tying the two brand colors together */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#003D7A]/10 via-transparent to-[#C41E3A]/10"></div>
+
+            {/* Dot-grid texture */}
+            <div className="absolute inset-0 opacity-[0.10] bg-[radial-gradient(#003D7A_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+            {/* Brand accent line along the bottom edge */}
+            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-[#003D7A] via-[#C41E3A] to-[#003D7A]"></div>
+
+            {/* Text content */}
             <div className="text-center p-3 relative z-10">
               <p className="text-[10px] font-bold tracking-widest text-[#003D7A] uppercase">Creating a platform</p>
               <p className="text-[11px] font-semibold text-slate-600">Where you can connect with Alumni</p>
@@ -308,17 +348,21 @@ export default function AlumniFeed() {
           <h4 className="text-md font-bold text-gray-900 mb-4">Quick links</h4>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Business Connect', icon: Award, href: '/alumni/networking' },
-              { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking' },
-              { label: 'Events', icon: Calendar, href: '/alumni/events' },
-              { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs' },
+              { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
+                bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
+              { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking',
+                bg: 'bg-purple-50 hover:bg-purple-100', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-700', icon2: 'text-purple-600' },
+              { label: 'Events', icon: Calendar, href: '/alumni/events',
+                bg: 'bg-orange-50 hover:bg-orange-100', border: 'border-orange-100 hover:border-orange-200', text: 'text-orange-700', icon2: 'text-orange-600' },
+              { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs',
+                bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },
             ].map((link, idx) => (
               <Link
                 key={idx}
                 href={link.href}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-blue-50 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-100 text-xs font-bold text-[#003D7A] transition"
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${link.border} ${link.bg} text-xs font-bold ${link.text} transition-all hover:-translate-y-0.5 hover:shadow-sm`}
               >
-                <link.icon size={14} className="text-[#003D7A]" />
+                <link.icon size={14} className={link.icon2} />
                 <span className="truncate">{link.label}</span>
               </Link>
             ))}
@@ -331,7 +375,7 @@ export default function AlumniFeed() {
       <div className="lg:col-span-8 space-y-6">
 
         {/* Composer Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors p-4 space-y-3">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-[#003D7A] font-bold text-sm overflow-hidden flex-shrink-0">
               {profile?.avatarUrl ? (
@@ -347,36 +391,31 @@ export default function AlumniFeed() {
               value={shareText}
               onChange={(e) => setShareText(e.target.value)}
               disabled={profile?.isAdmin}
-              className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 hover:border-slate-200 focus:border-slate-250 focus:bg-white focus:outline-none rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 transition resize-none"
+              className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 hover:border-[#003D7A]/30 focus:border-[#003D7A] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#003D7A]/10 rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 transition resize-none"
             />
           </div>
 
-          {/* Uploaded Image Preview Row */}
-          {uploadedImageUrl && (
-            <div className="relative rounded-xl overflow-hidden border border-slate-100 max-w-sm group bg-slate-50 ml-13">
-              <img src={uploadedImageUrl} alt="Upload preview" className="max-h-60 w-auto object-contain rounded-xl" />
-              <button
-                type="button"
-                onClick={() => setUploadedImageUrl('')}
-                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-full transition shadow cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
           {/* Actions Bar */}
           {!profile?.isAdmin && (
-            <div className="flex items-center justify-between pt-2 border-t border-slate-50 ml-13">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 ml-13">
               <div className="flex items-center gap-2">
                 <button 
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingImage}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-emerald-650 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 transition disabled:opacity-50 cursor-pointer"
                 >
                   {isUploadingImage ? <Loader2 size={15} className="animate-spin text-emerald-600" /> : <ImageIcon size={15} className="text-emerald-600" />}
                   <span>Add Photo</span>
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => setMyPostsModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#003D7A] bg-blue-50 hover:bg-blue-100 border border-blue-100 transition cursor-pointer"
+                >
+                  <FileText size={15} className="text-[#003D7A]" />
+                  <span>My Posts</span>
                 </button>
               </div>
 
@@ -384,7 +423,7 @@ export default function AlumniFeed() {
                 type="button"
                 onClick={handleCreatePost}
                 disabled={isSubmitting || isUploadingImage || (!shareText.trim() && !uploadedImageUrl)}
-                className="px-5 py-2 bg-[#C41E3A] hover:bg-[#a3182f] text-white text-xs font-bold rounded-full transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2 bg-[#C41E3A] hover:bg-[#a3182f] hover:shadow-md hover:shadow-red-200 text-white text-xs font-bold rounded-full transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? 'Posting...' : 'Post'}
               </button>
@@ -408,65 +447,95 @@ export default function AlumniFeed() {
               title: 'Are You Startup Owner?',
               desc: 'List your Startup here and stand out in the community!',
               btn: 'List Now',
-              iconColor: 'bg-orange-500',
               icon: Rocket,
-              href: '/alumni/startups'
+              href: '/alumni/startups',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-orange-50 to-white',
+                border: 'border-orange-100 hover:border-orange-300',
+                glow: 'hover:shadow-orange-100',
+                iconBg: 'bg-gradient-to-br from-orange-400 to-orange-600',
+                btnBg: 'bg-orange-600 hover:bg-orange-700',
+              },
             },
             {
               title: 'Job Openings You May Like',
               desc: 'Posted by your fellow alumni within the community',
               btn: 'View Openings',
-              iconColor: 'bg-emerald-500',
               icon: Briefcase,
-              href: '/alumni/jobs'
+              href: '/alumni/jobs',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-emerald-50 to-white',
+                border: 'border-emerald-100 hover:border-emerald-300',
+                glow: 'hover:shadow-emerald-100',
+                iconBg: 'bg-gradient-to-br from-emerald-400 to-emerald-600',
+                btnBg: 'bg-emerald-600 hover:bg-emerald-700',
+              },
             },
             {
               title: 'Looking for Guidance?',
               desc: 'Browse Senior Alumnis and get the Guidance',
               btn: 'See Mentors',
-              iconColor: 'bg-blue-500',
               icon: GraduationCap,
-              href: '/alumni/networking'
+              href: '/alumni/networking',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-blue-50 to-white',
+                border: 'border-blue-100 hover:border-blue-300',
+                glow: 'hover:shadow-blue-100',
+                iconBg: 'bg-gradient-to-br from-blue-400 to-[#003D7A]',
+                btnBg: 'bg-[#003D7A] hover:bg-[#002b56]',
+              },
             },
             {
               title: 'Get Your Story Published!',
               desc: 'Share it on the Post and inspire the community',
               btn: 'Post Now',
-              iconColor: 'bg-[#009688]',
               icon: FileText,
-              href: '/alumni/newscorner'
+              href: '/alumni/newscorner',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-teal-50 to-white',
+                border: 'border-teal-100 hover:border-teal-300',
+                glow: 'hover:shadow-teal-100',
+                iconBg: 'bg-gradient-to-br from-teal-400 to-teal-600',
+                btnBg: 'bg-teal-600 hover:bg-teal-700',
+              },
             },
             {
               title: 'Memories Fade, Photos',
               desc: 'Share Photos of your time here and help us preserve them',
               btn: 'Share Photos',
-              iconColor: 'bg-pink-500',
               icon: ImageIcon,
-              href: '/alumni/gallery'
-            }
-          ].map((promo, idx) => (
-            <div 
-              key={idx} 
-              className="w-[200px] flex-shrink-0 bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition duration-200"
-            >
-              <div>
-                <div className={`w-9 h-9 rounded-full ${promo.iconColor} flex items-center justify-center text-white mb-3 shadow-sm`}>
-                  <promo.icon size={16} />
+              href: '/alumni/gallery',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-pink-50 to-white',
+                border: 'border-pink-100 hover:border-pink-300',
+                glow: 'hover:shadow-pink-100',
+                iconBg: 'bg-gradient-to-br from-pink-400 to-pink-600',
+                btnBg: 'bg-pink-600 hover:bg-pink-700',
+              },
+            },
+            ].map((promo, idx) => (
+              <div 
+                key={idx} 
+                className={`w-[200px] flex-shrink-0 ${promo.theme.cardBg} border ${promo.theme.border} rounded-2xl p-4 flex flex-col justify-between hover:shadow-lg ${promo.theme.glow} hover:-translate-y-1 transition-all duration-300`}
+              >
+                <div>
+                  <div className={`w-9 h-9 rounded-xl ${promo.theme.iconBg} flex items-center justify-center text-white mb-3 shadow-sm`}>
+                    <promo.icon size={16} />
+                  </div>
+                  <h5 className="text-xs font-bold text-gray-900 line-clamp-2 min-h-[32px] leading-tight">
+                    {promo.title}
+                  </h5>
+                  <p className="text-[10px] text-slate-500 font-medium mt-1 line-clamp-3 leading-relaxed">
+                    {promo.desc}
+                  </p>
                 </div>
-                <h5 className="text-xs font-bold text-gray-900 line-clamp-2 min-h-[32px] leading-tight">
-                  {promo.title}
-                </h5>
-                <p className="text-[10px] text-slate-500 font-medium mt-1 line-clamp-3 leading-relaxed">
-                  {promo.desc}
-                </p>
+                <Link href={promo.href} className="w-full mt-4">
+                  <button className={`w-full py-1.5 ${promo.theme.btnBg} text-white text-[11px] font-bold rounded-lg transition active:scale-[0.98]`}>
+                    {promo.btn}
+                  </button>
+                </Link>
               </div>
-              <Link href={promo.href} className="w-full mt-4">
-                <button className="w-full py-1.5 bg-[#003D7A] hover:bg-[#002b56] text-white text-[11px] font-bold rounded-lg transition active:scale-[0.98]">
-                  {promo.btn}
-                </button>
-              </Link>
-            </div>
-          ))}
+            ))}
         </div>
 
         {/* Feed Posts */}
@@ -552,9 +621,38 @@ export default function AlumniFeed() {
                       );
                     })()}
                     
-                    <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition">
-                      <MoreHorizontal size={18} />
-                    </button>
+                    {(() => {
+                      const canDelete = Boolean(
+                        profile?.isAdmin || (profile?.id && post.author?.id === profile.id)
+                      );
+                      if (!canDelete) return null;
+
+                      return (
+                        <div className="relative">
+                          <button 
+                            onClick={() => setActiveMenuPostId(activeMenuPostId === post.id ? null : post.id)}
+                            className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition"
+                            title="Post Options"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                          {activeMenuPostId === post.id && (
+                            <div 
+                              className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-20 animate-fadeIn"
+                              onMouseLeave={() => setActiveMenuPostId(null)}
+                            >
+                              <button
+                                onClick={() => handleDeletePost(post.id)}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition"
+                              >
+                                <Trash2 size={14} />
+                                Delete Post
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Post Content */}
@@ -670,18 +768,21 @@ export default function AlumniFeed() {
                 <h4 className="text-sm font-bold text-gray-900 mb-3">Quick links</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Business Connect', icon: Award, href: '/alumni/networking' },
-                    { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking' },
-                    { label: 'Events', icon: Calendar, href: '/alumni/events' },
-                    { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs' },
+                    { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
+                      bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
+                    { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking',
+                      bg: 'bg-purple-50 hover:bg-purple-100', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-700', icon2: 'text-purple-600' },
+                    { label: 'Events', icon: Calendar, href: '/alumni/events',
+                      bg: 'bg-orange-50 hover:bg-orange-100', border: 'border-orange-100 hover:border-orange-200', text: 'text-orange-700', icon2: 'text-orange-600' },
+                    { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs',
+                      bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },
                   ].map((link, idx) => (
                     <Link
                       key={idx}
                       href={link.href}
-                      onClick={() => setMobileSidebarOpen(false)}
-                      className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-blue-50 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-100 text-[10px] font-bold text-[#003D7A] transition"
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${link.border} ${link.bg} text-xs font-bold ${link.text} transition-all hover:-translate-y-0.5 hover:shadow-sm`}
                     >
-                      <link.icon size={12} className="text-[#003D7A]" />
+                      <link.icon size={14} className={link.icon2} />
                       <span className="truncate">{link.label}</span>
                     </Link>
                   ))}
@@ -692,6 +793,12 @@ export default function AlumniFeed() {
           </div>
         </div>
       )}
+
+      {/* Profile Completion Nudge Modal */}
+      <ProfileCompletionModal profile={profile} />
+
+      {/* My Posts Modal */}
+      <MyPostsModal isOpen={myPostsModalOpen} onClose={() => setMyPostsModalOpen(false)} />
 
     </div>
   );

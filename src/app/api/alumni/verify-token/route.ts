@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const alumni = await prisma.alumni.findFirst({
     where: {
       inviteToken: token,
-      inviteStatus: { in: ['PENDING', 'INVITED'] },
+      inviteStatus: { in: ['PENDING', 'INVITED', 'BOUNCED'] },
       isRegistered: false,
     },
     select: {

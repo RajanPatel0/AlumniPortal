@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
+import { deleteFile } from '@/lib/fileUpload';
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
@@ -32,7 +33,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(req.url);
+    const selfOnly = searchParams.get('self') === 'true';
+
+    let authorIdFilter: string | undefined = undefined;
+    if (selfOnly && alumniToken) {
+      try {
+        const payload = verifyAlumniAccessToken(alumniToken);
+        if (payload?.id) {
+          authorIdFilter = payload.id;
+        }
+      } catch {}
+    }
+
     const posts = await prisma.post.findMany({
+      where: authorIdFilter ? { authorId: authorIdFilter } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
         author: {
@@ -160,5 +175,91 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('[API_POST_FEED_POSTS_ERROR]', error);
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 });
+  }
+}
+
+// DELETE endpoint for post deletion (supports both alumni self-deletion & admin moderation)
+export async function DELETE(req: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const alumniToken = cookieStore.get('alumniAccessToken')?.value;
+    const staffToken = cookieStore.get('accessToken')?.value;
+
+    let viewerId: string | null = null;
+    let isStaff = false;
+
+    if (staffToken) {
+      try {
+        const payload = verifyAccessToken(staffToken);
+        if (payload?.id) {
+          viewerId = payload.id;
+          isStaff = true;
+        }
+      } catch {}
+    }
+
+    if (!isStaff && alumniToken) {
+      try {
+        const payload = verifyAlumniAccessToken(alumniToken);
+        if (payload?.id) {
+          viewerId = payload.id;
+        }
+      } catch {}
+    }
+
+    if (!viewerId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const postId = searchParams.get('id');
+
+    if (!postId) {
+      return NextResponse.json({ error: 'Post ID is required' }, { status: 400 });
+    }
+
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: { images: true },
+    });
+
+    if (!post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+
+    // Explicit Authorization Check:
+    // Staff/Admin can delete ANY post unconditionally.
+    // Non-staff Alumni can ONLY delete posts where authorId === viewerId.
+    if (!isStaff) {
+      if (post.authorId !== viewerId) {
+        return NextResponse.json(
+          { error: 'Forbidden: You can only delete your own posts' }, 
+          { status: 403 }
+        );
+      }
+    }
+
+    // Safe disk file cleanup - failure does not block DB deletion
+    if (post.images && post.images.length > 0) {
+      for (const img of post.images) {
+        if (img.imageUrl) {
+          try {
+            await deleteFile(img.imageUrl);
+          } catch (fileErr) {
+            console.warn(`[POST_DELETE_FILE_WARNING] Failed to cleanup image file ${img.imageUrl}:`, fileErr);
+          }
+        }
+      }
+    }
+
+    // Delete post record from database
+    await prisma.post.delete({
+      where: { id: postId },
+    });
+
+    return NextResponse.json({ success: true, message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error('[API_DELETE_POST_ERROR]', error);
+    return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 });
   }
 }

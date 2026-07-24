@@ -45,7 +45,13 @@ export async function GET(req: NextRequest) {
   if (branch) where.branch = { contains: branch };
   if (college) where.college = { contains: college };
   if (course) where.course = { contains: course };
-  if (status) where.inviteStatus = status;
+  if (status) {
+    if (status === 'PENDING') {
+      where.inviteStatus = { in: ['PENDING', 'BOUNCED'] };
+    } else {
+      where.inviteStatus = status;
+    }
+  }
 
   const [alumni, total] = await Promise.all([
     prisma.alumni.findMany({
