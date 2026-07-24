@@ -287,7 +287,7 @@ export default function YearbookAlumniPage({
 
                     {/* View More */}
                     <Link
-                      href={`/alumni/profile?id=${a.id}`}
+                      href={`/alumni/profile/${a.id}`}
                       id={`view-profile-${a.id}`}
                       className="flex items-center gap-1.5 mt-3 text-[#003D7A] text-[11px] font-bold hover:gap-2 transition-all duration-200 group/link"
                     >

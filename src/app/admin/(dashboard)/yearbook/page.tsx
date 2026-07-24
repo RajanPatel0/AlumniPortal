@@ -259,7 +259,7 @@ function BranchSection({
                           </div>
                         )}
                         <Link
-                          href={`/alumni/profile?id=${a.id}`}
+                          href={`/alumni/profile/${a.id}`}
                           target="_blank"
                           className="flex items-center gap-1 mt-1.5 text-[#012140] text-[10px] font-bold hover:text-[#d61c1c] transition-colors"
                         >
