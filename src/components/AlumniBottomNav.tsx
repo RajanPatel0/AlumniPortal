@@ -16,22 +16,32 @@ const navItems = [
   { name: 'Profile', href: '/alumni/profile', icon: User },
 ];
 
-function AlumniBottomNavInner() {
+interface AlumniBottomNavProps {
+  isStaff?: boolean;
+}
+
+function AlumniBottomNavInner({ isStaff }: AlumniBottomNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(isStaff ?? false);
 
-  // Detect the alumni id being viewed (passed as ?id= query param)
-  const viewingId = searchParams.get('id');
+  // Detect the alumni id being viewed (from path parameter or ?id= query param)
+  const pathId = pathname?.startsWith('/alumni/profile/') ? pathname.split('/')[3] : null;
+  const viewingId = searchParams.get('id') || pathId;
 
   useEffect(() => {
-    // Check if current user is an admin/staff browsing the alumni portal
+    // Sync state if prop changes
+    if (typeof isStaff === 'boolean') {
+      setIsAdmin(isStaff);
+      return;
+    }
+    // Check if current user is an admin/staff browsing the alumni portal only if not passed as prop
     apiFetch('/admin/me')
       .then(res => {
         if (res.ok) setIsAdmin(true);
       })
       .catch(() => {});
-  }, []);
+  }, [isStaff]);
 
   const handleLogout = async () => {
     await apiFetch('/alumni/logout', { method: 'POST' });
@@ -44,7 +54,7 @@ function AlumniBottomNavInner() {
 
   // Build the profile link: for admin, if viewing a specific alumni, keep that context
   const profileHref = isAdmin && viewingId
-    ? `/alumni/profile?id=${viewingId}`
+    ? `/alumni/profile/${viewingId}`
     : '/alumni/profile';
 
   return (
@@ -121,12 +131,12 @@ function AlumniBottomNavInner() {
   );
 }
 
-export default function AlumniBottomNav() {
+export default function AlumniBottomNav({ isStaff }: AlumniBottomNavProps) {
   return (
     <Suspense fallback={
       <nav className="fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-6px_32px_rgba(0,61,122,0.10)] z-[1050] h-[68px]" />
     }>
-      <AlumniBottomNavInner />
+      <AlumniBottomNavInner isStaff={isStaff} />
     </Suspense>
   );
 }

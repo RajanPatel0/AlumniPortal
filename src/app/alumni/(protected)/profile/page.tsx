@@ -84,11 +84,18 @@ function ProfilePageClient() {
       const res = await apiFetch(url);
       if (!res.ok) throw new Error('Unauthorized');
       const data = await res.json();
+
+      // If server instructed a redirect (because target id is another user)
+      if (data.redirectUrl) {
+        router.replace(data.redirectUrl);
+        return;
+      }
+
       setProfile(data.user);
       setFormData(data.user);
-      const userIsSelf = data.isSelf ?? !id;
-      setIsSelf(userIsSelf);
-      if (isEditRequested && userIsSelf) {
+      setIsSelf(true);
+
+      if (isEditRequested) {
         setEditingMode(true);
       }
     } catch {
@@ -96,8 +103,10 @@ function ProfilePageClient() {
       try {
         const adminRes = await apiFetch('/admin/me');
         if (adminRes.ok) {
-          // Admin is authenticated but the profile fetch still failed (maybe no id param)
-          // Redirect back to admin dashboard
+          if (id) {
+            router.replace(`/alumni/profile/${id}`);
+            return;
+          }
           router.push('/admin/dashboard');
           return;
         }
@@ -106,7 +115,7 @@ function ProfilePageClient() {
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id, isEditRequested, router]);
 
   useEffect(() => {
     fetchProfile();

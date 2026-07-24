@@ -40,6 +40,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const targetId = searchParams.get('id');
 
+    // If targetId is provided and differs from logged in user, instruct client to redirect
+    if (targetId && targetId !== viewerId) {
+      return NextResponse.json({ redirectUrl: `/alumni/profile/${targetId}` });
+    }
+
     // If targetId is not specified, and the viewer is staff, return staff details
     if (!targetId && isStaff) {
       const staff = await prisma.staff.findUnique({
@@ -66,12 +71,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Resolve targetId: defaults to viewerId for alumni self-lookup
-    const activeTargetId = targetId || viewerId;
-    const isSelf = !isStaff && (activeTargetId === viewerId);
-
+    // Alumni self-lookup: always fetch viewerId only
     const alumni = await prisma.alumni.findUnique({
-      where: { id: activeTargetId },
+      where: { id: viewerId },
       include: {
         education: {
           orderBy: { startDate: 'desc' },
@@ -89,7 +91,7 @@ export async function GET(req: NextRequest) {
 
     const { passwordHash, ...alumniWithoutPassword } = alumni;
 
-    return NextResponse.json({ user: alumniWithoutPassword, isSelf, isAdmin: isStaff });
+    return NextResponse.json({ user: alumniWithoutPassword, isSelf: true, isAdmin: false });
   } catch (error) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }

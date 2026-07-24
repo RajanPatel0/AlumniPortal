@@ -574,7 +574,7 @@ export default function AlumniFeed() {
                         ? null
                         : post.author.id === (profile as any)?.id
                           ? '/alumni/profile'
-                          : `/alumni/profile?id=${post.author.id}`;
+                          : `/alumni/profile/${post.author.id}`;
 
                       const authorInfo = (
                         <>

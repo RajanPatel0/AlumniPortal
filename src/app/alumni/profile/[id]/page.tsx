@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { 
   Mail, Briefcase, MapPin, Calendar, ExternalLink, 
   GraduationCap, Globe, ShieldCheck, Building, Award, Rocket
 } from 'lucide-react';
 import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
+import AlumniHeader from '@/components/AlumniHeader';
+import AlumniBottomNav from '@/components/AlumniBottomNav';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -49,28 +50,23 @@ export default async function PublicProfilePage({ params }: Props) {
   const initial = alumni.name.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-10 px-4 sm:px-6 lg:px-8 selection:bg-[#C41E3A]/10">
-      <div className="max-w-5xl mx-auto space-y-8">
-        
-        {/* Breadcrumb / Back Navigation */}
-        <div className="flex items-center justify-between">
-          <Link 
-            href="/alumni/feed"
-            className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-[#003D7A] transition"
-          >
-            ← Back to Portal
-          </Link>
-          <div className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200/50 px-2.5 py-1 rounded-full font-bold">
-            <ShieldCheck size={14} />
-            Verified Alumni Profile
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-slate-50/60 pb-28 antialiased selection:bg-[#C41E3A]/10">
+      <AlumniHeader isStaff={!!staff} />
+      
+      <main className="py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto space-y-8">
+          
         {/* Profile Card Header */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
           {/* Header Cover Banner */}
           <div className="bg-gradient-to-r from-[#003D7A] via-[#002b56] to-[#C41E3A] h-48 relative">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+            
+            {/* Top-Right Status Badge */}
+            <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-10 flex items-center gap-1.5 text-xs text-emerald-800 bg-white/90 backdrop-blur-md border border-emerald-200/60 px-3 py-1.5 rounded-full font-bold shadow-sm">
+              <ShieldCheck size={14} className="text-emerald-600" />
+              <span>Verified Alumni Profile</span>
+            </div>
           </div>
 
           <div className="px-6 sm:px-10 pb-10 relative">
@@ -392,10 +388,11 @@ export default async function PublicProfilePage({ params }: Props) {
             </div>
 
           </div>
-
         </div>
-
       </div>
+    </main>
+
+      <AlumniBottomNav isStaff={!!staff} />
     </div>
   );
 }
