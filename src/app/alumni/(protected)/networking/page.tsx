@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
-import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
+import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
+import { ComboboxSelect, ComboboxOption } from '@/components/ComboboxSelect';
 
-// Inline LinkedIn icon (not in older lucide-react builds)
+// Inline LinkedIn icon
 function LinkedinIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -30,7 +31,13 @@ interface DirectoryAlumni {
   linkedinUrl?: string;
 }
 
-const BRANCHES = ['All', 'Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'Chemical Engineering'];
+interface FilterMeta {
+  companies: ComboboxOption[];
+  cities: ComboboxOption[];
+  branches: ComboboxOption[];
+  courses: ComboboxOption[];
+  years: { value: number; count: number }[];
+}
 
 function getInitials(name: string) {
   return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'AL';
@@ -42,46 +49,107 @@ export default function NetworkingPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Filter States
   const [search, setSearch] = useState('');
   const [branch, setBranch] = useState('All');
+  const [company, setCompany] = useState('All');
+  const [course, setCourse] = useState('All');
+  const [city, setCity] = useState('All');
+  const [batchYear, setBatchYear] = useState('All');
+  const [sort, setSort] = useState('name_asc');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Metadata options fetched from /api/alumni/directory/meta
+  const [meta, setMeta] = useState<FilterMeta>({
+    companies: [],
+    cities: [],
+    branches: [],
+    courses: [],
+    years: [],
+  });
+
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchDirectory = useCallback(async (searchVal: string, branchVal: string, pageVal: number) => {
+  // Fetch Directory Metadata once on mount
+  useEffect(() => {
+    apiFetch('/alumni/directory/meta')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setMeta({
+            companies: data.companies || [],
+            cities: data.cities || [],
+            branches: data.branches || [],
+            courses: data.courses || [],
+            years: data.years || [],
+          });
+        }
+      })
+      .catch((err) => console.error('Failed to load directory meta:', err));
+  }, []);
+
+  const fetchDirectory = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: String(pageVal),
+        page: String(page),
         limit: '12',
-        search: searchVal,
-        branch: branchVal,
+        search,
+        branch,
+        company,
+        course,
+        city,
+        batchYear,
+        sort,
       });
-      const res = await apiFetch(`/alumni/directory?${params}`);
+
+      const res = await apiFetch(`/alumni/directory?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setAlumni(data.alumni || []);
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
       }
+    } catch (err) {
+      console.error('Directory fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, search, branch, company, course, city, batchYear, sort]);
 
-  // Debounced search
+  // Debounced search trigger
   useEffect(() => {
     if (searchRef.current) clearTimeout(searchRef.current);
     searchRef.current = setTimeout(() => {
       setPage(1);
-      fetchDirectory(search, branch, 1);
-    }, 350);
-  }, [search, branch, fetchDirectory]);
+      fetchDirectory();
+    }, 300);
+  }, [search, branch, company, course, city, batchYear, sort, fetchDirectory]);
 
-  // Paginate
+  // Handle page change
   useEffect(() => {
-    fetchDirectory(search, branch, page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+    fetchDirectory();
+  }, [page, fetchDirectory]);
+
+  const activeFiltersCount =
+    (branch !== 'All' ? 1 : 0) +
+    (company !== 'All' ? 1 : 0) +
+    (course !== 'All' ? 1 : 0) +
+    (city !== 'All' ? 1 : 0) +
+    (batchYear !== 'All' ? 1 : 0) +
+    (search ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearch('');
+    setBranch('All');
+    setCompany('All');
+    setCourse('All');
+    setCity('All');
+    setBatchYear('All');
+    setSort('name_asc');
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -92,72 +160,253 @@ export default function NetworkingPage() {
           <p className="text-blue-200 text-xs font-bold tracking-widest uppercase mb-2">Alumni Network</p>
           <h1 className="text-3xl md:text-4xl font-black mb-2">Connect with Alumni</h1>
           <p className="text-blue-100 text-sm max-w-lg">
-            Browse through {total > 0 ? `${total}+` : ''} registered alumni across batches and branches. View profiles, connect on LinkedIn, and grow your network.
+            Browse through {total > 0 ? `${total}+` : ''} registered alumni across companies, locations, batches, and branches. View profiles, connect on LinkedIn, and grow your network.
           </p>
         </div>
       </div>
 
       {/* Search + Filter Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-        <div className="flex gap-3 mb-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+        {/* Main Search Row */}
+        <div className="flex gap-3 items-center">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Search by name, role, company, or city..."
+              placeholder="Search by name, role, company, city, or branch..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full text-[#012140] pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] focus:ring-1 focus:ring-[#003D7A]/20 text-sm transition"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
+
           <button
-            onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm transition ${showFilters ? 'bg-[#003D7A] text-white border-[#003D7A]' : 'border-slate-200 text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A]'}`}
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm transition ${
+              showFilters || activeFiltersCount > 0
+                ? 'bg-[#003D7A] text-white border-[#003D7A]'
+                : 'border-slate-200 text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A]'
+            }`}
           >
             <SlidersHorizontal size={16} />
-            <span className="hidden sm:inline">Filter</span>
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-[#C41E3A] text-white text-xs flex items-center justify-center font-bold">
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Branch Filters */}
+        {/* Expandable Filter Grid */}
         {showFilters && (
-          <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-100">
-            {BRANCHES.map(b => (
-              <button
-                key={b}
-                onClick={() => { setBranch(b); setPage(1); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${branch === b
-                  ? 'bg-gradient-to-r from-[#003D7A] to-[#0057B8] text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-              >
-                {b}
-              </button>
-            ))}
+          <div className="pt-4 border-t border-slate-100 space-y-4 animate-in fade-in duration-200">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Refine Directory Search</span>
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={resetFilters}
+                  className="text-xs font-bold text-[#C41E3A] hover:text-[#003D7A] transition flex items-center gap-1"
+                >
+                  <X size={12} /> Reset All
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Company Combobox */}
+              <ComboboxSelect
+                label="Company / Employer"
+                placeholder="Search company..."
+                value={company}
+                options={meta.companies}
+                onChange={(val) => {
+                  setCompany(val);
+                  setPage(1);
+                }}
+                allLabel="All Companies"
+              />
+
+              {/* City Combobox */}
+              <ComboboxSelect
+                label="Location / City"
+                placeholder="Search city..."
+                value={city}
+                options={meta.cities}
+                onChange={(val) => {
+                  setCity(val);
+                  setPage(1);
+                }}
+                allLabel="All Cities"
+              />
+
+              {/* Batch Year Select */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Batch Year</label>
+                <select
+                  value={batchYear}
+                  onChange={(e) => {
+                    setBatchYear(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
+                >
+                  <option value="All">All Batches</option>
+                  {meta.years.map((y) => (
+                    <option key={y.value} value={y.value}>
+                      Class of {y.value} ({y.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Branch Select */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Branch / Specialization</label>
+                <select
+                  value={branch}
+                  onChange={(e) => {
+                    setBranch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
+                >
+                  <option value="All">All Branches</option>
+                  {meta.branches.map((b) => (
+                    <option key={b.value} value={b.value}>
+                      {b.value} ({b.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Course Select */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Degree / Course</label>
+                <select
+                  value={course}
+                  onChange={(e) => {
+                    setCourse(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
+                >
+                  <option value="All">All Courses</option>
+                  {meta.courses.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.value} ({c.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort By Select */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Sort Directory By</label>
+                <select
+                  value={sort}
+                  onChange={(e) => {
+                    setSort(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
+                >
+                  <option value="name_asc">Name (A - Z)</option>
+                  <option value="newest">Recently Registered</option>
+                  <option value="batch_desc">Batch (Newest First)</option>
+                  <option value="batch_asc">Batch (Oldest First)</option>
+                  <option value="company_asc">Company Name (A - Z)</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Active filters badge */}
-        {(search || branch !== 'All') && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">Active filters:</span>
+        {/* Active Filter Badges & Total Results Count */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-[#003D7A]">
+              {total} Alumni Found
+            </span>
+
             {search && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-[#003D7A] rounded-full text-xs font-semibold">
-                "{search}"
-                <button onClick={() => setSearch('')}><X size={10} /></button>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                Search: "{search}"
+                <button onClick={() => setSearch('')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
               </span>
             )}
+
+            {company !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                Company: {company}
+                <button onClick={() => setCompany('All')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {city !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                City: {city}
+                <button onClick={() => setCity('All')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {batchYear !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                Batch: {batchYear}
+                <button onClick={() => setBatchYear('All')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
             {branch !== 'All' && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-[#003D7A] rounded-full text-xs font-semibold">
-                {branch}
-                <button onClick={() => setBranch('All')}><X size={10} /></button>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                Branch: {branch}
+                <button onClick={() => setBranch('All')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
               </span>
             )}
-            <span className="ml-auto text-xs text-slate-400">{total} result{total !== 1 ? 's' : ''}</span>
+
+            {course !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
+                Degree: {course}
+                <button onClick={() => setCourse('All')} className="hover:text-[#C41E3A]">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
           </div>
-        )}
+
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={resetFilters}
+              className="text-xs font-semibold text-slate-500 hover:text-[#C41E3A] underline transition"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Alumni Grid */}
+      {/* Alumni Cards Grid */}
       {loading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -181,16 +430,24 @@ export default function NetworkingPage() {
             <Users size={28} className="text-slate-400" />
           </div>
           <p className="text-lg font-bold text-slate-700 mb-1">No alumni found</p>
-          <p className="text-sm text-slate-500">Try adjusting your search or filters</p>
+          <p className="text-sm text-slate-500 mb-4">Try clearing your filters or broadening your search criteria.</p>
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 bg-[#003D7A] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#002852] transition"
+            >
+              Reset All Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {alumni.map(person => (
+          {alumni.map((person) => (
             <div
               key={person.id}
               className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group"
             >
-              {/* Card Top Bar */}
+              {/* Card Top Accent Bar */}
               <div className="h-1.5 bg-gradient-to-r from-[#003D7A] to-[#C41E3A]" />
 
               <div className="p-6">
@@ -269,7 +526,7 @@ export default function NetworkingPage() {
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A] transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -280,7 +537,7 @@ export default function NetworkingPage() {
             Page {page} of {totalPages}
           </span>
           <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A] transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -293,7 +550,7 @@ export default function NetworkingPage() {
   );
 }
 
-// For the empty state icon usage
+// Icon helper
 function Users({ size, className }: { size: number; className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
