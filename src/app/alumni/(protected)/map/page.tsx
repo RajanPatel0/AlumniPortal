@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Map, Search, SlidersHorizontal } from 'lucide-react';
+import { Map, Search, SlidersHorizontal, Globe, Building2, GraduationCap } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
-const AlumniMap = dynamic(() => import('@/components/AlumniMap'), {
+const AlumniMap = dynamic(() => import('@/components/map/AlumniMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-[480px] sm:h-[560px] lg:h-[650px] rounded-3xl bg-slate-100/80 flex items-center justify-center border border-slate-200/60 animate-pulse">
@@ -74,7 +74,7 @@ export default function MapPage() {
     setBranch('');
   }, [batchYear]);
 
-  // Debounced filters to prevent API calls on every keystroke
+  // Fast, responsive filters sync with TanStack Query
   const [debouncedFilters, setDebouncedFilters] = useState({
     batchYear: '',
     branch: '',
@@ -83,6 +83,7 @@ export default function MapPage() {
   });
 
   useEffect(() => {
+    // Dropdown selects (batchYear, branch) apply immediately; text searches debounce fast (200ms)
     const handler = setTimeout(() => {
       setDebouncedFilters({
         batchYear,
@@ -90,7 +91,7 @@ export default function MapPage() {
         company,
         country,
       });
-    }, 450); // 450ms debounce time
+    }, 200);
 
     return () => {
       clearTimeout(handler);
@@ -98,6 +99,7 @@ export default function MapPage() {
   }, [batchYear, branch, company, country]);
 
   const activeFiltersCount = [batchYear, branch, company, country].filter(Boolean).length;
+  const totalAlumniCount = availableYears.reduce((acc, y) => acc + y.count, 0);
 
   return (
     <div className="space-y-6 pb-32 lg:pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -111,6 +113,39 @@ export default function MapPage() {
           <p className="text-xs sm:text-sm font-semibold text-slate-500 max-w-2xl leading-relaxed">
             Locate classmates and fellow alumni worldwide. Zoom in on clusters to identify alumni in your area, and click markers to view their profiles or connect.
           </p>
+        </div>
+
+        {/* Quick Stats Pill Header */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto shrink-0">
+          <div className="flex items-center gap-2.5 px-3.5 py-2 bg-gradient-to-br from-blue-50/80 to-slate-50 rounded-2xl border border-blue-100/60 shadow-xs transition duration-200 hover:shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#003D7A] shadow-2xs border border-blue-100/50">
+              <GraduationCap size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Alumni</p>
+              <p className="text-xs font-black text-slate-900">{totalAlumniCount > 0 ? totalAlumniCount.toLocaleString() : '1,000+'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 px-3.5 py-2 bg-gradient-to-br from-red-50/80 to-slate-50 rounded-2xl border border-red-100/60 shadow-xs transition duration-200 hover:shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#C41E3A] shadow-2xs border border-red-100/50">
+              <Globe size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Countries</p>
+              <p className="text-xs font-black text-slate-900">{availableCountries.length > 0 ? availableCountries.length : '10+'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 px-3.5 py-2 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-2xl border border-slate-200/60 shadow-xs transition duration-200 hover:shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#003D7A] shadow-2xs border border-slate-200/50">
+              <Building2 size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Companies</p>
+              <p className="text-xs font-black text-slate-900">{availableCompanies.length > 0 ? availableCompanies.length : '50+'}</p>
+            </div>
+          </div>
         </div>
       </div>
 

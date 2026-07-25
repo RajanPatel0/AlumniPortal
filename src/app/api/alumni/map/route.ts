@@ -94,6 +94,11 @@ export async function GET(req: NextRequest) {
             displayName: true,
           },
         },
+        campus: {
+          select: {
+            code: true,
+          },
+        },
       },
       take: 1000, // Safety cap on total results returned at once
     });
@@ -108,6 +113,7 @@ export async function GET(req: NextRequest) {
       avatarUrl: alumni.avatarUrl,
       batchYear: alumni.batchYear,
       branch: alumni.branch,
+      campus: alumni.campus?.code ?? null,
       location: {
         lat: alumni.location?.latitude ?? null,
         lng: alumni.location?.longitude ?? null,
@@ -115,7 +121,14 @@ export async function GET(req: NextRequest) {
       },
     }));
 
-    return NextResponse.json({ alumni: formattedAlumni });
+    return NextResponse.json(
+      { alumni: formattedAlumni },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error) {
     console.error('[MAP_ALUMNI_ERROR]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
