@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   experimental: {
+    optimizePackageImports: ["lucide-react"],
     serverActions: {
       allowedOrigins: ["test.ptu.ac.in"],
     },
