@@ -5,24 +5,17 @@ import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  // Authentication check
+  // Map endpoint supports public visualization (e.g., landing page map) as well as authenticated portal map
   const cookieStore = await cookies();
   const alumniToken = cookieStore.get('alumniAccessToken')?.value;
   const staffToken = cookieStore.get('accessToken')?.value;
 
-  if (!alumniToken && !staffToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let authorized = false;
+  let isAuthenticated = false;
   if (alumniToken) {
-    try { verifyAlumniAccessToken(alumniToken); authorized = true; } catch {}
+    try { verifyAlumniAccessToken(alumniToken); isAuthenticated = true; } catch {}
   }
-  if (!authorized && staffToken) {
-    try { verifyAccessToken(staffToken); authorized = true; } catch {}
-  }
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAuthenticated && staffToken) {
+    try { verifyAccessToken(staffToken); isAuthenticated = true; } catch {}
   }
 
   const { searchParams } = new URL(req.url);
@@ -40,9 +33,11 @@ export async function GET(req: NextRequest) {
   const country = searchParams.get('country');
 
   // Build prisma where query
+  // Unauthenticated visitors (landing page public map) only see PUBLIC visibility alumni.
+  // Authenticated alumni/staff can also see ALUMNI_ONLY entries.
   const where: any = {
     isRegistered: true,
-    mapVisibility: { not: 'HIDDEN' },
+    mapVisibility: isAuthenticated ? { not: 'HIDDEN' } : 'PUBLIC',
     locationId: { not: null },
     location: {
       status: 'FOUND',
@@ -100,7 +95,7 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      take: 1000, // Safety cap on total results returned at once
+      take: 5000, // High safety cap to ensure complete global cluster visualization
     });
 
     // Format the location coordinates and display details nested cleanly

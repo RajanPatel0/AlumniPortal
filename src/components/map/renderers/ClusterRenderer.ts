@@ -12,7 +12,9 @@ export function createClusterMarker(
   pointCount: number,
   clusterId: number,
   map: L.Map,
-  supercluster: Supercluster<AlumniMarkerData>
+  supercluster: Supercluster<AlumniMarkerData>,
+  isPublic?: boolean,
+  onPublicClick?: () => void
 ): L.Marker {
   const icon = createClusterIcon(pointCount);
   const marker = L.marker([lat, lng], { icon });
@@ -20,17 +22,26 @@ export function createClusterMarker(
   // On click: expand cluster smoothly using map.flyTo()
   marker.on('click', () => {
     try {
-      const expansionZoom = Math.min(
-        supercluster.getClusterExpansionZoom(clusterId),
-        18
-      );
-      map.flyTo([lat, lng], expansionZoom, {
+      const expansionZoom = supercluster.getClusterExpansionZoom(clusterId);
+      const currentZoom = map.getZoom();
+
+      if (isPublic && (currentZoom >= 12 || expansionZoom > 14)) {
+        if (onPublicClick) onPublicClick();
+        return;
+      }
+
+      const targetZoom = Math.min(expansionZoom, 18);
+      map.flyTo([lat, lng], targetZoom, {
         animate: true,
         duration: 0.8,
       });
     } catch (err) {
-      console.warn('Failed to calculate expansion zoom for cluster:', err);
-      map.flyTo([lat, lng], map.getZoom() + 2);
+      if (isPublic && onPublicClick) {
+        onPublicClick();
+      } else {
+        console.warn('Failed to calculate expansion zoom for cluster:', err);
+        map.flyTo([lat, lng], map.getZoom() + 2);
+      }
     }
   });
 

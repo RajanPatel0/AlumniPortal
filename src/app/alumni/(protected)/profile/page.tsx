@@ -78,18 +78,19 @@ function ProfilePageClient() {
   const id = searchParams.get('id');
   const isEditRequested = searchParams.get('edit') === 'true';
 
+  // Instant redirect if legacy query param ?id= was used
+  useEffect(() => {
+    if (id) {
+      router.replace(`/alumni/profile/${id}`);
+    }
+  }, [id, router]);
+
   const fetchProfile = useCallback(async () => {
+    if (id) return; // Prevent fetching self profile if redirecting
     try {
-      const url = id ? `/alumni/me?id=${id}` : '/alumni/me';
-      const res = await apiFetch(url);
+      const res = await apiFetch('/alumni/me');
       if (!res.ok) throw new Error('Unauthorized');
       const data = await res.json();
-
-      // If server instructed a redirect (because target id is another user)
-      if (data.redirectUrl) {
-        router.replace(data.redirectUrl);
-        return;
-      }
 
       setProfile(data.user);
       setFormData(data.user);
@@ -103,10 +104,6 @@ function ProfilePageClient() {
       try {
         const adminRes = await apiFetch('/admin/me');
         if (adminRes.ok) {
-          if (id) {
-            router.replace(`/alumni/profile/${id}`);
-            return;
-          }
           router.push('/admin/dashboard');
           return;
         }

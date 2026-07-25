@@ -16,6 +16,51 @@ export const defaultAlumniIcon = typeof window !== 'undefined'
   : undefined;
 
 /**
+ * Creates custom divIcon for individual/leaf points showing a circular number count badge
+ */
+export function createSingleNumberIcon(count: number = 1): L.DivIcon {
+  const size = 28;
+  const html = `
+    <div style="
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: ${size}px;
+      height: ${size}px;
+      cursor: pointer;
+      user-select: none;
+    ">
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0096c7 0%, #003D7A 100%);
+        color: #ffffff;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 12px rgba(0, 61, 122, 0.45);
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      " onmouseover="this.style.transform='scale(1.15)';" onmouseout="this.style.transform='scale(1)';">
+        <span style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);">${count}</span>
+      </div>
+    </div>
+  `;
+
+  return L.divIcon({
+    html,
+    className: 'custom-single-number-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+/**
  * Calculates pixel diameter using sqrt(count) scaling
  */
 export function calculateClusterSize(pointCount: number): number {

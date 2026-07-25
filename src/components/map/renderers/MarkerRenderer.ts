@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import { AlumniMarkerData } from '../utils/cluster';
-import { defaultAlumniIcon } from '../utils/markerIcons';
+import { defaultAlumniIcon, createSingleNumberIcon } from '../utils/markerIcons';
 import { renderSingleAlumnusPopup } from './PopupRenderer';
 
 /**
@@ -9,10 +9,21 @@ import { renderSingleAlumnusPopup } from './PopupRenderer';
 export function createIndividualMarker(
   lat: number,
   lng: number,
-  person: AlumniMarkerData
+  person: AlumniMarkerData,
+  isPublic?: boolean,
+  onPublicClick?: () => void
 ): L.Marker {
-  const marker = L.marker([lat, lng], { icon: defaultAlumniIcon });
-  const popupContent = renderSingleAlumnusPopup(person);
-  marker.bindPopup(popupContent);
+  const icon = isPublic ? createSingleNumberIcon(1) : defaultAlumniIcon;
+  const marker = L.marker([lat, lng], { icon });
+
+  if (isPublic && onPublicClick) {
+    marker.on('click', () => {
+      onPublicClick();
+    });
+  } else {
+    const popupContent = renderSingleAlumnusPopup(person);
+    marker.bindPopup(popupContent);
+  }
+
   return marker;
 }

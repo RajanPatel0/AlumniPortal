@@ -26,9 +26,9 @@ export default function VideosSection({ videos }: { videos: VideoItem[] }) {
   if (!videos || videos.length === 0) return null;
 
   return (
-    <section id="videos" className="py-24 bg-gradient-to-b from-slate-50/50 to-white scroll-mt-16 border-t border-slate-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+    <section id="videos" className="py-16 bg-gradient-to-b from-slate-50/50 to-white scroll-mt-16 border-t border-slate-100">
+      <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Watch & Relive</h3>
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Videos</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>

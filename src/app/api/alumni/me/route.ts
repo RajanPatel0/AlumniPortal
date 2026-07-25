@@ -37,16 +37,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const targetId = searchParams.get('id');
-
-    // If targetId is provided and differs from logged in user, instruct client to redirect
-    if (targetId && targetId !== viewerId) {
-      return NextResponse.json({ redirectUrl: `/alumni/profile/${targetId}` });
-    }
-
-    // If targetId is not specified, and the viewer is staff, return staff details
-    if (!targetId && isStaff) {
+    if (isStaff) {
       const staff = await prisma.staff.findUnique({
         where: { id: viewerId },
         include: { campus: { select: { id: true, name: true } } },

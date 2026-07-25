@@ -26,16 +26,16 @@ export default function LandingNav() {
 
   const externalLinks = [
     { href: 'https://ptu.ac.in/alumni/distinguished-alumni', label: 'Distinguished Alumni' },
-    { href: 'https://ptu.ac.in/alumni/jobs-for-alumni/', label: 'Jobs for Alumni' },
+    { href: 'https://ptu.ac.in/alumni/jobs-for-alumni/', label: 'Vacancies for Alumni' },
   ];
 
   return (
-    <nav className={`sticky top-0 z-50 transition-all duration-300 w-full ${
+    <nav className={`sticky top-0 z-[2000] transition-all duration-300 w-full ${
       scrolled 
         ? 'bg-[#012140]/95 backdrop-blur-md shadow-lg py-3 border-b border-white/5' 
         : 'bg-[#012140] py-4 border-b border-white/10'
     }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+      <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
         {/* Crest & Title Logo */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white shadow-md overflow-hidden border border-slate-100/10 flex-shrink-0">

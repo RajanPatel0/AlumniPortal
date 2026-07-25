@@ -5,6 +5,7 @@ import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { GET } from '@/app/api/landing-data/route';
+import { BASE_PATH } from '@/lib/api';
 
 // Components
 import HeroCarousel from '@/components/landing/HeroCarousel';
@@ -16,6 +17,7 @@ import LandingNav from '@/components/landing/LandingNav';
 import NewsSection from '@/components/landing/NewsSection';
 import VideosSection from '@/components/landing/VideosSection';
 import SpotlightSection from '@/components/landing/SpotlightSection';
+import LandingMapSection from '@/components/landing/LandingMapSection';
 
 async function getLandingData() {
   const res = await GET();
@@ -53,7 +55,7 @@ export default async function HomePage() {
       description: 'Specializing in computer applications, management education, and emerging sciences through industry-focused learning and innovation.',
       alumniCount: '1,200+',
       url: 'https://mohali.ptu.ac.in',
-      image: '/campus/m1.png',
+      image: `${BASE_PATH}/campus/m1.png`,
     },
     {
       id: 'mohali-2',
@@ -63,7 +65,7 @@ export default async function HomePage() {
       description: 'Advancing technology education with modern computing, software innovation, startup incubation, and applied research.',
       alumniCount: '800+',
       url: 'https://mohalicampus.ptu.ac.in',
-      image: '/campus/m2.png',
+      image: `${BASE_PATH}/campus/m2.png`,
     },
     {
       id: 'amritsar',
@@ -73,7 +75,7 @@ export default async function HomePage() {
       description: 'Delivering quality education in engineering, computer networking, and technical disciplines with strong career development support.',
       alumniCount: '1,500+',
       url: 'https://amritsar.ptu.ac.in',
-      image: '/campus/amritsir.png',
+      image: `${BASE_PATH}/campus/amritsir.png`,
     },
     {
       id: 'hoshiarpur',
@@ -83,7 +85,7 @@ export default async function HomePage() {
       description: 'Strengthening engineering education through industrial training, applied sciences, and hands-on technical learning.',
       alumniCount: '1,100+',
       url: 'https://hoshiarpur.ptu.ac.in',
-      image: '/campus/hoshiarpur.png',
+      image: `${BASE_PATH}/campus/hoshiarpur.png`,
     },
     {
       id: 'batala',
@@ -93,7 +95,7 @@ export default async function HomePage() {
       description: 'Empowering students with vocational excellence, manufacturing technologies, and entrepreneurship-driven education.',
       alumniCount: '700+',
       url: 'https://ptu.ac.in/batala-campus/',
-      image: '/campus/Batala.png',
+      image: `${BASE_PATH}/campus/Batala.png`,
     },
     {
       id: 'main-campus',
@@ -102,7 +104,7 @@ export default async function HomePage() {
       iconName: 'Building3',
       description: 'The flagship campus of IKGPTU, driving excellence in engineering, management, computer applications, applied sciences, research, innovation, and industry collaboration.',
       url: 'https://ptu.ac.in',
-      image: '/campus/kpt.png',
+      image: `${BASE_PATH}/campus/kpt.png`,
     },
   ];
 
@@ -115,9 +117,9 @@ export default async function HomePage() {
       <HeroCarousel slides={data.heroSlides} />
 
       {/* 2. Stats Strip */}
-      <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-14 text-white relative overflow-hidden shadow-inner">
+      <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-10 text-white relative overflow-hidden shadow-inner">
         <div className="absolute inset-0 bg-blue-950/20 backdrop-brightness-75"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-wrap md:grid md:grid-cols-5 gap-y-8 gap-x-4 justify-center text-center">
             {data.statsList?.map((stat: any, idx: number) => {
               // Resolve Lucide Icon dynamically
@@ -137,8 +139,8 @@ export default async function HomePage() {
       </section>
 
       {/* 3. About / Welcome Note */}
-      <section id="leadership" className="scroll-mt-16 py-24 bg-gradient-to-b from-white via-slate-50/60 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="leadership" className="scroll-mt-16 py-16 bg-gradient-to-b from-white via-slate-50/60 to-white">
+        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             {/* Note text */}
             <div className="lg:col-span-7">
@@ -182,6 +184,9 @@ export default async function HomePage() {
       {/* 5. News & Campus Updates Section */}
       <NewsSection news={data.news} />
 
+      {/* 5.5 Global Community Alumni Map Section */}
+      <LandingMapSection />
+
       {/* 6. Gallery / Memories Section */}
       <GalleryMasonry items={data.gallery} />
 
@@ -196,9 +201,9 @@ export default async function HomePage() {
 
 
       {/* 9. Campus Showcase (Statically Fixed) */}
-      <section id="campuses" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+      <section id="campuses" className="py-16 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
+        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Our Footprint</h3>
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Campus Showcase</h2>
             <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
@@ -251,7 +256,7 @@ export default async function HomePage() {
 
       {/* 10. Partner/Affiliated Colleges strip */}
       {/* <section className="py-16 bg-white border-t border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-8">
             Partner / Affiliated Institutions
           </p>
@@ -275,7 +280,7 @@ export default async function HomePage() {
 
       {/* 12. Footer */}
       <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">IKGPTU Alumni</h4>
