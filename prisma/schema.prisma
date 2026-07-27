@@ -224,6 +224,7 @@ model Alumni {
   comments            Comment[]
   startups            StartUp[]
   albums              Album[]
+  albumLikes          AlbumLike[]
   jobs                Job[]
   events              Event[]
   sentConnections     Connection[]     @relation("SentConnections")
@@ -475,6 +476,8 @@ model Album {
   postedByStaffId String?
   postedByStaff   Staff?       @relation(fields: [postedByStaffId], references: [id], onDelete: Cascade)
   images          AlbumImage[]
+  likes           AlbumLike[]
+  viewsCount      Int          @default(0)
   isPublished     Boolean      @default(false) // admin let it be published or not (public property scope to campus)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -495,6 +498,20 @@ model AlbumImage {
 
   @@index([albumId])
   @@map("album_images")
+}
+
+model AlbumLike {
+  id        String   @id @default(cuid())
+  albumId   String
+  album     Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  alumniId  String
+  alumni    Alumni   @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([albumId, alumniId])
+  @@index([albumId])
+  @@index([alumniId])
+  @@map("album_likes")
 }
 
 model Job {
