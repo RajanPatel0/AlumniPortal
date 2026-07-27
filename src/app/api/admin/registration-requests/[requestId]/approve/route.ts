@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getAuthenticatedStaff, CampusScopeError } from '@/lib/auth/staff-auth';
 import { sendEmail } from '@/lib/brevo';
 import { resolveLocation } from '@/lib/geocoding';
+import { ensureAcademicOptionActive } from '@/lib/academic-options';
 
 export async function POST(
   req: NextRequest,
@@ -23,6 +24,8 @@ export async function POST(
     const { requestId } = await params;
     const body = await req.json().catch(() => ({}));
     const overrideCampusId = typeof body.campusId === 'string' ? body.campusId.trim() : '';
+    const overrideBranch = typeof body.branch === 'string' && body.branch.trim() ? body.branch.trim() : '';
+    const overrideCourse = typeof body.course === 'string' && body.course.trim() ? body.course.trim() : '';
 
     const existingRequest = await prisma.registrationRequest.findUnique({
       where: { id: requestId },
@@ -66,6 +69,15 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid campus' }, { status: 400 });
     }
 
+    const finalBranch = overrideBranch || existingRequest.branch;
+    const finalCourse = overrideCourse !== '' ? overrideCourse : existingRequest.course;
+
+    // Automatically ensure the approved branch and course are active in AcademicOption table
+    await Promise.all([
+      ensureAcademicOptionActive('BRANCH', finalBranch),
+      ensureAcademicOptionActive('COURSE', finalCourse),
+    ]);
+
     const duplicateAlumni = await prisma.alumni.findFirst({
       where: {
         OR: [
@@ -98,6 +110,9 @@ export async function POST(
         data: {
           status: 'APPROVED',
           campusId: finalCampusId,
+          branch: finalBranch,
+          course: finalCourse,
+          needsReview: false, // Approved by admin
           reviewedById: staff.id,
           reviewedAt: new Date(),
         },
@@ -109,9 +124,10 @@ export async function POST(
           email: existingRequest.email,
           enrollmentNo: existingRequest.enrollmentNo,
           batchYear: existingRequest.batchYear,
-          branch: existingRequest.branch,
+          branch: finalBranch,
           college: existingRequest.college,
-          course: existingRequest.course,
+          course: finalCourse,
+          needsReview: false, // Approved by admin
           phone: existingRequest.phone,
           campusId: finalCampusId,
           isRegistered: true,
@@ -162,7 +178,7 @@ export async function POST(
           <p style="margin: 0 0 8px; font-weight: bold; color: #0f172a;">Account Details:</p>
           <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> <code>${existingRequest.email}</code></p>
           <p style="margin: 4px 0; font-size: 14px;"><strong>Campus:</strong> ${campus.name}</p>
-          <p style="margin: 4px 0; font-size: 14px;"><strong>Course / Branch:</strong> ${existingRequest.branch} ${existingRequest.course ? `(${existingRequest.course})` : ''}</p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>Course / Branch:</strong> ${finalBranch} ${finalCourse ? `(${finalCourse})` : ''}</p>
         </div>
         
         <p>You can now log in to the portal using your registered email and credentials or your Google/LinkedIn account (depending on how you registered).</p>

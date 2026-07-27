@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed-academic": "node prisma/seed-academic-options.js",
+    "migrate-and-seed": "prisma migrate deploy && node prisma/seed-academic-options.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed-academic-options.js"
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.4",

@@ -25,6 +25,11 @@ export default function SelfRegisterPage() {
     companies: [],
   });
 
+  const [courseSelection, setCourseSelection] = useState('');
+  const [customCourse, setCustomCourse] = useState('');
+  const [branchSelection, setBranchSelection] = useState('');
+  const [customBranch, setCustomBranch] = useState('');
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
@@ -125,8 +130,10 @@ export default function SelfRegisterPage() {
       if (!formData.batchYear) return 'Batch Year is required';
       const year = Number(formData.batchYear);
       if (isNaN(year) || year < 1990 || year > 2035) return 'Please enter a valid batch year (1990-2035)';
-      if (!formData.branch.trim()) return 'Branch/Department is required';
-      if (!formData.course.trim()) return 'Course is required';
+      const effCourse = courseSelection === 'OTHER' ? customCourse.trim() : courseSelection.trim();
+      if (!effCourse) return 'Course is required';
+      const effBranch = branchSelection === 'OTHER' ? customBranch.trim() : branchSelection.trim();
+      if (!effBranch) return 'Branch/Department is required';
       if (!formData.college.trim()) return 'College is required';
     } else if (step === 3) {
       if (!formData.pincode.trim()) return 'Current Pincode is required';
@@ -169,11 +176,16 @@ export default function SelfRegisterPage() {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(formData.password, salt);
 
+      const finalCourse = courseSelection === 'OTHER' ? customCourse.trim() : courseSelection.trim();
+      const finalBranch = branchSelection === 'OTHER' ? customBranch.trim() : branchSelection.trim();
+
       const res = await apiFetch('/alumni/new-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          course: finalCourse,
+          branch: finalBranch,
           batchYear: Number(formData.batchYear),
           authProvider: 'MANUAL',
           passwordHash: hashedPassword,
@@ -432,43 +444,91 @@ export default function SelfRegisterPage() {
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Course *</label>
                       <div className="relative">
-                        <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                        <input
-                          type="text"
+                        <BookOpen className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400 z-10" />
+                        <select
                           required
-                          list="courses-list"
-                          placeholder="e.g. B.Tech"
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
-                          value={formData.course}
-                          onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                        />
-                        <datalist id="courses-list">
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 appearance-none"
+                          value={courseSelection}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCourseSelection(val);
+                            if (val !== 'OTHER') {
+                              setFormData((prev) => ({ ...prev, course: val }));
+                            } else {
+                              setFormData((prev) => ({ ...prev, course: customCourse }));
+                            }
+                          }}
+                        >
+                          <option value="">Select your course</option>
                           {autocompleteOptions.courses.map((c) => (
-                            <option key={c} value={c} />
+                            <option key={c} value={c}>{c}</option>
                           ))}
-                        </datalist>
+                          <option value="OTHER">Other (specify)</option>
+                        </select>
                       </div>
+
+                      {courseSelection === 'OTHER' && (
+                        <div className="mt-2.5">
+                          <input
+                            type="text"
+                            required
+                            placeholder="Enter your course name..."
+                            className="w-full px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:border-[#003D7A] focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-200"
+                            value={customCourse}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustomCourse(val);
+                              setFormData((prev) => ({ ...prev, course: val }));
+                            }}
+                          />
+                          <p className="mt-1 text-[11px] text-amber-700 font-medium">Custom entries will be flagged for administrative review.</p>
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Branch/Department *</label>
                       <div className="relative">
-                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                        <input
-                          type="text"
+                        <GraduationCap className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400 z-10" />
+                        <select
                           required
-                          list="branches-list"
-                          placeholder="e.g. Computer Science"
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
-                          value={formData.branch}
-                          onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                        />
-                        <datalist id="branches-list">
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 appearance-none"
+                          value={branchSelection}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBranchSelection(val);
+                            if (val !== 'OTHER') {
+                              setFormData((prev) => ({ ...prev, branch: val }));
+                            } else {
+                              setFormData((prev) => ({ ...prev, branch: customBranch }));
+                            }
+                          }}
+                        >
+                          <option value="">Select your branch/department</option>
                           {autocompleteOptions.branches.map((b) => (
-                            <option key={b} value={b} />
+                            <option key={b} value={b}>{b}</option>
                           ))}
-                        </datalist>
+                          <option value="OTHER">Other (specify)</option>
+                        </select>
                       </div>
+
+                      {branchSelection === 'OTHER' && (
+                        <div className="mt-2.5">
+                          <input
+                            type="text"
+                            required
+                            placeholder="Enter your branch/department name..."
+                            className="w-full px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:border-[#003D7A] focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-200"
+                            value={customBranch}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustomBranch(val);
+                              setFormData((prev) => ({ ...prev, branch: val }));
+                            }}
+                          />
+                          <p className="mt-1 text-[11px] text-amber-700 font-medium">Custom entries will be flagged for administrative review.</p>
+                        </div>
+                      )}
                     </div>
 
                     <div>

@@ -4,7 +4,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe, Layers } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { BASE_PATH } from '@/lib/api';
 
@@ -22,6 +22,7 @@ const allModules: NavItem[] = [
   { name: 'Web Update', href: '/admin/landing-page', icon: Globe, module: 'landing-page' },
   { name: 'Import Alumni', href: '/admin/import', icon: Import, module: 'import' },
   { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
+  { name: 'Data Normalization', href: '/admin/data-normalization', icon: Layers, module: 'alumni' },
   { name: 'Posts & Gallery', href: '/admin/posts', icon: FileText, module: 'posts' },
   { name: 'Yearbook', href: '/admin/yearbook', icon: BookOpen, module: 'yearbook' },
   { name: 'Opportunities', href: '/admin/jobs', icon: Briefcase, module: 'jobs' },
@@ -125,24 +126,28 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-30 h-full w-64 transform bg-[#012140] text-white transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-30 h-screen w-64 transform bg-[#012140] text-white flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-9">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
+        {/* Header logo area */}
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-6 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider overflow-hidden">
               <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
             </div>
-          <span className="text-lg font-semibold">IKGPTU Alumni</span>
+            <span className="text-base font-bold tracking-tight">IKGPTU Alumni</span>
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden"
+            className="lg:hidden text-white/80 hover:text-white"
           >
             <X size={20} />
           </button>
         </div>
 
-        <nav className="mt-6 flex flex-col gap-1 px-3">
+        {/* Scrollable navigation area */}
+        <nav className="flex-1 overflow-y-auto py-4 flex flex-col gap-1 px-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -152,7 +157,7 @@ export default function DashboardLayout({
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                   isActive
-                    ? 'bg-[#d61c1c] text-white'
+                    ? 'bg-[#d61c1c] text-white font-bold'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -163,7 +168,8 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-0 w-full px-3 space-y-1">
+        {/* Fixed footer area */}
+        <div className="p-3 border-t border-white/10 space-y-1 flex-shrink-0 bg-[#012140]">
           {/* Enter Alumni Portal shortcut */}
           <Link
             href="/alumni/feed"
@@ -176,7 +182,7 @@ export default function DashboardLayout({
           </Link>
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
           >
             <LogOut size={18} />
             <span>Logout</span>
@@ -187,10 +193,10 @@ export default function DashboardLayout({
       {/* Main content area */}
       <div className="lg:ml-64">
         {/* Topbar */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm lg:px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-gray-200 bg-[#003D7A] text-white px-4 shadow-sm lg:px-6">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded p-1 text-gray-600 hover:bg-gray-100 lg:hidden"
+            className="rounded p-1 text-white/80 hover:bg-white/10 lg:hidden"
           >
             <Menu size={24} />
           </button>
@@ -201,16 +207,16 @@ export default function DashboardLayout({
               href="/alumni/feed"
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#012140] border border-[#012140]/20 hover:bg-[#012140]/5 rounded-lg transition"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white border border-white/30 hover:bg-white/10 rounded-lg transition"
             >
               <ExternalLink size={13} />
               Alumni Portal
             </Link>
             <div className="text-left">
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
+              <p className="text-sm font-medium text-white">{user.name}</p>
+              <p className="text-xs text-white/70">{user.email}</p>
             </div>
-            <div className="h-8 w-8 rounded-full bg-[#012140] flex items-center justify-center text-white">
+            <div className="h-8 w-8 rounded-full bg-[#d61c1c] flex items-center justify-center text-white font-bold">
               {user.name.charAt(0).toUpperCase()}
             </div>
           </div>

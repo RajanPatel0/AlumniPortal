@@ -12,6 +12,7 @@ export interface AlumniImportRow {
   export interface ImportResult {
     success: number;
     failed: number;
+    reviewFlaggedCount?: number;
     errors: Array<{ row: number; email: string; reason: string }>;
     batchId: string;
   }

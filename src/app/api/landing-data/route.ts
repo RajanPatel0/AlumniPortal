@@ -21,9 +21,9 @@ export async function GET() {
         where: { isActive: true },
         orderBy: { displayOrder: 'asc' },
       }),
-      prisma.landingWelcome.findFirst({
+      prisma.landingWelcome.findMany({
         where: { isActive: true },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
       }),
       prisma.event.findMany({
         where: { showOnLanding: true, isPublished: true },
@@ -98,21 +98,27 @@ export async function GET() {
           { number: '350+', label: 'Events Hosted', icon: 'Calendar' }
         ];
 
-    const welcomeNote = dbWelcome
-      ? {
-          title: dbWelcome.title,
-          body: dbWelcome.body,
-          photo: dbWelcome.photo,
-          name: dbWelcome.name,
-          designation: dbWelcome.designation,
-        }
-      : {
-          title: 'Welcome to the IKGPTU Alumni Family',
-          body: '<p class="mb-4">It is a matter of immense pride to witness our alumni community spread its wings across the globe, driving innovation, entrepreneurship, and leadership in diverse fields.</p><p class="mb-4">This portal serves as a bridge connecting our rich legacy with the promising future. I invite all our former students to actively participate, share their expertise, and stay connected with their alma mater.</p>',
-          photo: 'https://ptu.ac.in/wp-content/uploads/2025/08/vice_chancellor_photo.jpg',
-          name: 'Dr. Susheel Mittal',
-          designation: 'Vice Chancellor, IKGPTU',
-        };
+    const welcomeNotes = dbWelcome.length > 0
+      ? dbWelcome.map(w => ({
+          id: w.id,
+          title: w.title,
+          body: w.body,
+          photo: w.photo,
+          name: w.name,
+          designation: w.designation,
+        }))
+      : [
+          {
+            id: 'welc-default-1',
+            title: 'Welcome to the IKGPTU Alumni Family',
+            body: '<p class="mb-4">It is a matter of immense pride to witness our alumni community spread its wings across the globe, driving innovation, entrepreneurship, and leadership in diverse fields.</p><p class="mb-4">This portal serves as a bridge connecting our rich legacy with the promising future. I invite all our former students to actively participate, share their expertise, and stay connected with their alma mater.</p>',
+            photo: 'https://ptu.ac.in/wp-content/uploads/2025/08/vice_chancellor_photo.jpg',
+            name: 'Dr. Susheel Mittal',
+            designation: 'Vice Chancellor, IKGPTU',
+          }
+        ];
+
+    const welcomeNote = welcomeNotes[0];
 
     const events = dbEvents.length > 0
       ? dbEvents.map(e => ({
@@ -377,6 +383,7 @@ export async function GET() {
       heroSlides,
       statsList,
       welcomeNote,
+      welcomeNotes,
       events,
       news,
       notableAlumni,

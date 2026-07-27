@@ -88,8 +88,9 @@ export async function POST(req: NextRequest) {
       file.name,
       targetCampusId // new parameter
     );
+    const flaggedMsg = result.reviewFlaggedCount ? ` (${result.reviewFlaggedCount} flagged for review)` : '';
     return NextResponse.json({
-      message: `Import completed. ${result.success} inserted, ${result.failed} failed.`,
+      message: `Import completed. ${result.success} inserted${flaggedMsg}, ${result.failed} failed.`,
       result,
     });
   } catch (err: any) {

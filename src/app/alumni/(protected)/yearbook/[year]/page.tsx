@@ -8,6 +8,7 @@ import { BookOpen, Users, ChevronRight, ArrowLeft, GraduationCap } from 'lucide-
 
 interface BranchData {
   branch: string;
+  optionId: string | null;  // AcademicOption.id — null for non-canonical variants
   count: number;
 }
 
@@ -170,32 +171,61 @@ export default function YearbookYearPage({ params }: { params: Promise<{ year: s
           {branches.map((b, idx) => {
             const color = CARD_COLORS[idx % CARD_COLORS.length];
             const icon = getBranchIcon(b.branch);
-            const encodedBranch = encodeURIComponent(b.branch);
-            return (
-              <Link
-                key={b.branch}
-                href={`/alumni/yearbook/${year}/${encodedBranch}`}
-                id={`branch-card-${b.branch.replace(/\s+/g, '-').toLowerCase()}`}
-                className={`group relative overflow-hidden rounded-2xl border ${color.bg} ${color.border} p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer`}
-              >
+            // Use AcademicOption.id as the URL segment — a plain CUID with no
+            // special characters, safe on IIS/ASP.NET with no encoding needed.
+            const hasLink = !!b.optionId;
+            const cardContent = (
+              <>
                 {/* Top accent bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1 ${color.accent} rounded-t-2xl`} />
+                <div className={`absolute top-0 left-0 right-0 h-1 ${hasLink ? color.accent : 'bg-slate-300'} rounded-t-2xl`} />
 
                 <div className="flex items-start justify-between mb-3">
                   <span className="text-3xl">{icon}</span>
-                  <ChevronRight
-                    size={16}
-                    className={`${color.text} opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 mt-1`}
-                  />
+                  {hasLink ? (
+                    <ChevronRight
+                      size={16}
+                      className={`${color.text} opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 mt-1`}
+                    />
+                  ) : (
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-1 leading-tight text-right max-w-[52px]">
+                      Review<br/>pending
+                    </span>
+                  )}
                 </div>
 
-                <p className={`text-sm font-extrabold ${color.text} leading-tight`}>{b.branch}</p>
+                <p className={`text-sm font-extrabold ${hasLink ? color.text : 'text-slate-500'} leading-tight`}>
+                  {b.branch}
+                </p>
 
-                <div className={`inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full ${color.badge}`}>
+                <div className={`inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full ${hasLink ? color.badge : 'bg-slate-100 text-slate-500'}`}>
                   <Users size={11} />
                   <span className="text-[11px] font-bold">{b.count} {b.count === 1 ? 'Member' : 'Members'}</span>
                 </div>
-              </Link>
+              </>
+            );
+
+            if (hasLink) {
+              return (
+                <Link
+                  key={b.branch}
+                  href={`/alumni/yearbook/${year}/${b.optionId}`}
+                  id={`branch-card-${b.optionId}`}
+                  className={`group relative overflow-hidden rounded-2xl border ${color.bg} ${color.border} p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer`}
+                >
+                  {cardContent}
+                </Link>
+              );
+            }
+
+            // No canonical match — render as a non-clickable card
+            return (
+              <div
+                key={b.branch}
+                id={`branch-card-unlinked-${b.branch.replace(/\s+/g, '-').toLowerCase()}`}
+                className="group relative overflow-hidden rounded-2xl border bg-slate-50 border-slate-200 p-5 shadow-sm opacity-70 cursor-default"
+              >
+                {cardContent}
+              </div>
             );
           })}
         </div>

@@ -45,6 +45,9 @@ import {
   deleteStatAction,
   
   getWelcomeMsgAction,
+  createWelcomeMsgAction,
+  updateWelcomeMsgAction,
+  deleteWelcomeMsgAction,
   saveWelcomeMsgAction,
   
   getLandingEventsAction,
@@ -117,7 +120,8 @@ export default function WebUpdatePage() {
     body: '',
     photo: '',
     name: '',
-    designation: ''
+    designation: '',
+    isActive: true
   });
 
   // 5. News Form State
@@ -211,7 +215,8 @@ export default function WebUpdatePage() {
         body: welcomeData.welcome.body || '',
         photo: welcomeData.welcome.photo || '',
         name: welcomeData.welcome.name || '',
-        designation: welcomeData.welcome.designation || ''
+        designation: welcomeData.welcome.designation || '',
+        isActive: welcomeData.welcome.isActive ?? true
       });
     }
   }, [welcomeData]);
@@ -331,13 +336,31 @@ export default function WebUpdatePage() {
 
   // --- Welcome ---
   const saveWelcomeMutation = useMutation({
-    mutationFn: (data: any) => saveWelcomeMsgAction(data),
+    mutationFn: async (data: any) => {
+      if (editingItem) {
+        return updateWelcomeMsgAction(editingItem.id, data);
+      }
+      return createWelcomeMsgAction(data);
+    },
     onSuccess: (res: any) => {
       if (res.success) {
-        toast.success('Welcome message updated successfully!');
+        toast.success(editingItem ? 'Welcome message updated!' : 'Welcome message added!');
         invalidateKey('landing-welcome');
+        resetForm();
       } else {
         toast.error(res.error || 'Failed to save welcome message');
+      }
+    }
+  });
+
+  const deleteWelcomeMutation = useMutation({
+    mutationFn: (id: string) => deleteWelcomeMsgAction(id),
+    onSuccess: (res: any) => {
+      if (res.success) {
+        toast.success('Welcome message deleted!');
+        invalidateKey('landing-welcome');
+      } else {
+        toast.error(res.error || 'Failed to delete welcome message');
       }
     }
   });
@@ -536,6 +559,15 @@ export default function WebUpdatePage() {
         displayOrder: item.displayOrder || 0,
         isActive: item.isActive ?? true
       });
+    } else if (activeSection === 'welcome') {
+      setWelcomeForm({
+        title: item.title,
+        body: item.body || '',
+        photo: item.photo || '',
+        name: item.name || '',
+        designation: item.designation || '',
+        isActive: item.isActive ?? true
+      });
     } else if (activeSection === 'news') {
       setNewsForm({
         title: item.title,
@@ -583,6 +615,11 @@ export default function WebUpdatePage() {
     } else if (activeSection === 'stats') {
       if (!statForm.number || !statForm.label) return toast.error('Number and label are required');
       saveStatMutation.mutate(statForm);
+    } else if (activeSection === 'welcome') {
+      if (!welcomeForm.title || !welcomeForm.body || !welcomeForm.photo || !welcomeForm.name) {
+        return toast.error('Title, message, photo, and author name are required');
+      }
+      saveWelcomeMutation.mutate(welcomeForm);
     } else if (activeSection === 'news') {
       if (!newsForm.title || !newsForm.summary) return toast.error('Title and Summary are required');
       saveNewsMutation.mutate(newsForm);
@@ -682,7 +719,7 @@ export default function WebUpdatePage() {
             Managing: {cards.find((c) => c.id === activeSection)?.name}
           </h2>
           {/* Action button if applicable */}
-          {['hero', 'stats', 'news', 'testimonials', 'videos'].includes(activeSection) && !showAddForm && !editingItem && (
+          {['hero', 'stats', 'welcome', 'news', 'testimonials', 'videos'].includes(activeSection) && !showAddForm && !editingItem && (
             <button
               onClick={() => setShowAddForm(true)}
               className="flex items-center gap-1 px-4 py-2 bg-[#C41E3A] hover:bg-[#a3182f] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer"
@@ -1017,19 +1054,18 @@ export default function WebUpdatePage() {
               ────────────────────────────────────────────────────────────────── */}
           {activeSection === 'welcome' && (
             <div className="space-y-6">
-              {loadingWelcome ? (
-                <div className="text-center py-12 text-slate-500 font-semibold">Loading Welcome note...</div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!welcomeForm.title || !welcomeForm.body || !welcomeForm.photo || !welcomeForm.name) {
-                      return toast.error('All Welcome Message fields are required');
-                    }
-                    saveWelcomeMutation.mutate(welcomeForm);
-                  }}
-                  className="space-y-6"
-                >
+              {/* Form container */}
+              {(showAddForm || editingItem) && (
+                <form onSubmit={handleFormSubmit} className="bg-slate-50/50 border border-slate-100 p-6 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#003D7A]">
+                      {editingItem ? 'Edit Leadership Welcome Note' : 'Create New Leadership Welcome Note'}
+                    </h3>
+                    <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600">
+                      <X size={18} />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Left Details Column */}
                     <div className="lg:col-span-8 space-y-4">
@@ -1048,7 +1084,7 @@ export default function WebUpdatePage() {
                       <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Welcome Note Message (HTML/Paragraphs supported)</label>
                         <textarea
-                          rows={6}
+                          rows={5}
                           required
                           value={welcomeForm.body}
                           onChange={(e) => setWelcomeForm((prev) => ({ ...prev, body: e.target.value }))}
@@ -1081,6 +1117,18 @@ export default function WebUpdatePage() {
                           />
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={welcomeForm.isActive}
+                            onChange={(e) => setWelcomeForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                            className="rounded border-slate-200 text-[#003D7A] focus:ring-[#003D7A]"
+                          />
+                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Active Message (Show on Landing)</span>
+                        </label>
+                      </div>
                     </div>
 
                     {/* Right Photo Column */}
@@ -1106,17 +1154,90 @@ export default function WebUpdatePage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-4 py-2 border border-slate-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition"
+                    >
+                      Cancel
+                    </button>
                     <button
                       type="submit"
                       disabled={saveWelcomeMutation.isPending}
-                      className="px-6 py-2.5 bg-[#003D7A] hover:bg-blue-950 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition disabled:opacity-50"
+                      className="px-5 py-2 bg-[#003D7A] hover:bg-blue-950 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition disabled:opacity-50"
                     >
                       {saveWelcomeMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                      Save Leadership Welcome Note
+                      {editingItem ? 'Update Message' : 'Save Message'}
                     </button>
                   </div>
                 </form>
+              )}
+
+              {/* Messages Table List */}
+              {loadingWelcome ? (
+                <div className="text-center py-12 text-slate-500 font-semibold">Loading Welcome notes...</div>
+              ) : welcomeData?.welcomes?.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 font-semibold border border-dashed border-slate-200 rounded-2xl">
+                  No leadership welcome notes created yet. Click "Add New" above to post a welcome message.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        <th className="py-3 px-4">Photo</th>
+                        <th className="py-3 px-4">Leader Name & Designation</th>
+                        <th className="py-3 px-4">Headline Title</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {welcomeData?.welcomes?.map((msg: any) => (
+                        <tr key={msg.id} className="border-b border-slate-50 hover:bg-slate-50/50 text-sm">
+                          <td className="py-3 px-4">
+                            <img src={msg.photo} alt={msg.name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-extrabold text-gray-900">{msg.name}</p>
+                            <p className="text-xs text-[#C41E3A] font-semibold">{msg.designation}</p>
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 font-medium max-w-xs truncate">{msg.title}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                              msg.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-50 text-slate-500'
+                            }`}>
+                              {msg.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleEditClick(msg)}
+                                className="p-1.5 text-[#003D7A] hover:bg-blue-50 rounded-lg transition"
+                                title="Edit"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Delete welcome message from ${msg.name}?`)) {
+                                    deleteWelcomeMutation.mutate(msg.id);
+                                  }
+                                }}
+                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

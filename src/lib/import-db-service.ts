@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { AlumniImportRow, ImportResult } from '@/types/alumni-import';
 import { validateEmail, validateBatchYear } from './import-utils';
+import { checkAcademicNeedsReview, getAutoCorrectedBranch } from './academic-options';
 import { nanoid } from 'nanoid';
 
 const UPSERT_CHUNK_SIZE = 100;
@@ -21,6 +22,7 @@ type NormalizedImportRecord = {
   importedById: string;
   batchId: string;
   campusId: string;
+  needsReview: boolean;
 };
 
 export async function processImportBatch(
@@ -105,15 +107,24 @@ export async function processImportBatch(
       continue;
     }
 
+    // PART A: Auto-correct branch to "Computer Applications" if course is BCA or MCA
+    const finalBranch = getAutoCorrectedBranch(row.branch, row.course);
+    const finalCourse = row.course?.trim() || null;
+
+    const needsReview = await checkAcademicNeedsReview(finalBranch, finalCourse);
+    if (needsReview) {
+      result.reviewFlaggedCount = (result.reviewFlaggedCount || 0) + 1;
+    }
+
     // Valid record – prepare for bulk insert
     validRecords.push({
       name: row.name.trim(),
       email: normalizedEmail,
       originalInvitedEmail: normalizedEmail,
       batchYear: batchYear!,
-      branch: row.branch.trim(),
+      branch: finalBranch,
       college: row.college.trim(),
-      course: row.course?.trim() || null,
+      course: finalCourse,
       enrollmentNo: row.enrollment_no?.trim() || null,
       phone: row.phone?.trim() || null,
       inviteToken: nanoid(32),
@@ -122,6 +133,7 @@ export async function processImportBatch(
       importedById: adminId,
       batchId: batch.id,
       campusId: campusId,
+      needsReview,
     });
     seenEmails.add(normalizedEmail);
   }
@@ -145,6 +157,8 @@ export async function processImportBatch(
                 phone: record.phone,
                 batchId: batch.id,
                 importedById: adminId,
+                campusId: record.campusId,
+                needsReview: record.needsReview,
               } as any,
               create: record as any,
             })

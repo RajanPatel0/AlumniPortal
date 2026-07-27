@@ -536,6 +536,8 @@ function ProfilePageClient() {
                     <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Current Company</label>
                     <input
                       type="text"
+                      name="alumni_current_company_no_autofill"
+                      autoComplete="off"
                       value={formData?.currentCompany || ''}
                       onChange={(e) => handleInputChange('currentCompany', e.target.value)}
                       placeholder="e.g. Google India"
@@ -849,6 +851,8 @@ function ProfilePageClient() {
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Company / Organization *</label>
                 <input
                   type="text"
+                  name="alumni_experience_company_no_autofill"
+                  autoComplete="off"
                   required
                   value={selectedExp.company || ''}
                   onChange={(e) => setSelectedExp({ ...selectedExp, company: e.target.value })}

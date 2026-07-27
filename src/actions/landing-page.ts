@@ -180,14 +180,82 @@ export async function deleteStatAction(id: string) {
 
 export async function getWelcomeMsgAction() {
   try {
-    const welcome = await prisma.landingWelcome.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: 'desc' },
+    const welcomes = await prisma.landingWelcome.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    return { success: true, welcomes, welcome: welcomes[0] || null };
+  } catch (err: any) {
+    console.error('[getWelcomeMsgAction]', err);
+    return { success: false, error: err.message || 'Failed to fetch welcome messages' };
+  }
+}
+
+export async function createWelcomeMsgAction(data: {
+  title: string;
+  body: string;
+  photo: string;
+  name: string;
+  designation: string;
+  isActive?: boolean;
+}) {
+  try {
+    await verifyStaff();
+    const welcome = await prisma.landingWelcome.create({
+      data: {
+        title: data.title,
+        body: data.body,
+        photo: data.photo,
+        name: data.name,
+        designation: data.designation,
+        isActive: data.isActive ?? true,
+      },
     });
     return { success: true, welcome };
   } catch (err: any) {
-    console.error('[getWelcomeMsgAction]', err);
-    return { success: false, error: err.message || 'Failed to fetch welcome message' };
+    console.error('[createWelcomeMsgAction]', err);
+    return { success: false, error: err.message || 'Failed to create welcome message' };
+  }
+}
+
+export async function updateWelcomeMsgAction(
+  id: string,
+  data: {
+    title: string;
+    body: string;
+    photo: string;
+    name: string;
+    designation: string;
+    isActive?: boolean;
+  }
+) {
+  try {
+    await verifyStaff();
+    const welcome = await prisma.landingWelcome.update({
+      where: { id },
+      data: {
+        title: data.title,
+        body: data.body,
+        photo: data.photo,
+        name: data.name,
+        designation: data.designation,
+        isActive: data.isActive ?? true,
+      },
+    });
+    return { success: true, welcome };
+  } catch (err: any) {
+    console.error('[updateWelcomeMsgAction]', err);
+    return { success: false, error: err.message || 'Failed to update welcome message' };
+  }
+}
+
+export async function deleteWelcomeMsgAction(id: string) {
+  try {
+    await verifyStaff();
+    await prisma.landingWelcome.delete({ where: { id } });
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteWelcomeMsgAction]', err);
+    return { success: false, error: err.message || 'Failed to delete welcome message' };
   }
 }
 
@@ -198,42 +266,7 @@ export async function saveWelcomeMsgAction(data: {
   name: string;
   designation: string;
 }) {
-  try {
-    await verifyStaff();
-    // We update the active welcome message, or create one if none exists.
-    const current = await prisma.landingWelcome.findFirst({
-      where: { isActive: true },
-    });
-
-    let welcome;
-    if (current) {
-      welcome = await prisma.landingWelcome.update({
-        where: { id: current.id },
-        data: {
-          title: data.title,
-          body: data.body,
-          photo: data.photo,
-          name: data.name,
-          designation: data.designation,
-        },
-      });
-    } else {
-      welcome = await prisma.landingWelcome.create({
-        data: {
-          title: data.title,
-          body: data.body,
-          photo: data.photo,
-          name: data.name,
-          designation: data.designation,
-          isActive: true,
-        },
-      });
-    }
-    return { success: true, welcome };
-  } catch (err: any) {
-    console.error('[saveWelcomeMsgAction]', err);
-    return { success: false, error: err.message || 'Failed to save welcome message' };
-  }
+  return createWelcomeMsgAction(data);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

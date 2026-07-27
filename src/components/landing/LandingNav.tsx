@@ -26,7 +26,7 @@ export default function LandingNav() {
 
   const externalLinks = [
     { href: 'https://ptu.ac.in/alumni/distinguished-alumni', label: 'Distinguished Alumni' },
-    { href: 'https://ptu.ac.in/alumni/jobs-for-alumni/', label: 'Vacancies for Alumni' },
+    { href: 'https://ptu.ac.in/alumni/jobs-for-alumni', label: 'Govt. Vacancies' },
   ];
 
   return (

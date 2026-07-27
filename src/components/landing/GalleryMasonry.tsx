@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface GalleryItem {
   id: string;
@@ -13,7 +14,7 @@ interface GalleryItem {
 
 export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
   const [selectedAlbum, setSelectedAlbum] = useState<string>('All');
-  const [lightboxImage, setLightboxImage] = useState<GalleryItem | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Extract unique album names dynamically
   const albums = ['All', ...Array.from(new Set(items.map((item) => item.album)))];
@@ -24,6 +25,34 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
     if (selectedAlbum === 'All') return true;
     return item.album === selectedAlbum;
   });
+
+  const currentItem = lightboxIndex !== null ? filteredItems[lightboxIndex] : null;
+
+  const handlePrev = useCallback(() => {
+    if (lightboxIndex === null || filteredItems.length === 0) return;
+    setLightboxIndex(lightboxIndex === 0 ? filteredItems.length - 1 : lightboxIndex - 1);
+  }, [lightboxIndex, filteredItems.length]);
+
+  const handleNext = useCallback(() => {
+    if (lightboxIndex === null || filteredItems.length === 0) return;
+    setLightboxIndex(lightboxIndex === filteredItems.length - 1 ? 0 : lightboxIndex + 1);
+  }, [lightboxIndex, filteredItems.length]);
+
+  const handleClose = useCallback(() => {
+    setLightboxIndex(null);
+  }, []);
+
+  // Keyboard navigation shortcuts
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, handlePrev, handleNext, handleClose]);
 
   return (
     <section id="gallery" className="py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
@@ -43,10 +72,13 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
           {albums.map((album) => (
             <button
               key={album}
-              onClick={() => setSelectedAlbum(album)}
+              onClick={() => {
+                setSelectedAlbum(album);
+                setLightboxIndex(null);
+              }}
               className={`px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 selectedAlbum === album
-                  ? 'bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white'
+                  ? 'bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white shadow-md'
                   : 'bg-slate-50 text-gray-600 border border-slate-200 hover:bg-slate-100'
               }`}
             >
@@ -57,11 +89,11 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
 
         {/* Masonry-like Grid on Desktop, Horizontal Scroll on Mobile */}
         <div className="flex overflow-x-auto gap-6 sm:columns-2 md:columns-3 lg:columns-4 sm:block pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
-          {filteredItems.map((item) => (
+          {filteredItems.map((item, idx) => (
             <div
               key={item.id}
-              onClick={() => setLightboxImage(item)}
-              className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative w-[240px] flex-shrink-0 sm:w-auto sm:break-inside-avoid sm:mb-6"
+              onClick={() => setLightboxIndex(idx)}
+              className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative w-[240px] flex-shrink-0 sm:w-auto sm:break-inside-avoid sm:mb-6 group"
             >
               <img
                 src={item.image}
@@ -80,40 +112,87 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
           ))}
         </div>
 
-        {/* Lightbox Modal */}
-        {lightboxImage && (
+        {/* Lightbox Modal — elevated z-index (z-[9999]) above header navbar (z-[2000]) */}
+        {currentItem !== null && lightboxIndex !== null && (
           <div
-            className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-zoom-out"
-            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[9999] flex flex-col justify-between p-4 sm:p-6"
+            onClick={handleClose}
           >
+            {/* Top Bar inside modal frame — Close button & counter */}
             <div
-              className="relative max-w-4xl w-full max-h-[85vh] flex flex-col items-center cursor-default"
+              className="flex items-center justify-between text-white border-b border-white/10 pb-3 z-[10000] relative"
               onClick={(e) => e.stopPropagation()}
             >
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#C41E3A] text-white">
+                  {currentItem.album}
+                </span>
+                <span className="text-xs font-bold text-white/70">
+                  Image {lightboxIndex + 1} of {filteredItems.length}
+                </span>
+              </div>
+
               <button
-                onClick={() => setLightboxImage(null)}
-                className="absolute -top-12 right-0 text-white/80 hover:text-white transition-colors"
+                onClick={handleClose}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/15 rounded-full transition cursor-pointer"
                 aria-label="Close Lightbox"
               >
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={22} />
               </button>
-              
-              <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-900">
+            </div>
+
+            {/* Slider Container with Prev/Next arrows */}
+            <div
+              className="flex-1 flex items-center justify-center relative my-2 z-[10000]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Left Navigation Arrow */}
+              {filteredItems.length > 1 && (
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-2 sm:left-6 z-20 p-3 text-white/90 hover:text-white bg-slate-900/60 hover:bg-[#003D7A] rounded-full transition-all shadow-xl backdrop-blur-sm border border-white/10 cursor-pointer"
+                  aria-label="Previous Image"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              {/* Main Image View */}
+              <div className="max-w-4xl max-h-[72vh] flex flex-col items-center justify-center overflow-hidden">
                 <img
-                  src={lightboxImage.image}
-                  alt={lightboxImage.caption}
-                  className="max-h-[70vh] object-contain mx-auto"
+                  key={currentItem.id}
+                  src={currentItem.image}
+                  alt={currentItem.caption}
+                  className="max-w-full max-h-[62vh] object-contain rounded-xl shadow-2xl border border-white/10"
                 />
-                <div className="bg-slate-950/95 p-4 text-white">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#C41E3A]">
-                    {lightboxImage.album}
-                  </span>
-                  <h4 className="text-sm font-semibold mt-1">{lightboxImage.caption}</h4>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">Uploaded on {lightboxImage.uploadDate}</p>
-                </div>
+                {currentItem.caption && (
+                  <div className="mt-3 text-center bg-slate-900/80 border border-white/10 backdrop-blur-md px-5 py-2.5 rounded-2xl max-w-xl">
+                    <p className="text-white text-xs font-semibold">{currentItem.caption}</p>
+                    {currentItem.uploadDate && (
+                      <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Uploaded on {currentItem.uploadDate}</p>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {/* Right Navigation Arrow */}
+              {filteredItems.length > 1 && (
+                <button
+                  onClick={handleNext}
+                  className="absolute right-2 sm:right-6 z-20 p-3 text-white/90 hover:text-white bg-slate-900/60 hover:bg-[#003D7A] rounded-full transition-all shadow-xl backdrop-blur-sm border border-white/10 cursor-pointer"
+                  aria-label="Next Image"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+            </div>
+
+            {/* Bottom Keyboard Hint / Progress */}
+            <div
+              className="text-center text-[11px] font-medium text-white/40 pt-1 z-[10000] hidden sm:block"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Use <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white font-mono text-[10px]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white font-mono text-[10px]">→</kbd> arrows to navigate, <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white font-mono text-[10px]">Esc</kbd> to close
             </div>
           </div>
         )}

@@ -190,6 +190,7 @@ model Alumni {
 
   // Extra profile fields
   isActive       Boolean      @default(true)
+  needsReview    Boolean      @default(false)
   dob            DateTime?
   gender         Gender?
   addressLine    String?
@@ -343,6 +344,7 @@ model RegistrationRequest {
 
   // Workflow Fields
   status          RequestStatus @default(PENDING)
+  needsReview     Boolean       @default(false)
   rejectionReason String? @db.Text // Good UX so admins can state why they rejected
 
   // Admin Tracking Relations
@@ -696,5 +698,19 @@ model PincodeLocation {
 
   @@unique([country, pincode])
   @@index([latitude, longitude])
+}
+
+model AcademicOption {
+  id        String   @id @default(cuid())
+  type      String   // 'BRANCH' | 'COURSE'
+  value     String   // canonical display value
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, value])
+  @@index([type])
+  @@index([isActive])
+  @@map("academic_options")
 }
 

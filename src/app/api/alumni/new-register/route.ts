@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkAcademicNeedsReview, getAutoCorrectedBranch } from '@/lib/academic-options';
 
 export async function POST(req: Request) {
   try {
@@ -67,17 +68,23 @@ export async function POST(req: Request) {
       }
     }
 
+    // PART A: Auto-correct branch to "Computer Applications" if course is BCA or MCA
+    const finalBranch = getAutoCorrectedBranch(branch, course);
+    const finalCourse = course.trim();
+
+    const needsReview = await checkAcademicNeedsReview(finalBranch, finalCourse);
     const newRequest = await prisma.registrationRequest.create({
       data: {
         name: name.trim(),
         email: normalizedEmail,
         enrollmentNo: enrollmentNo?.trim() || null,
         batchYear: Number(batchYear),
-        branch: branch.trim(),
+        branch: finalBranch,
         college: college.trim(),
-        course: course.trim(),
+        course: finalCourse,
         phone: phone?.trim() || null,
         campusId,
+        needsReview,
         authProvider,
         providerId: providerId || null,
         passwordHash: passwordHash || null,

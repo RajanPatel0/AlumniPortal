@@ -17,6 +17,7 @@ import LandingNav from '@/components/landing/LandingNav';
 import NewsSection from '@/components/landing/NewsSection';
 import VideosSection from '@/components/landing/VideosSection';
 import SpotlightSection from '@/components/landing/SpotlightSection';
+import LeadershipWelcomeSection from '@/components/landing/LeadershipWelcomeSection';
 import LandingMapSection from '@/components/landing/LandingMapSection';
 
 async function getLandingData() {
@@ -138,46 +139,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. About / Welcome Note */}
-      <section id="leadership" className="scroll-mt-16 py-16 bg-gradient-to-b from-white via-slate-50/60 to-white">
-        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            {/* Note text */}
-            <div className="lg:col-span-7">
-              <span className="inline-block px-3 py-1 bg-[#003D7A]/5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-[#003D7A] mb-4">
-                Message from Leadership
-              </span>
-              <h2 className="text-3xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
-                {data.welcomeNote.title}
-              </h2>
-              <div 
-                className="text-gray-600 text-sm leading-relaxed font-light mb-8"
-                dangerouslySetInnerHTML={{ __html: data.welcomeNote.body }}
-              />
-              <div>
-                <h4 className="font-extrabold text-gray-900 text-sm">{data.welcomeNote.name}</h4>
-                <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5">{data.welcomeNote.designation}</p>
-              </div>
-            </div>
-            
-            {/* Leadership Photo Card with Layered Offset Borders */}
-            <div className="lg:col-span-5 flex justify-center relative">
-              <div className="absolute -inset-2.5 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] rounded-[2.5rem] blur opacity-15 -rotate-1 scale-95" />
-              <div className="absolute -top-3 -left-3 w-16 h-16 border-t-4 border-l-4 border-[#C41E3A] rounded-tl-3xl hidden sm:block" />
-              <div className="absolute -bottom-3 -right-3 w-16 h-16 border-b-4 border-r-4 border-[#003D7A] rounded-br-3xl hidden sm:block" />
-              <div className="relative p-3.5 bg-white border border-slate-100 rounded-[2.2rem] shadow-2xl max-w-sm w-full z-10 transition-transform duration-300 hover:scale-[1.02]">
-                <div className="relative h-96 w-full rounded-3xl overflow-hidden bg-slate-50">
-                  <img 
-                    src={data.welcomeNote.photo} 
-                    alt={data.welcomeNote.name} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 3. About / Welcome Note (Carousel for multiple leadership messages) */}
+      <LeadershipWelcomeSection welcomeNotes={data.welcomeNotes || [data.welcomeNote]} />
 
       {/* 4. Upcoming Events Section */}
       <EventsSection events={data.events} />

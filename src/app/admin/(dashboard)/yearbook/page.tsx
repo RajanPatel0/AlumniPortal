@@ -18,6 +18,7 @@ interface YearData {
 
 interface BranchData {
   branch: string;
+  optionId: string | null;  // AcademicOption.id — null for non-canonical variants
   count: number;
 }
 
@@ -149,14 +150,16 @@ function BranchSection({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/alumni/yearbook/${year}/${encodeURIComponent(branch.branch)}`}
-            onClick={(e) => e.stopPropagation()}
-            className="hidden sm:flex items-center gap-1 text-xs text-[#012140] font-semibold hover:underline"
-          >
-            <ExternalLink size={11} />
-            Open in portal
-          </Link>
+          {branch.optionId && (
+            <Link
+              href={`/alumni/yearbook/${year}/${branch.optionId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hidden sm:flex items-center gap-1 text-xs text-[#012140] font-semibold hover:underline"
+            >
+              <ExternalLink size={11} />
+              Open in portal
+            </Link>
+          )}
           {expanded ? (
             <ChevronUp size={16} className="text-gray-400" />
           ) : (

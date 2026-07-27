@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // 1. Group alumni by branch value for this year (preserves all raw values,
+    //    including non-canonical ones that haven't been cleaned yet).
     const grouped = await prisma.alumni.groupBy({
       by: ['branch'],
       where: { batchYear: year },
@@ -43,10 +45,28 @@ export async function GET(req: NextRequest) {
       orderBy: { branch: 'asc' },
     });
 
-    const branches = grouped.map((g) => ({
-      branch: g.branch,
-      count: g._count.id,
-    }));
+    // 2. Look up canonical AcademicOption ids for branch values (case-insensitive).
+    //    This lets the front-end build /yearbook/[year]/[optionId] URLs that are
+    //    free of special characters and immune to IIS/ASP.NET request validation.
+    const canonicalOptions = await prisma.academicOption.findMany({
+      where: { type: 'BRANCH' },
+      select: { id: true, value: true },
+    });
+
+    // Build a lowercase-keyed map: value → id
+    const canonicalMap = new Map<string, string>();
+    for (const opt of canonicalOptions) {
+      canonicalMap.set(opt.value.toLowerCase().trim(), opt.id);
+    }
+
+    const branches = grouped.map((g) => {
+      const optionId = canonicalMap.get(g.branch?.toLowerCase().trim() ?? '') ?? null;
+      return {
+        branch: g.branch,   // raw display value (for label rendering)
+        optionId,           // AcademicOption.id — null if no canonical match
+        count: g._count.id,
+      };
+    });
 
     return NextResponse.json({ year, branches });
   } catch (error) {

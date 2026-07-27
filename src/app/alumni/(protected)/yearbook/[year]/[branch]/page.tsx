@@ -48,13 +48,18 @@ function getAvatarColor(name: string) {
   return AVATAR_BG_COLORS[idx];
 }
 
+// The [branch] segment now carries an AcademicOption.id (a plain CUID like
+// "cm4x7y2z3000008l5abc1def2") — no special characters, safe on IIS/ASP.NET.
+// The API resolves this id to a canonical value and fetches alumni.
 export default function YearbookAlumniPage({
   params,
 }: {
   params: Promise<{ year: string; branch: string }>;
 }) {
-  const { year, branch } = use(params);
-  const decodedBranch = decodeURIComponent(branch);
+  const { year, branch: optionId } = use(params);
+
+  // Resolved from the API response — shown in headers/breadcrumbs.
+  const [branchLabel, setBranchLabel] = useState('');
 
   const [alumni, setAlumni] = useState<AlumniCard[]>([]);
   const [total, setTotal] = useState(0);
@@ -73,7 +78,7 @@ export default function YearbookAlumniPage({
     try {
       const params = new URLSearchParams({
         year,
-        branch: decodedBranch,
+        optionId,          // ← CUID, no special chars — safe in query strings too
         page: String(pageNum),
         limit: '12',
         ...(searchVal ? { search: searchVal } : {}),
@@ -84,12 +89,16 @@ export default function YearbookAlumniPage({
       setAlumni(data.alumni || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      // The API returns the canonical label; store it for the UI
+      if (data.branch && !branchLabel) {
+        setBranchLabel(data.branch);
+      }
     } catch {
       setError('Failed to load alumni. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [year, decodedBranch]);
+  }, [year, optionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => {
@@ -120,6 +129,9 @@ export default function YearbookAlumniPage({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Fallback label while first fetch is in flight
+  const displayLabel = branchLabel || '…';
+
   return (
     <div className="min-h-screen pb-24">
       {/* Breadcrumb & Back */}
@@ -138,7 +150,7 @@ export default function YearbookAlumniPage({
             Class of {year}
           </Link>
           <ChevronRight size={12} />
-          <span className="text-slate-700 font-semibold">{decodedBranch}</span>
+          <span className="text-slate-700 font-semibold">{displayLabel}</span>
         </div>
       </div>
 
@@ -151,11 +163,11 @@ export default function YearbookAlumniPage({
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="text-white/60" size={16} />
             <span className="text-white/60 text-xs font-bold uppercase tracking-widest">
-              {year} · {decodedBranch}
+              {year} · {displayLabel}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-            {decodedBranch}
+            {displayLabel}
           </h1>
           <p className="text-white/60 text-sm mt-1 font-medium">
             {loading ? 'Loading members…' : `${total} ${total === 1 ? 'Member' : 'Members'} · Class of ${year}`}
