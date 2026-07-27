@@ -59,6 +59,7 @@ export const eventSchema = z.object({
   eventDate: z.preprocess(preprocessDate, z.date({ message: 'Event date is required' })),
   venue: z.string().min(2, 'Venue must be at least 2 characters'),
   coverImageUrl: z.string().or(z.literal('')).optional(),
+  imageUrls: z.array(z.string()).optional().default([]),
   rsvpDeadline: z.preprocess(preprocessDate, z.date().nullable().optional()),
   isPublished: z.boolean().default(false),
 });

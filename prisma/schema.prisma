@@ -256,6 +256,7 @@ model Event {
   eventDate     DateTime
   venue         String
   coverImageUrl String?
+  imageUrls     Json?
   rsvpDeadline  DateTime?
   isPublished   Boolean   @default(false)
   showOnLanding Boolean   @default(false)

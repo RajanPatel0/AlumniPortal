@@ -32,3 +32,27 @@ export function exportCandidatesToExcel(title: string, candidates: any[]) {
   const safeTitle = title.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
   XLSX.writeFile(workbook, `interested_candidates_${safeTitle}_${Date.now()}.xlsx`);
 }
+
+export function exportRsvpsToExcel(title: string, rsvps: any[]) {
+  const sheetData = rsvps.map((row) => ({
+    'Event Title': row.eventTitle || '-',
+    'Event Date': row.eventDate ? new Date(row.eventDate).toLocaleDateString() : '-',
+    'Alumni Name': row.alumniName || '-',
+    'Alumni Email': row.alumniEmail || '-',
+    'Batch Year': row.batchYear || '-',
+    Branch: row.branch || '-',
+    Course: row.course || '-',
+    'Current Role': row.currentRole || '-',
+    'Current Company': row.currentCompany || '-',
+    'RSVP Status': row.status || '-',
+    Message: row.message || '-',
+    'Responded At': row.respondedAt ? new Date(row.respondedAt).toLocaleString() : '-',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(sheetData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Event RSVPs');
+
+  const safeTitle = title.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+  XLSX.writeFile(workbook, `${safeTitle}_${Date.now()}.xlsx`);
+}

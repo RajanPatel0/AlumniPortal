@@ -11,6 +11,7 @@ export interface EventItemType {
   eventDate: Date | string;
   venue: string;
   coverImageUrl: string | null;
+  imageUrls?: string[] | null;
   rsvpDeadline: Date | string | null;
   isPublished: boolean;
   createdAt: Date | string;

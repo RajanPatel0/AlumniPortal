@@ -18,6 +18,8 @@ import {
   ChevronRight,
   UserCircle,
   ShieldCheck,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -28,11 +30,13 @@ import {
   deleteEventAction,
   toggleEventPublishAction,
   getEventRsvpsAction,
+  exportEventRsvpsAction,
 } from "@/actions/events";
 import { CALENDAR_CATEGORIES } from "@/schemas/event";
 import type { EventItemType, RsvpDetailsType } from "@/types/events";
 import Link from "next/link";
-import { ImageUploader } from "@/components/ImageUploader";
+import { MultiImageUploader } from "@/components/MultiImageUploader";
+import { exportRsvpsToExcel } from "@/lib/export-utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,6 +59,7 @@ const EMPTY_FORM = {
   eventDate: "",
   venue: "",
   coverImageUrl: "",
+  imageUrls: [] as string[],
   rsvpDeadline: "",
   isPublished: false,
 };
@@ -108,6 +113,26 @@ function AdminEventsClient() {
         rsvpEventId ? getEventRsvpsAction(rsvpEventId) : Promise.resolve(null),
       enabled: !!rsvpEventId,
     });
+
+  const [isExportingRsvp, setIsExportingRsvp] = useState(false);
+
+  const handleExportRsvps = async () => {
+    if (!rsvpEventId) return;
+    setIsExportingRsvp(true);
+    try {
+      const res = await exportEventRsvpsAction(rsvpEventId);
+      if (!res.success || !res.data || res.data.length === 0) {
+        toast.error(res.error || "No RSVPs to export");
+        return;
+      }
+      exportRsvpsToExcel(`${res.title}_rsvps`, res.data);
+      toast.success(`Exported ${res.data.length} RSVPs to Excel!`);
+    } catch {
+      toast.error("Failed to export RSVPs");
+    } finally {
+      setIsExportingRsvp(false);
+    }
+  };
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
@@ -179,6 +204,7 @@ function AdminEventsClient() {
       eventDate: new Date(event.eventDate).toISOString().slice(0, 16),
       venue: event.venue,
       coverImageUrl: event.coverImageUrl || "",
+      imageUrls: Array.isArray(event.imageUrls) ? (event.imageUrls as string[]) : event.coverImageUrl ? [event.coverImageUrl] : [],
       rsvpDeadline: event.rsvpDeadline
         ? new Date(event.rsvpDeadline as string).toISOString().slice(0, 16)
         : "",
@@ -486,16 +512,18 @@ function AdminEventsClient() {
                 />
               </div>
 
-              {/* Cover Image - Cloudinary Upload */}
+              {/* Event Photos - Multi-Image Upload */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                  Cover Image
+                  Event Photos
                 </label>
-                <ImageUploader
-                  value={formData.coverImageUrl}
-                  onChange={(url) => setFormData({ ...formData, coverImageUrl: url })}
+                <MultiImageUploader
+                  imageUrls={formData.imageUrls}
+                  coverImageUrl={formData.coverImageUrl}
+                  onChange={(images, cover) =>
+                    setFormData({ ...formData, imageUrls: images, coverImageUrl: cover })
+                  }
                   folder="event_covers"
-                  placeholder="Upload event cover image"
                 />
               </div>
 
@@ -570,12 +598,29 @@ function AdminEventsClient() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => setRsvpEventId(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                {rsvpData && rsvpData.rsvps.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleExportRsvps}
+                    disabled={isExportingRsvp}
+                    className="px-3 py-1.5 bg-[#003D7A] hover:bg-[#002b56] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-sm cursor-pointer disabled:opacity-60"
+                  >
+                    {isExportingRsvp ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Download size={13} />
+                    )}
+                    <span>{isExportingRsvp ? "Exporting…" : "Export Excel"}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setRsvpEventId(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
