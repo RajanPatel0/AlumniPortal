@@ -84,7 +84,10 @@ async function addRsvpStats<T extends { id: string }>(
 /** Parse and validate event form data */
 function parseEventForm(formData: EventSchemaType) {
   const validated = eventSchema.safeParse(formData);
-  if (!validated.success) return { error: 'Validation failed', data: null } as const;
+  if (!validated.success) {
+    const errorMsg = validated.error.issues.map((issue) => issue.message).join('. ');
+    return { error: errorMsg || 'Validation failed', data: null } as const;
+  }
   return { error: null, data: validated.data } as const;
 }
 
@@ -97,6 +100,7 @@ function buildEventData(data: EventSchemaType) {
     eventDate: data.eventDate,
     venue: data.venue,
     coverImageUrl: data.coverImageUrl || null,
+    imageUrls: data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls : undefined,
     rsvpDeadline: data.rsvpDeadline ?? null,
     isPublished: data.isPublished,
   };
@@ -160,7 +164,7 @@ export async function getEventsAction(params: EventFilterParams): Promise<{
       const withStats = await addRsvpStats(e, alumniId ?? undefined);
       return {
         ...withStats,
-        postedByMe: alumniId ? e.postedByAlumniId === alumniId : false,
+        postedByMe: identity.isAdmin ? true : (alumniId ? e.postedByAlumniId === alumniId : false),
       } as unknown as EventItemType;
     }),
   );
@@ -390,12 +394,17 @@ export async function toggleEventPublishAction(id: string, isPublished: boolean)
 
 export async function deleteEventAction(id: string): Promise<ActionResult> {
   try {
-    const staff = await getAuthenticatedStaff();
-    if (!staff) return { success: false, error: 'Unauthorized' };
+    const identity = await getCurrentAlumniOrStaff();
+    if (!identity) return { success: false, error: 'Unauthorized' };
 
-    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
-    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
-      return { success: false, error: 'Forbidden: Access denied to events module' };
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { id: true, postedByAlumniId: true },
+    });
+    if (!event) return { success: false, error: 'Event not found' };
+
+    if (!identity.isAdmin && event.postedByAlumniId !== identity.alumni.id) {
+      return { success: false, error: 'Permission denied: You can only delete your own posts' };
     }
 
     // Clear dependents first (FK constraints)
@@ -461,3 +470,62 @@ export async function getEventRsvpsAction(eventId: string): Promise<RsvpDetailsT
   }
 }
 
+/** Server action to fetch sanitized RSVP export dataset for a specific event by ID */
+export async function exportEventRsvpsAction(eventId: string) {
+  try {
+    const staff = await getAuthenticatedStaff();
+    if (!staff) return { success: false, error: 'Unauthorized' } as const;
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Insufficient permissions' } as const;
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { title: true, eventDate: true },
+    });
+    if (!event) return { success: false, error: 'Event not found' } as const;
+
+    const rsvps = await prisma.rsvp.findMany({
+      where: { eventId },
+      orderBy: { respondedAt: 'desc' },
+      select: {
+        status: true,
+        message: true,
+        respondedAt: true,
+        alumni: {
+          select: {
+            name: true,
+            email: true,
+            batchYear: true,
+            branch: true,
+            course: true,
+            currentRole: true,
+            currentCompany: true,
+          },
+        },
+      },
+    });
+
+    const data = rsvps.map((r) => ({
+      eventTitle: event.title,
+      eventDate: event.eventDate.toISOString(),
+      alumniName: r.alumni.name,
+      alumniEmail: r.alumni.email,
+      batchYear: r.alumni.batchYear,
+      branch: r.alumni.branch,
+      course: r.alumni.course,
+      currentRole: r.alumni.currentRole,
+      currentCompany: r.alumni.currentCompany,
+      status: r.status,
+      message: r.message,
+      respondedAt: r.respondedAt.toISOString(),
+    }));
+
+    return { success: true, title: event.title, data } as const;
+  } catch (err: any) {
+    console.error('[exportEventRsvpsAction]', err);
+    return { success: false, error: 'Failed to export RSVPs' } as const;
+  }
+}
