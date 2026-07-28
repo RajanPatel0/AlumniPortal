@@ -33,18 +33,18 @@ export default function LeadershipWelcomeSection({
   };
 
   return (
-    <section id="leadership" className="scroll-mt-16 py-16 bg-gradient-to-b from-white via-slate-50/60 to-white relative overflow-hidden">
+    <section id="leadership" className="scroll-mt-16 py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/60 to-white relative overflow-hidden">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header bar with navigation controls if multiple */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+
+        {/* Header bar with navigation controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <div>
             <span className="inline-block px-3.5 py-1 bg-[#003D7A]/5 border border-[#003D7A]/10 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-[#003D7A]">
               Message from Leadership
             </span>
           </div>
 
-          {/* Left/Right Navigation controls for multiple messages */}
+          {/* Navigation controls — always visible on all screen sizes */}
           {hasMultiple && (
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-400">
@@ -70,8 +70,41 @@ export default function LeadershipWelcomeSection({
           )}
         </div>
 
-        {/* Content Grid */}
-        <div className="grid lg:grid-cols-12 gap-12 items-center min-h-[380px]">
+        {/* Mobile Layout: Compact card with photo on top + text below */}
+        <div className="block lg:hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            {/* Leader Photo — compact for mobile */}
+            <div className="relative h-52 w-full bg-slate-50">
+              <img
+                key={current.photo || current.name}
+                src={current.photo}
+                alt={current.name}
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+              {/* Name overlay */}
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="font-extrabold text-white text-base leading-tight">{current.name}</h4>
+                <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5 drop-shadow">
+                  {current.designation}
+                </p>
+              </div>
+            </div>
+            {/* Message content */}
+            <div className="p-5">
+              <h2 className="text-xl font-black text-gray-900 mb-3 tracking-tight leading-tight">
+                {current.title}
+              </h2>
+              <div
+                className="text-gray-600 text-sm leading-relaxed font-light line-clamp-5"
+                dangerouslySetInnerHTML={{ __html: current.body }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout: Original 12-column grid */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-12 items-center min-h-[380px]">
           {/* Message Text */}
           <div className="lg:col-span-7 transition-all duration-300">
             <h2 className="text-3xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
@@ -109,7 +142,7 @@ export default function LeadershipWelcomeSection({
 
         {/* Carousel indicators if multiple */}
         {hasMultiple && (
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex justify-center gap-2 mt-6 md:mt-8">
             {welcomeNotes.map((_, idx) => (
               <button
                 key={idx}
@@ -122,7 +155,6 @@ export default function LeadershipWelcomeSection({
             ))}
           </div>
         )}
-
       </div>
     </section>
   );

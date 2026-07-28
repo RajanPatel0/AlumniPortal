@@ -13,6 +13,43 @@ interface Testimonial {
   status: 'approved' | 'pending';
 }
 
+// Shared testimonial card
+function TestimonialCard({ t }: { t: Testimonial }) {
+  return (
+    <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative h-full">
+      <div className="absolute top-5 right-5 md:top-8 md:right-8 text-slate-100 text-5xl md:text-6xl font-serif select-none pointer-events-none">
+        &ldquo;
+      </div>
+      <div className="mb-4 md:mb-6">
+        {/* Rating */}
+        {t.rating && (
+          <div className="flex gap-1 mb-3 md:mb-4 text-amber-400">
+            {Array.from({ length: t.rating }).map((_, i) => (
+              <span key={i}>★</span>
+            ))}
+          </div>
+        )}
+        <p className="text-gray-650 italic text-xs md:text-sm leading-relaxed relative z-10">
+          &quot;{t.quote}&quot;
+        </p>
+      </div>
+
+      {/* Profile Card */}
+      <div className="flex items-center gap-3 md:gap-4 pt-3 md:pt-4 border-t border-slate-50">
+        <img
+          src={t.photo}
+          alt={t.name}
+          className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border border-slate-200 flex-shrink-0"
+        />
+        <div>
+          <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
+          <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TestimonialsSection({ initialTestimonials }: { initialTestimonials: Testimonial[] }) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>(initialTestimonials);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -27,8 +64,8 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === 'left' 
-        ? scrollLeft - clientWidth * 0.75 
+      const scrollTo = direction === 'left'
+        ? scrollLeft - clientWidth * 0.75
         : scrollLeft + clientWidth * 0.75;
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
@@ -43,14 +80,13 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
     const newTestimonial: Testimonial = {
       id: `temp-${Date.now()}`,
       name,
-      photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80', // placeholder photo
+      photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
       batch,
       quote,
       rating,
-      status: 'pending' // pending moderation
+      status: 'pending',
     };
 
-    // Simulate submission
     setTestimonials((prev) => [...prev, newTestimonial]);
     setSubmitted(true);
 
@@ -65,22 +101,57 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
   };
 
   return (
-    <section id="testimonials" className="py-16 bg-gradient-to-b from-slate-50 via-slate-100/55 to-white scroll-mt-16">
+    <section id="testimonials" className="py-12 md:py-16 bg-gradient-to-b from-slate-50 via-slate-100/55 to-white scroll-mt-16">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-10 relative">
+        <div className="text-center mb-8 md:mb-10 relative">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Words of Pride</h3>
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Testimonials</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
           <p className="text-gray-600 max-w-2xl mx-auto font-medium">
             Hear from our global alumni community about how their time at IKGPTU shaped their careers.
           </p>
         </div>
 
-        {/* Testimonials Grid */}
+        {/* ── MOBILE: Always horizontal scroll with always-visible nav buttons ── */}
+        <div className="md:hidden relative mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-400">{approvedTestimonials.length} testimonials</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => scroll('left')}
+                className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft size={16} className="stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scroll('right')}
+                className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                aria-label="Scroll right"
+              >
+                <ChevronRight size={16} className="stroke-[2.5]" />
+              </button>
+            </div>
+          </div>
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-none pb-4 -mx-4 px-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {approvedTestimonials.map((t) => (
+              <div key={t.id} className="w-[270px] flex-shrink-0">
+                <TestimonialCard t={t} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── DESKTOP: Scroll if >4, otherwise grid ── */}
         {approvedTestimonials.length > 4 ? (
-          <div className="relative group/scroll px-1 mb-12">
-            {/* Scroll Buttons */}
+          <div className="hidden md:block relative group/scroll px-1 mb-12">
             <button
               type="button"
               onClick={() => scroll('left')}
@@ -97,88 +168,22 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
             >
               <ChevronRight size={20} className="stroke-[2.5]" />
             </button>
-
-            {/* Horizontal Scroll Grid (2 rows, col flow) */}
             <div
               ref={scrollRef}
-              className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
+              className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {approvedTestimonials.map((t) => (
-                <div
-                  key={t.id}
-                  className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] md:w-[480px] flex-shrink-0"
-                >
-                  <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
-                    “
-                  </div>
-                  <div className="mb-6">
-                    {/* Rating */}
-                    {t.rating && (
-                      <div className="flex gap-1 mb-4 text-amber-400">
-                        {Array.from({ length: t.rating }).map((_, i) => (
-                          <span key={i}>★</span>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-gray-650 italic text-sm leading-relaxed relative z-10">
-                      "{t.quote}"
-                    </p>
-                  </div>
-
-                  {/* Profile Card */}
-                  <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                    <img
-                      src={t.photo}
-                      alt={t.name}
-                      className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                    />
-                    <div>
-                      <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
-                      <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
-                    </div>
-                  </div>
+                <div key={t.id} className="w-[480px] flex-shrink-0">
+                  <TestimonialCard t={t} />
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 md:gap-8 pb-4 mb-12 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="hidden md:grid grid-cols-2 gap-8 mb-12">
             {approvedTestimonials.map((t) => (
-              <div
-                key={t.id}
-                className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] flex-shrink-0 md:w-auto"
-              >
-                <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
-                  “
-                </div>
-                <div className="mb-6">
-                  {/* Rating */}
-                  {t.rating && (
-                    <div className="flex gap-1 mb-4 text-amber-400">
-                      {Array.from({ length: t.rating }).map((_, i) => (
-                        <span key={i}>★</span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-gray-650 italic text-sm leading-relaxed relative z-10">
-                    "{t.quote}"
-                  </p>
-                </div>
-
-                {/* Profile Card */}
-                <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                  <img
-                    src={t.photo}
-                    alt={t.name}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
-                    <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
-                  </div>
-                </div>
-              </div>
+              <TestimonialCard key={t.id} t={t} />
             ))}
           </div>
         )}

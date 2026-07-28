@@ -49,6 +49,15 @@ export default async function HomePage() {
   // Static campuses list as requested
     const staticCampuses = [
     {
+      id: 'main-campus',
+      name: 'Main Campus',
+      location: 'Kapurthala, Punjab',
+      iconName: 'Building3',
+      description: 'The flagship campus of IKGPTU, driving excellence in engineering, management, computer applications, applied sciences, research, innovation, and industry collaboration.',
+      url: 'https://ptu.ac.in',
+      image: `${BASE_PATH}/campus/kpt.png`,
+    },
+    {
       id: 'mohali-1',
       name: 'Mohali-I Campus',
       location: 'Mohali, Punjab',
@@ -98,15 +107,6 @@ export default async function HomePage() {
       url: 'https://ptu.ac.in/batala-campus/',
       image: `${BASE_PATH}/campus/Batala.png`,
     },
-    {
-      id: 'main-campus',
-      name: 'Main Campus',
-      location: 'Kapurthala, Punjab',
-      iconName: 'Building3',
-      description: 'The flagship campus of IKGPTU, driving excellence in engineering, management, computer applications, applied sciences, research, innovation, and industry collaboration.',
-      url: 'https://ptu.ac.in',
-      image: `${BASE_PATH}/campus/kpt.png`,
-    },
   ];
 
   return (
@@ -118,23 +118,58 @@ export default async function HomePage() {
       <HeroCarousel slides={data.heroSlides} />
 
       {/* 2. Stats Strip */}
-      <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-10 text-white relative overflow-hidden shadow-inner">
-        <div className="absolute inset-0 bg-blue-950/20 backdrop-brightness-75"></div>
-        <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-wrap md:grid md:grid-cols-5 gap-y-8 gap-x-4 justify-center text-center">
-            {data.statsList?.map((stat: any, idx: number) => {
-              // Resolve Lucide Icon dynamically
-              const IconComponent = (LucideIcons as any)[stat.icon] || LucideIcons.BarChart3;
-              return (
-                <div key={idx} className="flex-1 min-w-[140px] md:border-r md:border-white/10 last:border-none flex flex-col items-center">
-                  <div className="mb-2 p-2 bg-white/10 rounded-xl">
-                    <IconComponent size={22} className="text-white" />
+      <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-8 md:py-10 text-white relative overflow-hidden shadow-inner">
+        <div className="absolute inset-0 bg-blue-950/20 backdrop-brightness-75" />
+        <div className="relative z-10">
+          {/* Mobile: Horizontal auto-scroll with scroll-snap — touch-friendly, no JS needed */}
+          <div className="md:hidden overflow-x-auto scroll-smooth scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
+            <div
+              className="flex gap-0 w-max px-4"
+              style={{ scrollSnapType: 'x mandatory' }}
+            >
+              {data.statsList?.map((stat: any, idx: number) => {
+                const IconComponent = (LucideIcons as any)[stat.icon] || LucideIcons.BarChart3;
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center text-center px-8 py-2 border-r border-white/15 last:border-none flex-shrink-0"
+                    style={{ scrollSnapAlign: 'center', minWidth: '38vw' }}
+                  >
+                    <div className="mb-2 p-2 bg-white/10 rounded-xl">
+                      <IconComponent size={20} className="text-white" />
+                    </div>
+                    <p className="text-2xl font-black mb-1 tracking-tight">{stat.number}</p>
+                    <p className="text-[9px] uppercase tracking-widest text-slate-200 font-bold leading-tight">{stat.label}</p>
                   </div>
-                  <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{stat.number}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">{stat.label}</p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            {/* Scroll hint dots */}
+            {data.statsList && data.statsList.length > 2 && (
+              <div className="flex justify-center gap-1 mt-3 pb-1">
+                {data.statsList.map((_: any, i: number) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: Original 5-column grid */}
+          <div className="hidden md:block max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-5 gap-x-4 text-center">
+              {data.statsList?.map((stat: any, idx: number) => {
+                const IconComponent = (LucideIcons as any)[stat.icon] || LucideIcons.BarChart3;
+                return (
+                  <div key={idx} className="border-r border-white/10 last:border-none flex flex-col items-center py-2">
+                    <div className="mb-2 p-2 bg-white/10 rounded-xl">
+                      <IconComponent size={22} className="text-white" />
+                    </div>
+                    <p className="text-4xl font-black mb-1.5 tracking-tight">{stat.number}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">{stat.label}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

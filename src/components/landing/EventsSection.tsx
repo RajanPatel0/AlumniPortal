@@ -18,6 +18,59 @@ interface Event {
   published: boolean;
 }
 
+// Shared event card UI
+function EventCard({ event, formatDate }: { event: Event; formatDate: (d: string) => string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
+      {/* Event Cover Photo */}
+      <div className="relative h-44 md:h-48 w-full bg-slate-100 overflow-hidden flex-shrink-0">
+        <img
+          src={event.bannerImage}
+          alt={event.title}
+          className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+        />
+        <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-white shadow-sm ${
+          event.category === 'reunion' ? 'bg-amber-500' :
+          event.category === 'webinar' ? 'bg-[#003D7A]' : 'bg-[#C41E3A]'
+        }`}>
+          {event.category}
+        </span>
+        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-semibold">
+          📍 {event.campusTag}
+        </span>
+      </div>
+
+      {/* Event Body */}
+      <div className="p-5 md:p-6 flex flex-col flex-grow">
+        <div className="text-[#C41E3A] text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {formatDate(event.dateTime)}
+        </div>
+        <h4 className="text-base md:text-lg font-bold text-gray-900 mb-3 hover:text-[#003D7A] transition-colors line-clamp-1">
+          {event.title}
+        </h4>
+        <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
+          {event.description}
+        </p>
+
+        {/* Location and Info */}
+        <div className="mt-auto pt-4 md:pt-6 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-4 text-xs font-medium text-gray-500">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+              event.venueType === 'virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {event.venueType}
+            </span>
+            <span className="truncate">{event.venue}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EventsSection({ events }: { events: Event[] }) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'reunion' | 'webinar' | 'workshop'>('all');
   const [rsvpEvent, setRsvpEvent] = useState<Event | null>(null);
@@ -30,8 +83,8 @@ export default function EventsSection({ events }: { events: Event[] }) {
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === 'left' 
-        ? scrollLeft - clientWidth * 0.75 
+      const scrollTo = direction === 'left'
+        ? scrollLeft - clientWidth * 0.75
         : scrollLeft + clientWidth * 0.75;
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
@@ -46,8 +99,6 @@ export default function EventsSection({ events }: { events: Event[] }) {
   const handleRsvpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rsvpName || !rsvpEmail) return;
-    
-    // Simulate API registration request
     console.log(`RSVP submitted for event ${rsvpEvent?.title} by ${rsvpName} (${rsvpEmail})`);
     setRsvpSubmitted(true);
     setTimeout(() => {
@@ -71,13 +122,13 @@ export default function EventsSection({ events }: { events: Event[] }) {
   };
 
   return (
-    <section id="events" className="py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
+    <section id="events" className="py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Get Involved</h3>
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Upcoming Alumni Events</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
           <p className="text-gray-600 max-w-2xl mx-auto font-medium">
             Reconnect in person or tune in virtually to expand your industry insights and mentor networks.
           </p>
@@ -95,12 +146,12 @@ export default function EventsSection({ events }: { events: Event[] }) {
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex justify-center gap-2 mb-12 flex-wrap">
+        <div className="flex justify-center gap-2 mb-8 md:mb-12 flex-wrap">
           {(['all', 'reunion', 'webinar', 'workshop'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-all duration-300 ${
+              className={`px-4 md:px-5 py-1.5 md:py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-all duration-300 ${
                 selectedCategory === cat
                   ? 'bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white border-transparent shadow-md'
                   : 'bg-slate-50 text-gray-600 border-slate-200 hover:bg-slate-100'
@@ -111,146 +162,89 @@ export default function EventsSection({ events }: { events: Event[] }) {
           ))}
         </div>
 
-        {/* Card Grid */}
+        {/* Card Layout */}
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12 text-gray-500 font-medium">
             No upcoming events listed in this category right now. Check back soon!
           </div>
-        ) : filteredEvents.length > 6 ? (
-          <div className="relative group/scroll px-1">
-            {/* Scroll Buttons */}
-            <button
-              type="button"
-              onClick={() => scroll('left')}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft size={20} className="stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scroll('right')}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
-              aria-label="Scroll right"
-            >
-              <ChevronRight size={20} className="stroke-[2.5]" />
-            </button>
-
-            {/* Horizontal Scroll Grid (2 rows, col flow) */}
-            <div
-              ref={scrollRef}
-              className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {filteredEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full w-[290px] md:w-[360px] flex-shrink-0"
-                >
-                  {/* Event Cover Photo */}
-                  <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                    <img
-                      src={event.bannerImage}
-                      alt={event.title}
-                      className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-white shadow-sm ${
-                      event.category === 'reunion' ? 'bg-amber-500' :
-                      event.category === 'webinar' ? 'bg-[#003D7A]' : 'bg-[#C41E3A]'
-                    }`}>
-                      {event.category}
-                    </span>
-                    <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-semibold">
-                      📍 {event.campusTag}
-                    </span>
-                  </div>
-
-                  {/* Event Body */}
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className="text-[#C41E3A] text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {formatDate(event.dateTime)}
-                    </div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-3 hover:text-[#003D7A] transition-colors line-clamp-1">
-                      {event.title}
-                    </h4>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
-                      {event.description}
-                    </p>
-                    
-                    {/* Location and Info */}
-                    <div className="mt-auto pt-6 border-t border-slate-100">
-                      <div className="flex items-center gap-2 mb-4 text-xs font-medium text-gray-500">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          event.venueType === 'virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-green-50 text-green-700 border border-green-200'
-                        }`}>
-                          {event.venueType}
-                        </span>
-                        <span className="truncate">{event.venue}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full w-full"
-              >
-                {/* Event Cover Photo */}
-                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                  <img
-                    src={event.bannerImage}
-                    alt={event.title}
-                    className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
-                  />
-                  <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-white shadow-sm ${
-                    event.category === 'reunion' ? 'bg-amber-500' :
-                    event.category === 'webinar' ? 'bg-[#003D7A]' : 'bg-[#C41E3A]'
-                  }`}>
-                    {event.category}
-                  </span>
-                  <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-semibold">
-                    📍 {event.campusTag}
-                  </span>
-                </div>
-
-                {/* Event Body */}
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="text-[#C41E3A] text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {formatDate(event.dateTime)}
-                  </div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-3 hover:text-[#003D7A] transition-colors line-clamp-1">
-                    {event.title}
-                  </h4>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
-                    {event.description}
-                  </p>
-                  
-                  {/* Location and Info */}
-                  <div className="mt-auto pt-6 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-4 text-xs font-medium text-gray-500">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        event.venueType === 'virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-green-50 text-green-700 border border-green-200'
-                      }`}>
-                        {event.venueType}
-                      </span>
-                      <span className="truncate">{event.venue}</span>
-                    </div>
-                  </div>
+          <>
+            {/* ── MOBILE: Always 2-row horizontal scroll with always-visible buttons ── */}
+            <div className="md:hidden relative">
+              {/* Always-visible nav buttons on mobile */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-slate-400">{filteredEvents.length} events</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scroll('left')}
+                    className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                    aria-label="Scroll left"
+                  >
+                    <ChevronLeft size={16} className="stroke-[2.5]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scroll('right')}
+                    className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight size={16} className="stroke-[2.5]" />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+              <div
+                ref={scrollRef}
+                className="grid grid-rows-2 grid-flow-col gap-4 overflow-x-auto scroll-smooth scrollbar-none pb-4 -mx-4 px-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {filteredEvents.map((event) => (
+                  <div key={event.id} className="w-[260px] flex-shrink-0">
+                    <EventCard event={event} formatDate={formatDate} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── DESKTOP: Grid or horizontal scroll based on count ── */}
+            {filteredEvents.length > 6 ? (
+              <div className="hidden md:block relative group/scroll px-1">
+                <button
+                  type="button"
+                  onClick={() => scroll('left')}
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft size={20} className="stroke-[2.5]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scroll('right')}
+                  className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight size={20} className="stroke-[2.5]" />
+                </button>
+                <div
+                  ref={scrollRef}
+                  className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {filteredEvents.map((event) => (
+                    <div key={event.id} className="w-[360px] flex-shrink-0">
+                      <EventCard event={event} formatDate={formatDate} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {filteredEvents.map((event) => (
+                  <EventCard key={event.id} event={event} formatDate={formatDate} />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* RSVP Modal */}
@@ -272,7 +266,6 @@ export default function EventsSection({ events }: { events: Event[] }) {
                   <p className="text-gray-500 text-xs mb-6">
                     Register for <span className="font-bold text-[#003D7A]">{rsvpEvent.title}</span>.
                   </p>
-                  
                   <div className="space-y-4 mb-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
@@ -297,7 +290,6 @@ export default function EventsSection({ events }: { events: Event[] }) {
                       />
                     </div>
                   </div>
-
                   <button
                     type="submit"
                     className="w-full py-3 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all duration-300"

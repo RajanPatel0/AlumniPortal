@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface GalleryItem {
@@ -15,6 +15,7 @@ interface GalleryItem {
 export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
   const [selectedAlbum, setSelectedAlbum] = useState<string>('All');
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Extract unique album names dynamically
   const albums = ['All', ...Array.from(new Set(items.map((item) => item.album)))];
@@ -27,6 +28,16 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
   });
 
   const currentItem = lightboxIndex !== null ? filteredItems[lightboxIndex] : null;
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left'
+        ? scrollLeft - clientWidth * 0.75
+        : scrollLeft + clientWidth * 0.75;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   const handlePrev = useCallback(() => {
     if (lightboxIndex === null || filteredItems.length === 0) return;
@@ -55,20 +66,20 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
   }, [lightboxIndex, handlePrev, handleNext, handleClose]);
 
   return (
-    <section id="gallery" className="py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
+    <section id="gallery" className="py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Campus Life</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Memories & Gallery</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Memories &amp; Gallery</h2>
+          <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
           <p className="text-gray-600 max-w-2xl mx-auto font-medium">
             Relive your college days and see snapshots of latest convocations, fests, and alumni meetups.
           </p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex justify-center gap-2 mb-12 flex-wrap">
+        <div className="flex justify-center gap-2 mb-8 md:mb-12 flex-wrap">
           {albums.map((album) => (
             <button
               key={album}
@@ -76,7 +87,7 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
                 setSelectedAlbum(album);
                 setLightboxIndex(null);
               }}
-              className={`px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 selectedAlbum === album
                   ? 'bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white shadow-md'
                   : 'bg-slate-50 text-gray-600 border border-slate-200 hover:bg-slate-100'
@@ -87,29 +98,76 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
           ))}
         </div>
 
-        {/* Masonry-like Grid on Desktop, Horizontal Scroll on Mobile */}
-        <div className="flex overflow-x-auto gap-6 sm:columns-2 md:columns-3 lg:columns-4 sm:block pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
-          {filteredItems.map((item, idx) => (
-            <div
-              key={item.id}
-              onClick={() => setLightboxIndex(idx)}
-              className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative w-[240px] flex-shrink-0 sm:w-auto sm:break-inside-avoid sm:mb-6 group"
-            >
-              <img
-                src={item.image}
-                alt={item.caption}
-                className="w-full h-44 sm:h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41E3A] mb-1">
-                  {item.album}
-                </span>
-                <p className="text-white text-xs font-semibold leading-relaxed line-clamp-2">
-                  {item.caption}
-                </p>
-              </div>
+        {/* ── MOBILE: 2-row horizontal scroll with always-visible nav buttons ── */}
+        <div className="sm:hidden relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-400">{filteredItems.length} photos</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => scroll('left')}
+                className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft size={16} className="stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scroll('right')}
+                className="bg-white hover:bg-[#003D7A] hover:text-white text-slate-800 p-2 rounded-full shadow-md border border-slate-200 transition-all duration-200 flex items-center justify-center"
+                aria-label="Scroll right"
+              >
+                <ChevronRight size={16} className="stroke-[2.5]" />
+              </button>
             </div>
-          ))}
+          </div>
+          {/* 2-row horizontal scroll grid */}
+          <div
+            ref={scrollRef}
+            className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto scroll-smooth scrollbar-none pb-4 -mx-4 px-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {filteredItems.map((item, idx) => (
+              <div
+                key={item.id}
+                onClick={() => setLightboxIndex(idx)}
+                className="w-[160px] flex-shrink-0 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative group"
+              >
+                <img
+                  src={item.image}
+                  alt={item.caption}
+                  className="w-full h-28 object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#C41E3A] mb-0.5">{item.album}</span>
+                  <p className="text-white text-[10px] font-semibold leading-relaxed line-clamp-2">{item.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── DESKTOP / SM+: Original masonry column layout ── */}
+        <div className="hidden sm:block">
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-6">
+            {filteredItems.map((item, idx) => (
+              <div
+                key={item.id}
+                onClick={() => setLightboxIndex(idx)}
+                className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative break-inside-avoid mb-6 group"
+              >
+                <img
+                  src={item.image}
+                  alt={item.caption}
+                  className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41E3A] mb-1">{item.album}</span>
+                  <p className="text-white text-xs font-semibold leading-relaxed line-clamp-2">{item.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Lightbox Modal — elevated z-index (z-[9999]) above header navbar (z-[2000]) */}
@@ -131,7 +189,6 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
                   Image {lightboxIndex + 1} of {filteredItems.length}
                 </span>
               </div>
-
               <button
                 onClick={handleClose}
                 className="p-2 text-white/80 hover:text-white hover:bg-white/15 rounded-full transition cursor-pointer"
@@ -187,7 +244,7 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
               )}
             </div>
 
-            {/* Bottom Keyboard Hint / Progress */}
+            {/* Bottom Keyboard Hint */}
             <div
               className="text-center text-[11px] font-medium text-white/40 pt-1 z-[10000] hidden sm:block"
               onClick={(e) => e.stopPropagation()}

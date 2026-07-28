@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
-import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
+import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
 import { ComboboxSelect, ComboboxOption } from '@/components/ComboboxSelect';
 
 // Inline LinkedIn icon
@@ -69,7 +69,9 @@ export default function NetworkingPage() {
     years: [],
   });
 
-  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs to track debounce timer and whether filters changed (vs. page-only change)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFilterChange = useRef(false);
 
   // Fetch Directory Metadata once on mount
   useEffect(() => {
@@ -89,48 +91,60 @@ export default function NetworkingPage() {
       .catch((err) => console.error('Failed to load directory meta:', err));
   }, []);
 
-  const fetchDirectory = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '12',
-        search,
-        branch,
-        company,
-        course,
-        city,
-        batchYear,
-        sort,
-      });
+  // Single unified fetch effect — handles both filter changes and page changes
+  useEffect(() => {
+    // Clear any existing debounce timer
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-      const res = await apiFetch(`/alumni/directory?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAlumni(data.alumni || []);
-        setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
+    const doFetch = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '12',
+          search,
+          branch,
+          company,
+          course,
+          city,
+          batchYear,
+          sort,
+        });
+
+        const res = await apiFetch(`/alumni/directory?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAlumni(data.alumni || []);
+          setTotal(data.total || 0);
+          setTotalPages(data.totalPages || 1);
+        }
+      } catch (err) {
+        console.error('Directory fetch error:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Directory fetch error:', err);
-    } finally {
-      setLoading(false);
+    };
+
+    // Debounce filter changes (300ms), but fetch page changes immediately
+    if (isFilterChange.current) {
+      debounceRef.current = setTimeout(doFetch, 300);
+      isFilterChange.current = false;
+    } else {
+      doFetch();
     }
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, branch, company, course, city, batchYear, sort]);
 
-  // Debounced search trigger
-  useEffect(() => {
-    if (searchRef.current) clearTimeout(searchRef.current);
-    searchRef.current = setTimeout(() => {
-      setPage(1);
-      fetchDirectory();
-    }, 300);
-  }, [search, branch, company, course, city, batchYear, sort, fetchDirectory]);
-
-  // Handle page change
-  useEffect(() => {
-    fetchDirectory();
-  }, [page, fetchDirectory]);
+  // Helper: update a filter and reset page to 1
+  const updateFilter = (setter: (v: string) => void) => (val: string) => {
+    isFilterChange.current = true;
+    setter(val);
+    setPage(1);
+  };
 
   const activeFiltersCount =
     (branch !== 'All' ? 1 : 0) +
@@ -141,6 +155,7 @@ export default function NetworkingPage() {
     (search ? 1 : 0);
 
   const resetFilters = () => {
+    isFilterChange.current = true;
     setSearch('');
     setBranch('All');
     setCompany('All');
@@ -176,6 +191,7 @@ export default function NetworkingPage() {
               placeholder="Search by name, role, company, city, or branch..."
               value={search}
               onChange={(e) => {
+                isFilterChange.current = true;
                 setSearch(e.target.value);
                 setPage(1);
               }}
@@ -183,7 +199,7 @@ export default function NetworkingPage() {
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
+                onClick={() => { isFilterChange.current = true; setSearch(''); setPage(1); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 <X size={14} />
@@ -231,10 +247,7 @@ export default function NetworkingPage() {
                 placeholder="Search company..."
                 value={company}
                 options={meta.companies}
-                onChange={(val) => {
-                  setCompany(val);
-                  setPage(1);
-                }}
+                onChange={updateFilter(setCompany)}
                 allLabel="All Companies"
               />
 
@@ -244,10 +257,7 @@ export default function NetworkingPage() {
                 placeholder="Search city..."
                 value={city}
                 options={meta.cities}
-                onChange={(val) => {
-                  setCity(val);
-                  setPage(1);
-                }}
+                onChange={updateFilter(setCity)}
                 allLabel="All Cities"
               />
 
@@ -256,10 +266,7 @@ export default function NetworkingPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Batch Year</label>
                 <select
                   value={batchYear}
-                  onChange={(e) => {
-                    setBatchYear(e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => updateFilter(setBatchYear)(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
                 >
                   <option value="All">All Batches</option>
@@ -276,10 +283,7 @@ export default function NetworkingPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Branch / Specialization</label>
                 <select
                   value={branch}
-                  onChange={(e) => {
-                    setBranch(e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => updateFilter(setBranch)(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
                 >
                   <option value="All">All Branches</option>
@@ -296,10 +300,7 @@ export default function NetworkingPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Degree / Course</label>
                 <select
                   value={course}
-                  onChange={(e) => {
-                    setCourse(e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => updateFilter(setCourse)(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
                 >
                   <option value="All">All Courses</option>
@@ -316,10 +317,7 @@ export default function NetworkingPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Sort Directory By</label>
                 <select
                   value={sort}
-                  onChange={(e) => {
-                    setSort(e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => updateFilter(setSort)(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm text-[#012140] hover:border-[#003D7A] focus:outline-none transition shadow-sm"
                 >
                   <option value="name_asc">Name (A - Z)</option>
@@ -342,8 +340,8 @@ export default function NetworkingPage() {
 
             {search && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
-                Search: "{search}"
-                <button onClick={() => setSearch('')} className="hover:text-[#C41E3A]">
+                Search: &quot;{search}&quot;
+                <button onClick={() => { isFilterChange.current = true; setSearch(''); setPage(1); }} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -352,7 +350,7 @@ export default function NetworkingPage() {
             {company !== 'All' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
                 Company: {company}
-                <button onClick={() => setCompany('All')} className="hover:text-[#C41E3A]">
+                <button onClick={() => updateFilter(setCompany)('All')} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -361,7 +359,7 @@ export default function NetworkingPage() {
             {city !== 'All' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
                 City: {city}
-                <button onClick={() => setCity('All')} className="hover:text-[#C41E3A]">
+                <button onClick={() => updateFilter(setCity)('All')} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -370,7 +368,7 @@ export default function NetworkingPage() {
             {batchYear !== 'All' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
                 Batch: {batchYear}
-                <button onClick={() => setBatchYear('All')} className="hover:text-[#C41E3A]">
+                <button onClick={() => updateFilter(setBatchYear)('All')} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -379,7 +377,7 @@ export default function NetworkingPage() {
             {branch !== 'All' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
                 Branch: {branch}
-                <button onClick={() => setBranch('All')} className="hover:text-[#C41E3A]">
+                <button onClick={() => updateFilter(setBranch)('All')} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -388,7 +386,7 @@ export default function NetworkingPage() {
             {course !== 'All' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#003D7A] border border-blue-100 rounded-full text-xs font-semibold">
                 Degree: {course}
-                <button onClick={() => setCourse('All')} className="hover:text-[#C41E3A]">
+                <button onClick={() => updateFilter(setCourse)('All')} className="hover:text-[#C41E3A]">
                   <X size={12} />
                 </button>
               </span>
@@ -427,7 +425,7 @@ export default function NetworkingPage() {
       ) : alumni.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users size={28} className="text-slate-400" />
+            <UsersIcon size={28} className="text-slate-400" />
           </div>
           <p className="text-lg font-bold text-slate-700 mb-1">No alumni found</p>
           <p className="text-sm text-slate-500 mb-4">Try clearing your filters or broadening your search criteria.</p>
@@ -551,7 +549,7 @@ export default function NetworkingPage() {
 }
 
 // Icon helper
-function Users({ size, className }: { size: number; className?: string }) {
+function UsersIcon({ size, className }: { size: number; className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
