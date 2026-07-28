@@ -14,6 +14,7 @@ interface AdminPost {
   content: string | null;
   images: string[];
   createdAt: string;
+  itemType?: 'post';
 }
 
 interface CommunityPost {
@@ -30,6 +31,7 @@ interface CommunityPost {
     currentCompany: string;
     isAdmin: boolean;
   };
+  itemType?: 'post';
 }
 
 interface AlbumImage {
@@ -42,9 +44,17 @@ interface AdminAlbum {
   id: string;
   title: string;
   description: string | null;
+  category?: 'College Days' | 'Video Gallery' | 'Festivals' | 'Reunions' | string;
   isPublished: boolean;
   createdAt: string;
   images: AlbumImage[];
+  itemType?: 'album';
+  postedBy?: {
+    id?: string;
+    name?: string;
+    avatar?: string | null;
+    type?: 'alumni' | 'staff' | 'admin';
+  };
 }
 
 // ─── Image Uploader (reuse design pattern) ────────────────────────────────────
@@ -225,6 +235,7 @@ export default function AdminPostsPage() {
   // Album form
   const [albumTitle, setAlbumTitle] = useState('');
   const [albumDesc, setAlbumDesc] = useState('');
+  const [albumCategory, setAlbumCategory] = useState<'College Days' | 'Video Gallery' | 'Festivals' | 'Reunions'>('College Days');
   const [albumImages, setAlbumImages] = useState<{ url: string; caption: string }[]>([]);
   const [submittingAlbum, setSubmittingAlbum] = useState(false);
 
@@ -334,6 +345,7 @@ export default function AdminPostsPage() {
           type: 'album',
           title: albumTitle,
           description: albumDesc,
+          category: albumCategory,
           images: albumImages,
         }),
       });
@@ -342,6 +354,7 @@ export default function AdminPostsPage() {
         toast.success('Album published to gallery!');
         setAlbumTitle('');
         setAlbumDesc('');
+        setAlbumCategory('College Days');
         setAlbumImages([]);
         fetchItems();
       } else {
@@ -507,6 +520,20 @@ export default function AdminPostsPage() {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Category *</label>
+                <select
+                  value={albumCategory}
+                  onChange={e => setAlbumCategory(e.target.value as any)}
+                  className="w-full text-[#012140] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-[#003D7A] transition"
+                >
+                  <option value="College Days">College Days</option>
+                  <option value="Video Gallery">Video Gallery</option>
+                  <option value="Festivals">Festivals</option>
+                  <option value="Reunions">Reunions</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Description</label>
                 <textarea
                   value={albumDesc}
@@ -567,7 +594,7 @@ export default function AdminPostsPage() {
               {activeTab === 'feed'
               ? `My Published Posts (${myPosts.length})`
               : activeTab === 'gallery'
-              ? `Published Albums (${myAlbums.length})`
+              ? `Gallery Albums — All (${myAlbums.length})`
               : `Community Posts — All Alumni (${communityPosts.length})`
             }
             </h2>
@@ -637,16 +664,26 @@ export default function AdminPostsPage() {
                   <div key={album.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-600 text-white">
                             GALLERY
                           </span>
+                          {album.category && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                              {album.category}
+                            </span>
+                          )}
                           <span className="text-xs text-slate-400">
                             {new Date(album.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${album.isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                             {album.isPublished ? 'PUBLISHED' : 'DRAFT'}
                           </span>
+                          {album.postedBy?.name && (
+                            <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                              By {album.postedBy.name}
+                            </span>
+                          )}
                         </div>
                         <h3 className="text-sm font-bold text-gray-900 truncate">{album.title}</h3>
                         {album.description && (

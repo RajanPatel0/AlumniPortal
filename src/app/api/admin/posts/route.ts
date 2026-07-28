@@ -26,17 +26,36 @@ export async function GET(req: NextRequest) {
 
     const formattedPosts = posts.map(post => ({
       ...post,
+      itemType: 'post' as const,
       images: post.images.map(img => img.imageUrl),
     }));
 
-    // Fetch albums created by staff
+    // Fetch all albums (admin-created & alumni-created) for total admin content policy moderation
     const albums = await prisma.album.findMany({
-      where: { postedByStaffId: payload.id },
-      include: { images: true },
+      include: {
+        images: true,
+        alumni: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        postedByStaff: {
+          select: { id: true, name: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ posts: formattedPosts, albums });
+    const formattedAlbums = albums.map(album => ({
+      ...album,
+      itemType: 'album' as const,
+      postedBy: {
+        id: album.alumniId || album.postedByStaffId || 'admin',
+        name: album.alumni?.name || album.postedByStaff?.name || 'Alumni Cell',
+        avatar: album.alumni?.avatarUrl || null,
+        type: album.alumni ? ('alumni' as const) : album.postedByStaff ? ('staff' as const) : ('admin' as const),
+      },
+    }));
+
+    return NextResponse.json({ posts: formattedPosts, albums: formattedAlbums });
   } catch (error) {
     console.error('[API_ADMIN_GET_POSTS_ERROR]', error);
     return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 });
@@ -57,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { type, content, imageUrl, title, description, images } = body;
+    const { type, content, imageUrl, title, description, category, images } = body;
 
     if (type === 'post') {
       if (!content && !imageUrl) {
@@ -75,19 +94,21 @@ export async function POST(req: NextRequest) {
 
       const formattedPost = {
         ...post,
+        itemType: 'post' as const,
         images: post.images.map(img => img.imageUrl)
       };
 
       return NextResponse.json({ success: true, post: formattedPost });
     } else if (type === 'album') {
-      if (!title || !description) {
-        return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+      if (!title) {
+        return NextResponse.json({ error: 'Title is required' }, { status: 400 });
       }
 
       const album = await prisma.album.create({
         data: {
           title,
-          description,
+          description: description || '',
+          category: category || 'College Days',
           postedByStaffId: payload.id,
           isPublished: true, // auto-publish admin albums
           images: {
@@ -100,7 +121,12 @@ export async function POST(req: NextRequest) {
         include: { images: true },
       });
 
-      return NextResponse.json({ success: true, album });
+      const formattedAlbum = {
+        ...album,
+        itemType: 'album' as const,
+      };
+
+      return NextResponse.json({ success: true, album: formattedAlbum });
     } else {
       return NextResponse.json({ error: 'Invalid post type' }, { status: 400 });
     }
@@ -132,17 +158,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (deleteType === 'post') {
-      // Ensure it belongs to this staff member
-      const post = await prisma.post.findFirst({
-        where: { id, postedByStaffId: payload.id },
+      const post = await prisma.post.findUnique({
+        where: { id },
         include: { images: true },
       });
 
       if (!post) {
-        return NextResponse.json({ error: 'Post not found or unauthorized' }, { status: 404 });
+        return NextResponse.json({ error: 'Post not found' }, { status: 404 });
       }
 
-      // Delete images from disk
+      // Delete images from disk if local uploads
       for (const img of post.images) {
         await deleteFile(img.imageUrl);
       }
@@ -150,17 +175,16 @@ export async function DELETE(req: NextRequest) {
       await prisma.post.delete({ where: { id } });
       return NextResponse.json({ success: true, message: 'Post deleted' });
     } else if (deleteType === 'album') {
-      // Ensure it belongs to this staff member
-      const album = await prisma.album.findFirst({
-        where: { id, postedByStaffId: payload.id },
+      const album = await prisma.album.findUnique({
+        where: { id },
         include: { images: true },
       });
 
       if (!album) {
-        return NextResponse.json({ error: 'Album not found or unauthorized' }, { status: 404 });
+        return NextResponse.json({ error: 'Album not found' }, { status: 404 });
       }
 
-      // Delete images from disk
+      // Delete images from disk if local uploads
       for (const img of album.images) {
         await deleteFile(img.imageUrl);
       }
