@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, Calendar, Briefcase, User, LogOut, Bell, BookOpen, ArrowLeftCircle, Map } from 'lucide-react';
+import { Home, Calendar, Briefcase, User, LogOut, Bell, BookOpen, ArrowLeftCircle, Map, Users } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
 import { apiFetch, BASE_PATH } from "@/lib/api";
 
 const navItems = [
   { name: 'Feed', href: '/alumni/feed', icon: Home },
+  { name: 'Communities', href: '/alumni/communities', icon: Users },
   { name: 'Noticeboard', href: '/alumni/noticeboard', icon: Bell },
   { name: 'Yearbook', href: '/alumni/yearbook', icon: BookOpen },
   { name: 'Map', href: '/alumni/map', icon: Map },

@@ -25,8 +25,14 @@ export default function AlumniHeader({ isStaff = false }: AlumniHeaderProps) {
           </Link>
         </div>
 
-        {/* Center Yearbook Nav Link - Hidden on Mobile */}
+        {/* Center Nav Links - Hidden on Mobile */}
         <div className="hidden sm:flex items-center gap-3">
+          <Link
+            href="/alumni/communities"
+            className="group flex items-center gap-2 px-4 py-1.5 rounded-full border border-indigo-500/20 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-500/40 transition-all duration-200"
+          >
+            <span className="text-xs font-bold text-indigo-700 tracking-wide">Communities</span>
+          </Link>
           <Link
             href="/alumni/yearbook"
             className="group flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#003D7A]/20 bg-[#003D7A]/5 hover:bg-[#003D7A]/10 hover:border-[#003D7A]/40 transition-all duration-200"
