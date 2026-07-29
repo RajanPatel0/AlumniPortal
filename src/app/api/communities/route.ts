@@ -1,19 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedStaff, resolveCampusScope, CampusScopeError } from "@/lib/auth/staff-auth";
+import { StaffRole } from "@prisma/client";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const campusId = searchParams.get("campusId");
+    const requestedCampusId = searchParams.get("campusId");
     const category = searchParams.get("category");
     const search = searchParams.get("search");
+
+    let scopedCampusId: string | null = requestedCampusId;
+
+    // Check staff session if request is coming from admin context
+    const staff = await getAuthenticatedStaff();
+    if (staff) {
+      try {
+        scopedCampusId = resolveCampusScope(staff, requestedCampusId);
+      } catch (err) {
+        if (err instanceof CampusScopeError) {
+          return NextResponse.json({ success: false, error: err.message }, { status: 403 });
+        }
+      }
+    }
 
     const where: any = {
       isActive: true,
     };
 
-    if (campusId) {
-      where.campusId = campusId;
+    if (scopedCampusId) {
+      where.campusId = scopedCampusId;
     }
 
     if (category && category !== "All") {
@@ -49,11 +65,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const staff = await getAuthenticatedStaff();
     const body = await request.json();
     const { name, slug, description, logoUrl, bannerUrl, category, campusId, externalLinks } = body;
 
     if (!name || !description) {
       return NextResponse.json({ success: false, error: "Name and description are required" }, { status: 400 });
+    }
+
+    let targetCampusId = campusId || null;
+
+    // Enforce campus assignment rules based on StaffRole
+    if (staff && staff.role !== StaffRole.ADMIN) {
+      // Sub-Admin or Coordinator locked to their assigned campus
+      targetCampusId = staff.campusId || null;
     }
 
     const generatedSlug = (slug || name)
@@ -78,7 +103,7 @@ export async function POST(request: Request) {
         logoUrl: logoUrl || null,
         bannerUrl: bannerUrl || null,
         category: category || "General",
-        campusId: campusId || null,
+        campusId: targetCampusId,
         externalLinks: externalLinks || {},
       },
       include: {

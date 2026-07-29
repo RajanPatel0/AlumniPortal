@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCommunitySession } from "@/lib/auth/community-auth";
 
 export async function GET(
   request: Request,
@@ -52,9 +53,14 @@ export async function POST(
   { params }: { params: Promise<{ communityId: string }> }
 ) {
   try {
+    const session = await getCommunitySession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized. Please log in." }, { status: 401 });
+    }
+
     const { communityId } = await params;
     const body = await request.json();
-    const { title, slug, summary, content, coverImage, category, tags, authorAlumniId, authorStaffId, isPublished } = body;
+    const { title, slug, summary, content, coverImage, category, tags, isPublished } = body;
 
     if (!title || !summary || !content) {
       return NextResponse.json({ success: false, error: "Title, summary, and content are required" }, { status: 400 });
@@ -84,10 +90,10 @@ export async function POST(
         coverImage: coverImage || null,
         category: category || "Recap",
         tags: tags || [],
-        authorAlumniId: authorAlumniId || null,
-        authorStaffId: authorStaffId || null,
+        authorAlumniId: session.alumniId || null,
+        authorStaffId: session.staffId || null,
         isPublished: isPublished !== undefined ? isPublished : true,
-        publishedAt: isPublished ? new Date() : null,
+        publishedAt: isPublished ? new Date() : new Date(),
       },
     });
 

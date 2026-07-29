@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCommunitySession } from "@/lib/auth/community-auth";
 
 export async function GET(
   request: Request,
@@ -66,7 +67,7 @@ export async function GET(
             id: opt.id,
             text: opt.text,
             voteCount: opt._count.votes,
-            hasVoted: false, // Client can compute based on active user ID
+            hasVoted: false,
           })),
         };
       }
@@ -88,9 +89,14 @@ export async function POST(
   { params }: { params: Promise<{ communityId: string }> }
 ) {
   try {
+    const session = await getCommunitySession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized. Please log in." }, { status: 401 });
+    }
+
     const { communityId } = await params;
     const body = await request.json();
-    const { title, content, type, isNewsletter, isPinned, authorAlumniId, authorStaffId, documents, poll } = body;
+    const { title, content, type, isNewsletter, isPinned, documents, poll } = body;
 
     if (!title || !content) {
       return NextResponse.json({ success: false, error: "Title and content are required" }, { status: 400 });
@@ -112,8 +118,8 @@ export async function POST(
         type: type || "GENERAL_MSG",
         isNewsletter: !!isNewsletter,
         isPinned: !!isPinned,
-        authorAlumniId: authorAlumniId || null,
-        authorStaffId: authorStaffId || null,
+        authorAlumniId: session.alumniId || null,
+        authorStaffId: session.staffId || null,
         documents: documents && documents.length > 0 ? {
           create: documents.map((doc: any) => ({
             fileUrl: doc.fileUrl,
