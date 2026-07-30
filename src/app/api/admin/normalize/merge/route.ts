@@ -26,29 +26,53 @@ export async function POST(req: NextRequest) {
     }
 
     const canonicalTarget = targetValue.trim();
-    const field = type === 'BRANCH' ? 'branch' : 'course';
+    const fieldName = type === 'BRANCH' ? 'branch' : 'course';
 
     // Ensure the target value is active in AcademicOption table
     await ensureAcademicOptionActive(type, canonicalTarget);
 
-    // Perform updates in transaction and clear needsReview flag
+    // 1. Collect affected IDs before updating for audit logging
+    const matchingAlumni = await prisma.alumni.findMany({
+      where: { [fieldName]: { in: sourceValues } },
+      select: { id: true },
+    });
+    const matchingRequests = await prisma.registrationRequest.findMany({
+      where: { [fieldName]: { in: sourceValues } },
+      select: { id: true },
+    });
+
+    const affectedIds = [
+      ...matchingAlumni.map((a) => `alumni:${a.id}`),
+      ...matchingRequests.map((r) => `req:${r.id}`),
+    ];
+
+    // 2. Perform updates and write merge log in transaction
     const [alumniResult, requestResult] = await prisma.$transaction([
       prisma.alumni.updateMany({
         where: {
-          [field]: { in: sourceValues },
+          [fieldName]: { in: sourceValues },
         },
         data: {
-          [field]: canonicalTarget,
-          needsReview: false, // Target is now canonical
+          [fieldName]: canonicalTarget,
+          needsReview: false,
         },
       }),
       prisma.registrationRequest.updateMany({
         where: {
-          [field]: { in: sourceValues },
+          [fieldName]: { in: sourceValues },
         },
         data: {
-          [field]: canonicalTarget,
-          needsReview: false, // Target is now canonical
+          [fieldName]: canonicalTarget,
+          needsReview: false,
+        },
+      }),
+      prisma.normalizationMergeLog.create({
+        data: {
+          field: fieldName,
+          fromValues: JSON.stringify(sourceValues),
+          toValue: canonicalTarget,
+          affectedIds: JSON.stringify(affectedIds),
+          performedBy: staff.email || staff.id,
         },
       }),
     ]);

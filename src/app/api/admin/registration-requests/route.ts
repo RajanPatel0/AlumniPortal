@@ -34,6 +34,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         campus: { select: { id: true, name: true } },
+        affiliatedCollege: { select: { id: true, name: true } },
       },
     });
 
