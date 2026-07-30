@@ -356,6 +356,8 @@ export default function AlumniFeed() {
                 bg: 'bg-orange-50 hover:bg-orange-100', border: 'border-orange-100 hover:border-orange-200', text: 'text-orange-700', icon2: 'text-orange-600' },
               { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs',
                 bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },
+              { label: 'Campus Communities', icon: Users, href: '/alumni/communities',
+                bg: 'bg-indigo-50 hover:bg-indigo-100', border: 'border-indigo-100 hover:border-indigo-200', text: 'text-indigo-700', icon2: 'text-indigo-600' },
             ].map((link, idx) => (
               <Link
                 key={idx}
