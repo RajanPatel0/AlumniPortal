@@ -24,6 +24,7 @@ const allModules: NavItem[] = [
   { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
   { name: 'Data Normalization', href: '/admin/data-normalization', icon: Layers, module: 'alumni' },
   { name: 'Posts & Gallery', href: '/admin/posts', icon: FileText, module: 'posts' },
+  { name: 'Communities', href: '/admin/communities', icon: Users, module: 'communities' },
   { name: 'Yearbook', href: '/admin/yearbook', icon: BookOpen, module: 'yearbook' },
   { name: 'Opportunities', href: '/admin/jobs', icon: Briefcase, module: 'jobs' },
   { name: 'Events', href: '/admin/events', icon: Calendar, module: 'events' },
