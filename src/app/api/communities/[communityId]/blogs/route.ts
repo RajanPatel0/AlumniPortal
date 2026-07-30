@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
+import { isLeaderOrAdmin } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -25,7 +26,10 @@ export async function GET(
     };
 
     if (category && category !== "All") {
-      where.category = category;
+      where.OR = [
+        { category: category },
+        { category: { equals: category, mode: "insensitive" } },
+      ];
     }
 
     const blogs = await prisma.communityBlog.findMany({
@@ -68,10 +72,30 @@ export async function POST(
 
     const community = await prisma.community.findFirst({
       where: { OR: [{ id: communityId }, { slug: communityId }] },
+      include: {
+        members: {
+          where: session.alumniId
+            ? { alumniId: session.alumniId }
+            : session.staffId
+            ? { staffId: session.staffId }
+            : undefined,
+        },
+      },
     });
 
     if (!community) {
       return NextResponse.json({ success: false, error: "Community not found" }, { status: 404 });
+    }
+
+    // Permission check for blog creation
+    const userMember = community.members[0];
+    const canCreate = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+
+    if (!canCreate) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden. Admin or leader role required to create community blogs." },
+        { status: 403 }
+      );
     }
 
     const generatedSlug = (slug || title)

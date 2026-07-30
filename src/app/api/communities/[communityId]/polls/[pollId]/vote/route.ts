@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { alumniAuthConfig } from "@/lib/alumni/auth";
+import { getAuthenticatedStaff } from "@/lib/auth/staff-auth";
 
 export async function POST(
   request: Request,
@@ -8,10 +11,23 @@ export async function POST(
   try {
     const { pollId } = await params;
     const body = await request.json();
-    const { optionId, alumniId } = body;
+    const { optionId } = body;
 
-    if (!optionId || !alumniId) {
-      return NextResponse.json({ success: false, error: "optionId and alumniId are required" }, { status: 400 });
+    let alumniId: string | null = null;
+    const staff = await getAuthenticatedStaff();
+    const session = await getServerSession(alumniAuthConfig);
+
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (userId) {
+      alumniId = userId;
+    }
+
+    if (!alumniId && !staff) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!optionId) {
+      return NextResponse.json({ success: false, error: "optionId is required" }, { status: 400 });
     }
 
     const poll = await prisma.communityPoll.findUnique({
@@ -23,10 +39,13 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Poll not found" }, { status: 404 });
     }
 
+    const voterId = alumniId || staff?.id || "anonymous-voter";
+
     // Check if user already voted on this option
-    const existingVote = await prisma.communityPollVote.findUnique({
+    const existingVote = await prisma.communityPollVote.findFirst({
       where: {
-        optionId_alumniId: { optionId, alumniId },
+        optionId,
+        alumniId: voterId,
       },
     });
 
@@ -43,7 +62,7 @@ export async function POST(
       const optionIds = poll.options.map((o) => o.id);
       await prisma.communityPollVote.deleteMany({
         where: {
-          alumniId,
+          alumniId: voterId,
           optionId: { in: optionIds },
         },
       });
@@ -52,7 +71,7 @@ export async function POST(
     const vote = await prisma.communityPollVote.create({
       data: {
         optionId,
-        alumniId,
+        alumniId: voterId,
       },
     });
 
