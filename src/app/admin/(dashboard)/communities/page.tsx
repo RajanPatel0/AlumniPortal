@@ -18,6 +18,7 @@ import {
 } from "@/actions/communities";
 import { communitySchema, memberRoleUpdateSchema } from "@/schemas/community";
 import { useDebounce } from "@/lib/useDebounce";
+import { COMMUNITY_CATEGORIES } from "@/lib/community-permissions";
 
 interface Campus {
   id: string;
@@ -127,6 +128,8 @@ export default function AdminCommunitiesPage() {
   const [whatsapp, setWhatsapp] = useState("");
   const [telegram, setTelegram] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [github, setGithub] = useState("");
+  const [discord, setDiscord] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // User Role Scoping State
@@ -296,6 +299,8 @@ export default function AdminCommunitiesPage() {
     setWhatsapp("");
     setTelegram("");
     setLinkedin("");
+    setGithub("");
+    setDiscord("");
     setIsModalOpen(true);
   };
 
@@ -312,6 +317,8 @@ export default function AdminCommunitiesPage() {
     setWhatsapp(comm.externalLinks?.whatsapp || "");
     setTelegram(comm.externalLinks?.telegram || "");
     setLinkedin(comm.externalLinks?.linkedin || "");
+    setGithub(comm.externalLinks?.github || "");
+    setDiscord(comm.externalLinks?.discord || "");
     setIsModalOpen(true);
   };
 
@@ -324,6 +331,8 @@ export default function AdminCommunitiesPage() {
     if (whatsapp.trim()) externalLinks.whatsapp = whatsapp;
     if (telegram.trim()) externalLinks.telegram = telegram;
     if (linkedin.trim()) externalLinks.linkedin = linkedin;
+    if (github.trim()) externalLinks.github = github;
+    if (discord.trim()) externalLinks.discord = discord;
 
     const payload = {
       name,
@@ -822,11 +831,11 @@ export default function AdminCommunitiesPage() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full text-[#012140] p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A] bg-white"
                   >
-                    <option value="General">General</option>
-                    <option value="Tech">Tech</option>
-                    <option value="Culture">Culture</option>
-                    <option value="Sports">Sports</option>
-                    <option value="Research">Research</option>
+                    {COMMUNITY_CATEGORIES.filter((c) => c !== "All").map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -915,6 +924,20 @@ export default function AdminCommunitiesPage() {
                     placeholder="LinkedIn Page Link"
                     value={linkedin}
                     onChange={(e) => setLinkedin(e.target.value)}
+                    className="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-[#012140]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="GitHub Repo Link"
+                    value={github}
+                    onChange={(e) => setGithub(e.target.value)}
+                    className="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-[#012140]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Discord Invite Link"
+                    value={discord}
+                    onChange={(e) => setDiscord(e.target.value)}
                     className="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-[#012140]"
                   />
                 </div>

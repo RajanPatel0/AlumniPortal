@@ -289,16 +289,16 @@ export default async function HomePage() {
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Quick Navigation</h4>
               <ul className="space-y-2.5 text-xs font-semibold">
-                <li><a href="#events" className="hover:text-[#C41E3A] transition-colors">Events & Reunions</a></li>
-                <li><a href="#news" className="hover:text-[#C41E3A] transition-colors">News Updates</a></li>
-                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Support Desk</a></li>
+                <li><Link href="#events" className="hover:text-[#C41E3A] transition-colors">Events & Reunions</Link></li>
+                <li><Link href="#news" className="hover:text-[#C41E3A] transition-colors">News Updates</Link></li>
+                <li><Link href="#" className="hover:text-[#C41E3A] transition-colors">Support Desk</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Compliance</h4>
               <ul className="space-y-2.5 text-xs font-semibold">
-                <li><a href="/guidelines" className="hover:text-[#C41E3A] transition-colors">Platform Guidelines</a></li>
-                <li><a href="/privacy" className="hover:text-[#C41E3A] transition-colors">Privacy Charter</a></li>
+                <li><Link href="/guidelines" className="hover:text-[#C41E3A] transition-colors">Platform Guidelines</Link></li>
+                <li><Link href="/privacy" className="hover:text-[#C41E3A] transition-colors">Privacy Charter</Link></li>
               </ul>
             </div>
             <div>
