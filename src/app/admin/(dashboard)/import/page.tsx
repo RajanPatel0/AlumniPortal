@@ -81,7 +81,11 @@ export default function ImportPage() {
   const [modalSearch, setModalSearch] = useState('');
   const [debouncedModalSearch, setDebouncedModalSearch] = useState('');
   const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
+  const [approvedColleges, setApprovedColleges] = useState<{ id: string; name: string }[]>([]);
   const [campusId, setCampusId] = useState('');
+  const [isAffiliatedBatch, setIsAffiliatedBatch] = useState(false);
+  const [importAffiliatedCollegeId, setImportAffiliatedCollegeId] = useState('');
+  const [importCustomCollegeName, setImportCustomCollegeName] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
   const [assignedCampusName, setAssignedCampusName] = useState<string | null>(null);
   const [historyCampusFilter, setHistoryCampusFilter] = useState('');
@@ -95,6 +99,9 @@ export default function ImportPage() {
       .catch(() => {});
     axiosClient.get('/api/admin/campuses')
       .then(res => setCampuses(res.data))
+      .catch(() => {});
+    axiosClient.get('/api/affiliated-colleges')
+      .then(res => setApprovedColleges(res.data))
       .catch(() => {});
   }, []);
 
@@ -348,13 +355,34 @@ export default function ImportPage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('batchLabel', batchLabel);
+    formData.append('isAffiliated', String(isAffiliatedBatch));
 
-    if (userRole === 'ADMIN') {
-      if (!campusId) {
-        setError('Please select a campus');
-        return;
+    if (isAffiliatedBatch) {
+      if (importAffiliatedCollegeId === 'NEW') {
+        if (!importCustomCollegeName.trim()) {
+          setError('Please specify custom affiliated college name');
+          setLoading(false);
+          return;
+        }
+        formData.append('affiliatedCollegeId', 'NEW');
+        formData.append('customCollegeName', importCustomCollegeName.trim());
+      } else {
+        if (!importAffiliatedCollegeId) {
+          setError('Please select an affiliated college');
+          setLoading(false);
+          return;
+        }
+        formData.append('affiliatedCollegeId', importAffiliatedCollegeId);
       }
-      formData.append('campusId', campusId);
+    } else {
+      if (userRole === 'ADMIN') {
+        if (!campusId) {
+          setError('Please select a campus');
+          setLoading(false);
+          return;
+        }
+        formData.append('campusId', campusId);
+      }
     }
 
     try {
@@ -367,6 +395,8 @@ export default function ImportPage() {
       setPage(1);
       fetchBatches();
       setCampusId('');
+      setImportAffiliatedCollegeId('');
+      setImportCustomCollegeName('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Import failed');
     } finally {
@@ -399,6 +429,32 @@ export default function ImportPage() {
         >
           <h2 className="text-lg font-bold text-[#012140] border-b border-gray-100 pb-3">Import Invitation Batch</h2>
           
+          {userRole === 'ADMIN' && (
+            <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Institution Type:</label>
+              <label className="inline-flex items-center gap-1.5 text-xs text-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="institutionType"
+                  checked={!isAffiliatedBatch}
+                  onChange={() => setIsAffiliatedBatch(false)}
+                  className="text-[#012140]"
+                />
+                Constituent Campus
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-xs text-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="institutionType"
+                  checked={isAffiliatedBatch}
+                  onChange={() => setIsAffiliatedBatch(true)}
+                  className="text-[#012140]"
+                />
+                Affiliated College Batch
+              </label>
+            </div>
+          )}
+
           <div className="grid gap-5 md:grid-cols-2">
             <div>
               <label className="block text-sm font-semibold text-gray-700">Upload Label *</label>
@@ -412,13 +468,13 @@ export default function ImportPage() {
               />
             </div>
             
-            {userRole === 'ADMIN' && (
+            {userRole === 'ADMIN' && !isAffiliatedBatch && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700">Select Campus *</label>
                 <select
                   value={campusId}
                   onChange={(e) => setCampusId(e.target.value)}
-                  required
+                  required={!isAffiliatedBatch}
                   className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
                 >
                   <option value="">Select Target Campus</option>
@@ -428,7 +484,40 @@ export default function ImportPage() {
                 </select>
               </div>
             )}
+
+            {userRole === 'ADMIN' && isAffiliatedBatch && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700">Select Affiliated College *</label>
+                <select
+                  value={importAffiliatedCollegeId}
+                  onChange={(e) => setImportAffiliatedCollegeId(e.target.value)}
+                  required={isAffiliatedBatch}
+                  className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-[#012140]/10 focus:border-[#012140] transition"
+                >
+                  <option value="">Select Affiliated College</option>
+                  {approvedColleges.map((col) => (
+                    <option key={col.id} value={col.id}>{col.name}</option>
+                  ))}
+                  <option value="NEW">+ Specify New Affiliated College</option>
+                </select>
+              </div>
+            )}
           </div>
+
+          {userRole === 'ADMIN' && isAffiliatedBatch && importAffiliatedCollegeId === 'NEW' && (
+            <div>
+              <label className="block text-sm font-semibold text-amber-800">Specify Custom Affiliated College Name *</label>
+              <input
+                type="text"
+                value={importCustomCollegeName}
+                onChange={(e) => setImportCustomCollegeName(e.target.value)}
+                placeholder="e.g. Rayat Bahra Group of Institutes"
+                required
+                className="mt-1.5 w-full rounded-lg border border-amber-300 px-3 py-2 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-amber-500/20 transition"
+              />
+              <p className="mt-1 text-xs text-amber-700">Will create an unapproved college entry for admin review.</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data File *</label>

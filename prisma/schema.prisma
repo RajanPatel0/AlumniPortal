@@ -95,6 +95,21 @@ model Campus {
   @@map("campuses")
 }
 
+model AffiliatedCollege {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  isApproved  Boolean  @default(false)
+  requestedBy String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  alumni               Alumni[]
+  registrationRequests RegistrationRequest[]
+
+  @@map("affiliated_colleges")
+}
+
+
 model Staff {
   id           String    @id @default(cuid())
   name         String
@@ -208,6 +223,10 @@ model Alumni {
   campusId     String // alumni must belong to a campus (foreign key)
   campus       Campus   @relation(fields: [campusId], references: [id])
 
+  // Affiliated College assignment (optional)
+  affiliatedCollegeId String?
+  affiliatedCollege   AffiliatedCollege? @relation(fields: [affiliatedCollegeId], references: [id])
+
   // Tracking
   importedById String?
   importedBy   Staff?           @relation(fields: [importedById], references: [id])
@@ -246,6 +265,7 @@ model Alumni {
   @@index([inviteToken])
   @@index([originalInvitedEmail])
   @@index([campusId])
+  @@index([affiliatedCollegeId])
   @@index([isActive])
   @@index([city])
   @@index([pincode])
@@ -335,6 +355,9 @@ model RegistrationRequest {
   campusId     String?
   campus       Campus?   @relation(fields: [campusId], references: [id])
 
+  affiliatedCollegeId String?
+  affiliatedCollege   AffiliatedCollege? @relation(fields: [affiliatedCollegeId], references: [id])
+
   // Professional Details
   currentRole    String?
   currentCompany String?
@@ -366,6 +389,7 @@ model RegistrationRequest {
   updatedAt  DateTime  @updatedAt
 
   @@index([status])
+  @@index([affiliatedCollegeId])
   @@map("registration_requests")
 }
 
@@ -929,4 +953,18 @@ model Newsletter {
 
   @@map("newsletters")
 }
+model NormalizationMergeLog {
+  id          String   @id @default(cuid())
+  field       String   // 'college' | 'branch' | 'course'
+  fromValues  String   @db.Text // JSON array of original text values that were merged
+  toValue     String
+  affectedIds String   @db.Text // JSON array of Alumni/RegistrationRequest ids that were updated
+  performedBy String   // admin staff id or email
+  createdAt   DateTime @default(now())
+
+  @@index([field])
+  @@index([createdAt])
+  @@map("normalization_merge_logs")
+}
+
 

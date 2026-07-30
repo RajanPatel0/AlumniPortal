@@ -19,6 +19,11 @@ export default function SelfRegisterPage() {
   const searchParams = useSearchParams();
 
   const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [approvedColleges, setApprovedColleges] = useState<{ id: string; name: string }[]>([]);
+  const [isAffiliated, setIsAffiliated] = useState(false);
+  const [affiliatedCollegeId, setAffiliatedCollegeId] = useState('');
+  const [customCollegeName, setCustomCollegeName] = useState('');
+
   const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOptions>({
     branches: [],
     courses: [],
@@ -102,6 +107,12 @@ export default function SelfRegisterPage() {
       .then((data) => setCampuses(Array.isArray(data) ? data : []))
       .catch(() => {});
 
+    // Fetch approved affiliated colleges
+    apiFetch('/affiliated-colleges')
+      .then((res) => res.json())
+      .then((data) => setApprovedColleges(Array.isArray(data) ? data : []))
+      .catch(() => {});
+
     // Fetch autocomplete options
     apiFetch('/alumni/options')
       .then((res) => res.json())
@@ -126,7 +137,14 @@ export default function SelfRegisterPage() {
       if (!formData.password) return 'Password is required';
       if (formData.password.length < 6) return 'Password must be at least 6 characters';
     } else if (step === 2) {
-      if (!formData.campusId) return 'Please select your campus';
+      if (!isAffiliated) {
+        if (!formData.campusId) return 'Please select your campus';
+      } else {
+        if (!affiliatedCollegeId) return 'Please select your affiliated college';
+        if (affiliatedCollegeId === 'NEW' && !customCollegeName.trim()) {
+          return 'Please specify your affiliated college name';
+        }
+      }
       if (!formData.batchYear) return 'Batch Year is required';
       const year = Number(formData.batchYear);
       if (isNaN(year) || year < 1990 || year > 2035) return 'Please enter a valid batch year (1990-2035)';
@@ -134,7 +152,6 @@ export default function SelfRegisterPage() {
       if (!effCourse) return 'Course is required';
       const effBranch = branchSelection === 'OTHER' ? customBranch.trim() : branchSelection.trim();
       if (!effBranch) return 'Branch/Department is required';
-      if (!formData.college.trim()) return 'College is required';
     } else if (step === 3) {
       if (!formData.pincode.trim()) return 'Current Pincode is required';
     }
@@ -179,11 +196,25 @@ export default function SelfRegisterPage() {
       const finalCourse = courseSelection === 'OTHER' ? customCourse.trim() : courseSelection.trim();
       const finalBranch = branchSelection === 'OTHER' ? customBranch.trim() : branchSelection.trim();
 
+      const mainCampus = campuses.find((c) => c.code === 'main') || campuses[0];
+      const selectedCampus = campuses.find((c) => c.id === formData.campusId);
+      const effectiveCampusId = isAffiliated ? (mainCampus?.id || formData.campusId) : formData.campusId;
+      const effectiveCollege = isAffiliated
+        ? (affiliatedCollegeId === 'NEW'
+            ? customCollegeName.trim()
+            : approvedColleges.find((ac) => ac.id === affiliatedCollegeId)?.name || customCollegeName.trim())
+        : (selectedCampus?.name || '');
+
       const res = await apiFetch('/alumni/new-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          campusId: effectiveCampusId,
+          college: effectiveCollege,
+          isAffiliated,
+          affiliatedCollegeId: isAffiliated && affiliatedCollegeId !== 'NEW' ? affiliatedCollegeId : null,
+          customCollegeName: isAffiliated && affiliatedCollegeId === 'NEW' ? customCollegeName.trim() : null,
           course: finalCourse,
           branch: finalBranch,
           batchYear: Number(formData.batchYear),
@@ -390,23 +421,106 @@ export default function SelfRegisterPage() {
                 {/* Step 2: Academic Details */}
                 {currentStep === 2 && (
                   <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Campus *</label>
-                      <div className="relative">
-                        <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                        <select
-                          required
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 appearance-none"
-                          value={formData.campusId}
-                          onChange={(e) => setFormData({ ...formData, campusId: e.target.value })}
-                        >
-                          <option value="">Select your campus</option>
-                          {campuses.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                    {/* Toggle: Affiliated vs Constituent */}
+                    <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <input
+                        type="checkbox"
+                        id="affiliatedToggle"
+                        checked={isAffiliated}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setIsAffiliated(val);
+                          if (val) {
+                            const mainCampus = campuses.find((c) => c.code === 'main') || campuses[0];
+                            if (mainCampus) {
+                              setFormData((prev) => ({ ...prev, campusId: mainCampus.id }));
+                            }
+                          } else {
+                            setAffiliatedCollegeId('');
+                            setCustomCollegeName('');
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-[#003D7A] focus:ring-[#003D7A] cursor-pointer"
+                      />
+                      <label htmlFor="affiliatedToggle" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                        I am from an Affiliated College
+                      </label>
                     </div>
+
+                    {!isAffiliated ? (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Campus *</label>
+                        <div className="relative">
+                          <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                          <select
+                            required={!isAffiliated}
+                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 appearance-none"
+                            value={formData.campusId}
+                            onChange={(e) => {
+                              const selectedId = e.target.value;
+                              const selectedCamp = campuses.find((c) => c.id === selectedId);
+                              setFormData((prev) => ({
+                                ...prev,
+                                campusId: selectedId,
+                                college: selectedCamp?.name || '',
+                              }));
+                            }}
+                          >
+                            <option value="">Select your campus</option>
+                            {campuses.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Affiliated College *</label>
+                          <div className="relative">
+                            <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 z-10" />
+                            <select
+                              required={isAffiliated}
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 appearance-none"
+                              value={affiliatedCollegeId}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setAffiliatedCollegeId(val);
+                                if (val !== 'NEW') {
+                                  const affName = approvedColleges.find((c) => c.id === val)?.name || '';
+                                  setFormData((prev) => ({ ...prev, college: affName }));
+                                }
+                              }}
+                            >
+                              <option value="">Select your affiliated college</option>
+                              {approvedColleges.map((col) => (
+                                <option key={col.id} value={col.id}>{col.name}</option>
+                              ))}
+                              <option value="NEW">+ Request new college</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {affiliatedCollegeId === 'NEW' && (
+                          <div>
+                            <label className="block text-xs font-bold text-amber-800 uppercase tracking-wider mb-1.5">Specify Affiliated College Name *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Chandigarh Engineering College, Landran"
+                              className="w-full px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:border-[#003D7A] focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-200"
+                              value={customCollegeName}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCustomCollegeName(val);
+                                setFormData((prev) => ({ ...prev, college: val }));
+                              }}
+                            />
+                            <p className="mt-1 text-[11px] text-amber-700 font-medium">New college requests will be reviewed by university administration.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -529,21 +643,6 @@ export default function SelfRegisterPage() {
                           <p className="mt-1 text-[11px] text-amber-700 font-medium">Custom entries will be flagged for administrative review.</p>
                         </div>
                       )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">College *</label>
-                      <div className="relative">
-                        <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. PTU Main Campus Jalandhar"
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
-                          value={formData.college}
-                          onChange={(e) => setFormData({ ...formData, college: e.target.value })}
-                        />
-                      </div>
                     </div>
                   </div>
                 )}

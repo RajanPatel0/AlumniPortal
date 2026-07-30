@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from "@/lib/api";
 import { toast } from 'react-hot-toast';
-import { Database, GitMerge, CheckCircle, AlertTriangle, RefreshCw, Plus, ToggleLeft, ToggleRight, ListChecks } from 'lucide-react';
+import { Database, GitMerge, CheckCircle, AlertTriangle, RefreshCw, Plus, ToggleLeft, ToggleRight, ListChecks, FileText } from 'lucide-react';
 
 interface VariantCount {
   branch?: string;
@@ -79,9 +79,165 @@ export default function DataNormalizationPage() {
   const [alumniReviewPage, setAlumniReviewPage] = useState(1);
   const [requestsReviewPage, setRequestsReviewPage] = useState(1);
 
+  // Section 4: Unified College Normalization Tool State
+  const [collegeClusters, setCollegeClusters] = useState<{
+    collegeText: string;
+    alumniCount: number;
+    requestCount: number;
+    totalCount: number;
+    suggestedCampusId: string | null;
+    suggestedCampusName: string;
+  }[]>([]);
+  const [campusesList, setCampusesList] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [approvedAffiliatedList, setApprovedAffiliatedList] = useState<{ id: string; name: string }[]>([]);
+  
+  const [selectedCollegeVariants, setSelectedCollegeVariants] = useState<string[]>([]);
+  const [collegeActionType, setCollegeActionType] = useState<'MAP_TO_CAMPUS' | 'TREAT_AS_AFFILIATED'>('MAP_TO_CAMPUS');
+  const [selectedTargetCampusId, setSelectedTargetCampusId] = useState('');
+  const [affiliatedMode, setAffiliatedMode] = useState<'CREATE_NEW' | 'MERGE_EXISTING'>('CREATE_NEW');
+  const [newAffiliatedName, setNewAffiliatedName] = useState('');
+  const [selectedTargetAffiliatedId, setSelectedTargetAffiliatedId] = useState('');
+  const [executingCollegeNorm, setExecutingCollegeNorm] = useState(false);
+  const [collegeNormPage, setCollegeNormPage] = useState(1);
+
+  // Section 4b: Pending Affiliated College Requests (from self-registration)
+  const [pendingColleges, setPendingColleges] = useState<{
+    id: string;
+    name: string;
+    requestedBy: string;
+    createdAt: string;
+    alumniCount: number;
+    requestCount: number;
+    totalReferencing: number;
+  }[]>([]);
+
+  // Merge Audit Logs State
+  const [mergeLogs, setMergeLogs] = useState<{
+    id: string;
+    field: string;
+    fromValues: string[];
+    toValue: string;
+    affectedCount: number;
+    performedBy: string;
+    createdAt: string;
+  }[]>([]);
+  const [cleaningOrphans, setCleaningOrphans] = useState(false);
+
   useEffect(() => {
     fetchStats();
+    fetchCollegeClusters();
+    fetchAffiliatedColleges();
+    fetchMergeLogs();
   }, []);
+
+  const fetchMergeLogs = async () => {
+    try {
+      const res = await apiFetch('/admin/normalize/merge-logs');
+      if (res.ok) {
+        const data = await res.json();
+        setMergeLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch merge logs:', err);
+    }
+  };
+
+  const handleCleanupOrphans = async () => {
+    setCleaningOrphans(true);
+    try {
+      const res = await apiFetch('/admin/affiliated-colleges/cleanup-orphans', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Cleanup failed');
+      toast.success(data.message || 'Orphaned entries cleaned up!');
+      fetchAffiliatedColleges();
+      fetchCollegeClusters();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cleanup orphaned entries');
+    } finally {
+      setCleaningOrphans(false);
+    }
+  };
+
+  const fetchCollegeClusters = async () => {
+    try {
+      const res = await apiFetch('/admin/normalize/colleges');
+      if (res.ok) {
+        const data = await res.json();
+        setCollegeClusters(data.clusters || []);
+        setCampusesList(data.campuses || []);
+        setApprovedAffiliatedList(data.approvedAffiliatedColleges || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch college clusters:', err);
+    }
+  };
+
+  const fetchAffiliatedColleges = async () => {
+    try {
+      const res = await apiFetch('/admin/affiliated-colleges');
+      if (res.ok) {
+        const data = await res.json();
+        setPendingColleges(data.pending || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch affiliated colleges queue:', err);
+    }
+  };
+
+  const handleExecuteCollegeNorm = async () => {
+    if (selectedCollegeVariants.length === 0) {
+      toast.error('Please select at least one college variant to normalize.');
+      return;
+    }
+
+    if (collegeActionType === 'MAP_TO_CAMPUS' && !selectedTargetCampusId) {
+      toast.error('Please select a target constituent campus.');
+      return;
+    }
+
+    if (collegeActionType === 'TREAT_AS_AFFILIATED') {
+      if (affiliatedMode === 'CREATE_NEW' && !newAffiliatedName.trim()) {
+        toast.error('Please enter the name for the new approved affiliated college.');
+        return;
+      }
+      if (affiliatedMode === 'MERGE_EXISTING' && !selectedTargetAffiliatedId) {
+        toast.error('Please select an existing approved affiliated college.');
+        return;
+      }
+    }
+
+    setExecutingCollegeNorm(true);
+    try {
+      const res = await apiFetch('/admin/normalize/colleges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selectedColleges: selectedCollegeVariants,
+          actionType: collegeActionType,
+          targetCampusId: selectedTargetCampusId,
+          affiliatedMode,
+          newCollegeName: newAffiliatedName.trim(),
+          targetAffiliatedId: selectedTargetAffiliatedId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Normalization failed');
+
+      toast.success(data.message || 'College normalization completed!');
+      setSelectedCollegeVariants([]);
+      setNewAffiliatedName('');
+      fetchCollegeClusters();
+      fetchAffiliatedColleges();
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to normalize colleges');
+    } finally {
+      setExecutingCollegeNorm(false);
+    }
+  };
+
+
 
   const fetchStats = async () => {
     setRefreshing(true);
@@ -964,6 +1120,415 @@ export default function DataNormalizationPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        {/* SECTION 4: UNIFIED COLLEGE NORMALIZATION TOOL */}
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b pb-4 flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#003D7A] flex items-center gap-2">
+                <ListChecks size={20} /> Section 4: College Normalization
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Inspect all distinct college text values across Alumni + Registration Requests. Select one or more variants and either map them to a constituent campus, or explicitly treat them as an affiliated college.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="px-3 py-1 bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-full">
+                {collegeClusters.length} distinct college values
+              </span>
+              {selectedCollegeVariants.length > 0 && (
+                <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold rounded-full">
+                  {selectedCollegeVariants.length} selected
+                </span>
+              )}
+            </div>
+          </div>
+
+          {collegeClusters.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed text-gray-500 text-xs font-medium">
+              ✅ All college text values are normalized — no variants found.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Cluster list */}
+              <div className="border rounded-xl overflow-hidden">
+                <div className="bg-slate-100 px-3 py-2 border-b flex items-center gap-3 text-xs font-bold text-gray-600">
+                  <input
+                    type="checkbox"
+                    className="w-3.5 h-3.5 accent-[#003D7A]"
+                    checked={selectedCollegeVariants.length === collegeClusters.slice((collegeNormPage - 1) * 20, collegeNormPage * 20).length && collegeClusters.length > 0}
+                    onChange={(e) => {
+                      const page = collegeClusters.slice((collegeNormPage - 1) * 20, collegeNormPage * 20);
+                      if (e.target.checked) {
+                        const newSel = Array.from(new Set([...selectedCollegeVariants, ...page.map((c) => c.collegeText)]));
+                        setSelectedCollegeVariants(newSel);
+                      } else {
+                        const pageTexts = new Set(page.map((c) => c.collegeText));
+                        setSelectedCollegeVariants(selectedCollegeVariants.filter((v) => !pageTexts.has(v)));
+                      }
+                    }}
+                  />
+                  <span>College Text (distinct value)</span>
+                  <span className="ml-auto">Alumni</span>
+                  <span className="w-16 text-right">Requests</span>
+                  <span className="w-40 text-right">Suggested Campus</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {collegeClusters.slice((collegeNormPage - 1) * 20, collegeNormPage * 20).map((cluster) => {
+                    const isSelected = selectedCollegeVariants.includes(cluster.collegeText);
+                    const isConstituentMatch = campusesList.some(
+                      (c) =>
+                        c.name.toLowerCase() === cluster.collegeText.toLowerCase() ||
+                        c.code.toLowerCase() === cluster.collegeText.toLowerCase()
+                    );
+                    return (
+                      <div
+                        key={cluster.collegeText}
+                        onClick={() => {
+                          setSelectedCollegeVariants((prev) =>
+                            isSelected ? prev.filter((v) => v !== cluster.collegeText) : [...prev, cluster.collegeText]
+                          );
+                        }}
+                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer text-xs transition ${isSelected ? 'bg-blue-50/70' : 'hover:bg-slate-50'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 accent-[#003D7A] shrink-0"
+                          checked={isSelected}
+                          readOnly
+                        />
+                        <span className="font-semibold text-gray-900 flex-1 truncate">{cluster.collegeText}</span>
+                        {isConstituentMatch && (
+                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold shrink-0">
+                            Exact Match
+                          </span>
+                        )}
+                        <span className="text-gray-600 font-bold w-12 text-right shrink-0">{cluster.alumniCount}</span>
+                        <span className="text-gray-500 w-16 text-right shrink-0">{cluster.requestCount}</span>
+                        <span className="text-blue-700 font-semibold w-40 text-right truncate shrink-0">
+                          → {cluster.suggestedCampusName}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pagination */}
+              {collegeClusters.length > 20 && (
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Showing {(collegeNormPage - 1) * 20 + 1}–{Math.min(collegeNormPage * 20, collegeClusters.length)} of {collegeClusters.length}</span>
+                  <div className="flex gap-2">
+                    <button disabled={collegeNormPage <= 1} onClick={() => setCollegeNormPage((p) => p - 1)} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">← Prev</button>
+                    <span className="py-1 font-semibold text-gray-700">Page {collegeNormPage} of {Math.ceil(collegeClusters.length / 20)}</span>
+                    <button disabled={collegeNormPage >= Math.ceil(collegeClusters.length / 20)} onClick={() => setCollegeNormPage((p) => p + 1)} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Next →</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Panel — only shows when rows selected */}
+              {selectedCollegeVariants.length > 0 && (
+                <div className="border border-blue-200 bg-blue-50/40 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-extrabold text-[#003D7A]">
+                    Action for {selectedCollegeVariants.length} selected college variant{selectedCollegeVariants.length > 1 ? 's' : ''}
+                  </h3>
+
+                  {/* Action Type */}
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
+                      <input
+                        type="radio"
+                        name="collegeAction"
+                        value="MAP_TO_CAMPUS"
+                        checked={collegeActionType === 'MAP_TO_CAMPUS'}
+                        onChange={() => setCollegeActionType('MAP_TO_CAMPUS')}
+                        className="accent-[#003D7A]"
+                      />
+                      Map to Constituent Campus
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
+                      <input
+                        type="radio"
+                        name="collegeAction"
+                        value="TREAT_AS_AFFILIATED"
+                        checked={collegeActionType === 'TREAT_AS_AFFILIATED'}
+                        onChange={() => setCollegeActionType('TREAT_AS_AFFILIATED')}
+                        className="accent-[#003D7A]"
+                      />
+                      Treat as Affiliated College
+                    </label>
+                  </div>
+
+                  {/* MAP_TO_CAMPUS sub-form */}
+                  {collegeActionType === 'MAP_TO_CAMPUS' && (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-gray-700">Select Constituent Campus</label>
+                      <select
+                        value={selectedTargetCampusId}
+                        onChange={(e) => setSelectedTargetCampusId(e.target.value)}
+                        className="w-full max-w-xs p-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-gray-900 focus:border-[#003D7A] outline-none"
+                      >
+                        <option value="">-- Select Campus --</option>
+                        {campusesList.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-500">
+                        Will bulk-update all selected rows: <code className="bg-white px-1 rounded border">campusId → selected campus</code> and <code className="bg-white px-1 rounded border">college → Campus.name</code>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* TREAT_AS_AFFILIATED sub-form */}
+                  {collegeActionType === 'TREAT_AS_AFFILIATED' && (
+                    <div className="space-y-3">
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
+                          <input
+                            type="radio"
+                            name="affiliatedMode"
+                            value="CREATE_NEW"
+                            checked={affiliatedMode === 'CREATE_NEW'}
+                            onChange={() => setAffiliatedMode('CREATE_NEW')}
+                            className="accent-[#003D7A]"
+                          />
+                          Create new approved affiliated college
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
+                          <input
+                            type="radio"
+                            name="affiliatedMode"
+                            value="MERGE_EXISTING"
+                            checked={affiliatedMode === 'MERGE_EXISTING'}
+                            onChange={() => setAffiliatedMode('MERGE_EXISTING')}
+                            className="accent-[#003D7A]"
+                          />
+                          Merge into existing approved college
+                        </label>
+                      </div>
+
+                      {affiliatedMode === 'CREATE_NEW' && (
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-gray-700">Canonical Name for New Affiliated College</label>
+                          <input
+                            type="text"
+                            value={newAffiliatedName}
+                            onChange={(e) => setNewAffiliatedName(e.target.value)}
+                            placeholder="e.g. Guru Nanak Dev Engineering College, Ludhiana"
+                            className="w-full max-w-md p-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-gray-900 focus:border-[#003D7A] outline-none"
+                          />
+                          <p className="text-[11px] text-gray-500">This name will be added as an approved Affiliated College and assigned to all selected rows.</p>
+                        </div>
+                      )}
+                      {affiliatedMode === 'MERGE_EXISTING' && (
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-gray-700">Select Existing Approved Affiliated College</label>
+                          <select
+                            value={selectedTargetAffiliatedId}
+                            onChange={(e) => setSelectedTargetAffiliatedId(e.target.value)}
+                            className="w-full max-w-xs p-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-gray-900 focus:border-[#003D7A] outline-none"
+                          >
+                            <option value="">-- Select Affiliated College --</option>
+                            {approvedAffiliatedList.map((a) => (
+                              <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                          </select>
+                          {approvedAffiliatedList.length === 0 && (
+                            <p className="text-[11px] text-amber-700 font-semibold">No approved affiliated colleges yet. Use &quot;Create new&quot; first.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      disabled={executingCollegeNorm}
+                      onClick={handleExecuteCollegeNorm}
+                      className="px-5 py-2 bg-[#003D7A] hover:bg-[#012140] text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {executingCollegeNorm ? 'Applying...' : 'Apply to Selected'}
+                    </button>
+                    <button
+                      onClick={() => setSelectedCollegeVariants([])}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-gray-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        {/* SECTION 5: PENDING AFFILIATED COLLEGE REQUESTS (from self-registration) */}
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b pb-4 flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#003D7A] flex items-center gap-2">
+                <GitMerge size={20} /> Section 5: Pending Affiliated College Requests
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                These colleges were explicitly requested via the &quot;I am from an Affiliated College&quot; toggle during self-registration. Review each to approve, merge into an existing college, or reject.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                disabled={cleaningOrphans}
+                onClick={handleCleanupOrphans}
+                className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold rounded-xl transition disabled:opacity-50 cursor-pointer"
+              >
+                {cleaningOrphans ? 'Cleaning...' : 'Clean Up Orphaned Entries'}
+              </button>
+              <span className={`px-3 py-1 text-xs font-bold rounded-full border ${pendingColleges.length > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>
+                {pendingColleges.length} Pending Request{pendingColleges.length === 1 ? '' : 's'}
+              </span>
+            </div>
+          </div>
+
+          {pendingColleges.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed text-gray-500 text-xs font-medium">
+              ✅ No pending affiliated college requests from self-registrations.
+            </div>
+          ) : (
+            <div className="border rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-100 border-b font-bold text-gray-700">
+                  <tr>
+                    <th className="p-3">College Name</th>
+                    <th className="p-3">Requested By</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3">Referencing Records</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pendingColleges.map((col) => (
+                    <tr key={col.id} className="hover:bg-slate-50">
+                      <td className="p-3 font-bold text-gray-900">{col.name}</td>
+                      <td className="p-3 text-gray-600 font-medium">{col.requestedBy}</td>
+                      <td className="p-3 text-gray-500 text-[11px]">{new Date(col.createdAt).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                          {col.totalReferencing} record{col.totalReferencing === 1 ? '' : 's'} ({col.alumniCount} alumni, {col.requestCount} requests)
+                        </span>
+                      </td>
+                      <td className="p-3 text-right space-x-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await apiFetch(`/admin/affiliated-colleges/${col.id}/approve`, { method: 'POST' });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Approval failed');
+                              toast.success('College approved!');
+                              fetchAffiliatedColleges();
+                              fetchCollegeClusters();
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to approve');
+                            }
+                          }}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Reject this college? Referencing records will be unlinked and flagged for review.')) return;
+                            try {
+                              const res = await apiFetch(`/admin/affiliated-colleges/${col.id}/reject`, { method: 'POST' });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Rejection failed');
+                              toast.success('College rejected.');
+                              fetchAffiliatedColleges();
+                              fetchCollegeClusters();
+                              fetchStats();
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to reject');
+                            }
+                          }}
+                          className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                        >
+                          Reject
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        {/* SECTION 6: MERGE AUDIT HISTORY */}
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#003D7A] flex items-center gap-2">
+                <FileText size={20} /> Section 6: Merge Audit History
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Traceable record of all past bulk merge and normalization operations across College, Branch, and Course.
+              </p>
+            </div>
+            <span className="px-3 py-1 bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-full">
+              {mergeLogs.length} Log Entry{mergeLogs.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {mergeLogs.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed text-gray-500 text-xs font-medium">
+              No merge log entries found. Merge actions will automatically produce audit records here.
+            </div>
+          ) : (
+            <div className="border rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-100 border-b font-bold text-gray-700">
+                  <tr>
+                    <th className="p-3">Field</th>
+                    <th className="p-3">From Values (Merged)</th>
+                    <th className="p-3">To Value (Canonical)</th>
+                    <th className="p-3">Records Affected</th>
+                    <th className="p-3">Performed By</th>
+                    <th className="p-3 text-right">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {mergeLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50">
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 font-bold uppercase text-[10px] rounded">
+                          {log.field}
+                        </span>
+                      </td>
+                      <td className="p-3 font-mono text-[11px] text-rose-700 font-semibold max-w-xs truncate">
+                        {log.fromValues.join(', ')}
+                      </td>
+                      <td className="p-3 font-semibold text-emerald-800">
+                        {log.toValue}
+                      </td>
+                      <td className="p-3 font-bold text-gray-900">
+                        {log.affectedCount} record{log.affectedCount === 1 ? '' : 's'}
+                      </td>
+                      <td className="p-3 text-gray-600 font-medium">
+                        {log.performedBy}
+                      </td>
+                      <td className="p-3 text-right text-gray-500 text-[11px]">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

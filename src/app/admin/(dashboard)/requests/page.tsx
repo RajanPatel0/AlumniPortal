@@ -16,9 +16,23 @@ interface RegistrationRequest {
   course?: string | null;
   status: string;
   createdAt: string;
+  campusId?: string | null;
   campus?: { id: string; name: string } | null;
+  affiliatedCollegeId?: string | null;
+  affiliatedCollege?: { id: string; name: string } | null;
   currentRole?: string | null;
   currentCompany?: string | null;
+}
+
+interface Campus {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface AffiliatedCollege {
+  id: string;
+  name: string;
 }
 
 export default function AdminRequestsPage() {
@@ -29,9 +43,11 @@ export default function AdminRequestsPage() {
   // Curated options
   const [branches, setBranches] = useState<string[]>([]);
   const [courses, setCourses] = useState<string[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [approvedColleges, setApprovedColleges] = useState<AffiliatedCollege[]>([]);
 
   // Local state for inline edits per request
-  const [edits, setEdits] = useState<Record<string, { branch: string; course: string }>>({});
+  const [edits, setEdits] = useState<Record<string, { branch: string; course: string; campusId: string; isAffiliated: boolean; affiliatedCollegeId: string }>>({});
 
   // States for sending individual registration link
   const [inviteName, setInviteName] = useState('');
@@ -41,6 +57,8 @@ export default function AdminRequestsPage() {
   useEffect(() => {
     fetchRequests();
     fetchOptions();
+    fetchCampuses();
+    fetchAffiliatedColleges();
   }, []);
 
   const fetchOptions = async () => {
@@ -53,6 +71,31 @@ export default function AdminRequestsPage() {
       }
     } catch (err) {
       console.error('Failed to load options:', err);
+    }
+  };
+
+  const fetchCampuses = async () => {
+    try {
+      const res = await apiFetch('/campuses');
+      if (res.ok) {
+        const data = await res.json();
+        setCampuses(data.campuses || data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load campuses:', err);
+    }
+  };
+
+  const fetchAffiliatedColleges = async () => {
+    try {
+      const res = await apiFetch('/admin/affiliated-colleges');
+      if (res.ok) {
+        const data = await res.json();
+        // Admin endpoint returns { pending: [], approved: [] }
+        setApprovedColleges(data.approved || []);
+      }
+    } catch (err) {
+      console.error('Failed to load affiliated colleges:', err);
     }
   };
 
@@ -102,11 +145,14 @@ export default function AdminRequestsPage() {
         setRequests(pending);
 
         // Initialize local edit state
-        const initialEdits: Record<string, { branch: string; course: string }> = {};
+        const initialEdits: Record<string, { branch: string; course: string; campusId: string; isAffiliated: boolean; affiliatedCollegeId: string }> = {};
         pending.forEach((r) => {
           initialEdits[r.id] = {
             branch: r.branch || '',
             course: r.course || '',
+            campusId: r.campusId || r.campus?.id || '',
+            isAffiliated: !!r.affiliatedCollegeId,
+            affiliatedCollegeId: r.affiliatedCollegeId || '',
           };
         });
         setEdits(initialEdits);
@@ -121,7 +167,7 @@ export default function AdminRequestsPage() {
     }
   };
 
-  const handleEditChange = (id: string, field: 'branch' | 'course', value: string) => {
+  const handleEditChange = (id: string, field: string, value: string | boolean) => {
     setEdits((prev) => ({
       ...prev,
       [id]: {
@@ -143,6 +189,7 @@ export default function AdminRequestsPage() {
       } else if (action === 'approve' && requestEdit) {
         payload.branch = requestEdit.branch;
         payload.course = requestEdit.course;
+        payload.campusId = requestEdit.campusId;
       }
 
       const res = await apiFetch(`/admin/registration-requests/${requestId}/${action}`, {
@@ -164,7 +211,6 @@ export default function AdminRequestsPage() {
 
       if (res.ok) {
         toast.success(data.message || `Request ${action}ed successfully`);
-        // Filter out the modified request from view immediately
         setRequests(prevRequests => prevRequests.filter(r => r.id !== requestId));
       } else {
         toast.error(data.error || `Failed to ${action} request`);
@@ -272,17 +318,18 @@ export default function AdminRequestsPage() {
                   <tr>
                     <th className="p-4 font-semibold text-gray-700">Name / Email</th>
                     <th className="p-4 font-semibold text-gray-700 min-w-[280px]">Academic Details (Editable)</th>
+                    <th className="p-4 font-semibold text-gray-700 min-w-[200px]">Campus / College (Editable)</th>
                     <th className="p-4 font-semibold text-gray-700">Professional Info</th>
-                    <th className="p-4 font-semibold text-gray-700">Campus</th>
                     <th className="p-4 font-semibold text-gray-700">Submitted</th>
                     <th className="p-4 font-semibold text-gray-700 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {requests.map((request) => {
-                    const currentEdit = edits[request.id] || { branch: request.branch || '', course: request.course || '' };
+                    const currentEdit = edits[request.id] || { branch: request.branch || '', course: request.course || '', campusId: request.campus?.id || '', isAffiliated: !!request.affiliatedCollegeId, affiliatedCollegeId: request.affiliatedCollegeId || '' };
                     const isBcaMca = isBcaOrMca(currentEdit.course);
                     const isBranchMismatch = isBcaMca && (currentEdit.branch || '').trim().toLowerCase() !== 'computer applications';
+                    const selectedCampus = campuses.find((c) => c.id === currentEdit.campusId);
 
                     return (
                       <tr key={request.id} className="hover:bg-gray-50/70 transition">
@@ -348,6 +395,51 @@ export default function AdminRequestsPage() {
                           <div className="text-gray-500 text-xs">Batch Year: {request.batchYear}</div>
                           <div className="text-xs text-gray-400 font-mono">Roll No: {request.enrollmentNo || 'N/A'}</div>
                         </td>
+
+                        {/* Campus / College editable column */}
+                        <td className="p-4 align-top text-sm space-y-2">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase">Campus</label>
+                            <select
+                              value={currentEdit.campusId}
+                              onChange={(e) => {
+                                handleEditChange(request.id, 'campusId', e.target.value);
+                              }}
+                              className="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-[#003D7A]"
+                            >
+                              <option value="">-- Select Campus --</option>
+                              {campuses.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Affiliated College — only if request was submitted as affiliated */}
+                          {(request.affiliatedCollegeId || currentEdit.isAffiliated) && (
+                            <div>
+                              <label className="block text-[11px] font-bold text-gray-500 uppercase">Affiliated College</label>
+                              <select
+                                value={currentEdit.affiliatedCollegeId}
+                                onChange={(e) => handleEditChange(request.id, 'affiliatedCollegeId', e.target.value)}
+                                className="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-amber-300 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-[#003D7A]"
+                              >
+                                <option value="">-- No Affiliated College --</option>
+                                {approvedColleges.map((a) => (
+                                  <option key={a.id} value={a.id}>{a.name}</option>
+                                ))}
+                                {request.affiliatedCollege && !approvedColleges.find((a) => a.id === request.affiliatedCollegeId) && (
+                                  <option value={request.affiliatedCollegeId || ''}>{request.affiliatedCollege.name} (pending)</option>
+                                )}
+                              </select>
+                            </div>
+                          )}
+
+                          {/* College text readonly display */}
+                          <div className="text-[11px] text-gray-500">
+                            <span className="font-semibold">College:</span> {request.college || selectedCampus?.name || '—'}
+                          </div>
+                        </td>
+
                         <td className="p-4 align-top text-sm">
                           {request.currentRole || request.currentCompany ? (
                             <>
@@ -357,9 +449,6 @@ export default function AdminRequestsPage() {
                           ) : (
                             <span className="text-gray-400 text-xs italic">Not specified</span>
                           )}
-                        </td>
-                        <td className="p-4 align-top text-sm text-gray-700">
-                          {request.campus?.name || '—'}
                         </td>
                         <td className="p-4 align-top text-sm text-gray-500">
                           {new Date(request.createdAt).toLocaleDateString(undefined, {

@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   const batchLabel = formData.get('batchLabel') as string | null;
-  const campusId = formData.get('campusId') as string | null; // only sent by admin
+  const campusId = formData.get('campusId') as string | null;
+  const isAffiliatedStr = formData.get('isAffiliated') as string | null;
+  const affiliatedCollegeId = formData.get('affiliatedCollegeId') as string | null;
+  const customCollegeName = formData.get('customCollegeName') as string | null;
+
+  const isAffiliated = isAffiliatedStr === 'true';
 
   // Validate file and batch label
   if (!file) {
@@ -51,14 +56,22 @@ export async function POST(req: NextRequest) {
   // 3. Determine target campus ID
   let targetCampusId: string;
   if (staff.role === 'ADMIN') {
-    if (!campusId) {
-      return NextResponse.json({ error: 'Campus selection is required for admin' }, { status: 400 });
+    if (isAffiliated) {
+      const mainCampus = await prisma.campus.findUnique({ where: { code: 'main' } });
+      if (!mainCampus) {
+        return NextResponse.json({ error: 'Main Campus not configured in database' }, { status: 400 });
+      }
+      targetCampusId = mainCampus.id;
+    } else {
+      if (!campusId) {
+        return NextResponse.json({ error: 'Campus selection is required for admin' }, { status: 400 });
+      }
+      const campus = await prisma.campus.findUnique({ where: { id: campusId } });
+      if (!campus) {
+        return NextResponse.json({ error: 'Invalid campus selected' }, { status: 400 });
+      }
+      targetCampusId = campusId;
     }
-    const campus = await prisma.campus.findUnique({ where: { id: campusId } });
-    if (!campus) {
-      return NextResponse.json({ error: 'Invalid campus selected' }, { status: 400 });
-    }
-    targetCampusId = campusId;
   } else {
     // SUB_ADMIN or COORDINATOR must have a campus assigned
     if (!staff.campusId) {
@@ -79,14 +92,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'File contains no valid data rows' }, { status: 400 });
   }
 
-  // 5. Process import – pass campusId to the batch processor
+  // 5. Process import – pass options to batch processor
   try {
     const result = await processImportBatch(
       rows,
       batchLabel,
-      staff.id,      // adminId
+      staff.id,
       file.name,
-      targetCampusId // new parameter
+      targetCampusId,
+      {
+        isAffiliated,
+        affiliatedCollegeId: isAffiliated && affiliatedCollegeId !== 'NEW' ? affiliatedCollegeId : null,
+        customCollegeName: isAffiliated && affiliatedCollegeId === 'NEW' ? customCollegeName : null,
+      }
     );
     const flaggedMsg = result.reviewFlaggedCount ? ` (${result.reviewFlaggedCount} flagged for review)` : '';
     return NextResponse.json({
