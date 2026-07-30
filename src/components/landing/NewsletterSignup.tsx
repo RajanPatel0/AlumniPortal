@@ -1,23 +1,34 @@
 'use client';
 
 import { useState } from 'react';
+import { subscribeToNewsletter } from '@/app/actions/newsletter';
 
 export default function NewsletterSignup() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
 
     setStatus('loading');
-    
-    // Simulate backend capture
-    setTimeout(() => {
-      console.log(`Newsletter captured: ${email} from Home Page at ${new Date().toISOString()}`);
-      setStatus('success');
-      setEmail('');
-    }, 1500);
+    setMessage('');
+
+    try {
+      const res = await subscribeToNewsletter(email);
+      if (res.success) {
+        setStatus('success');
+        setEmail('');
+      } else {
+        setStatus('error');
+        setMessage(res.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+      setMessage('Failed to connect to the server.');
+    }
   };
 
   return (
@@ -33,28 +44,39 @@ export default function NewsletterSignup() {
         </p>
 
         {status === 'success' ? (
-          <div className="bg-green-950/30 border border-green-800 text-green-400 p-4 rounded-xl max-w-md mx-auto animate-fade-in">
-            <p className="text-sm font-semibold">✓ Subscription successful! Welcome aboard.</p>
+          <div className="max-w-md mx-auto bg-slate-800/50 border border-emerald-500/30 rounded-2xl p-6 shadow-xl animate-fade-in backdrop-blur-sm">
+            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-emerald-400 text-lg font-bold">✓</span>
+            </div>
+            <h3 className="text-lg font-extrabold text-white mb-1">Subscription Successful!</h3>
+            <p className="text-xs text-slate-350 leading-relaxed font-medium">
+              Thank you for subscribing. You've been successfully added to our community newsletter.
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              required
-              value={email}
-              disabled={status === 'loading'}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email address"
-              className="flex-grow px-5 py-3.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C41E3A]/40 focus:border-[#C41E3A] transition-all duration-300 disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={status === 'loading'}
-              className="px-6 py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 text-sm whitespace-nowrap disabled:opacity-50"
-            >
-              {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
-            </button>
-          </form>
+          <div className="max-w-md mx-auto">
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                required
+                value={email}
+                disabled={status === 'loading'}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="flex-grow px-5 py-3.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C41E3A]/40 focus:border-[#C41E3A] transition-all duration-300 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                className="px-6 py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 text-sm whitespace-nowrap disabled:opacity-50"
+              >
+                {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </form>
+            {status === 'error' && (
+              <p className="text-xs text-rose-400 mt-2.5 text-left font-semibold">{message}</p>
+            )}
+          </div>
         )}
       </div>
     </section>

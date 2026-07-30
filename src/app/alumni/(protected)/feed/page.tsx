@@ -348,16 +348,16 @@ export default function AlumniFeed() {
           <h4 className="text-md font-bold text-gray-900 mb-4">Quick links</h4>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
-                bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
+              { label: 'Campus Clubs', icon: Users, href: '/alumni/communities',
+                bg: 'bg-indigo-50 hover:bg-indigo-100', border: 'border-indigo-100 hover:border-indigo-200', text: 'text-indigo-700', icon2: 'text-indigo-600' },
               { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking',
                 bg: 'bg-purple-50 hover:bg-purple-100', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-700', icon2: 'text-purple-600' },
               { label: 'Events', icon: Calendar, href: '/alumni/events',
                 bg: 'bg-orange-50 hover:bg-orange-100', border: 'border-orange-100 hover:border-orange-200', text: 'text-orange-700', icon2: 'text-orange-600' },
               { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs',
-                bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },
-              { label: 'Campus Communities', icon: Users, href: '/alumni/communities',
-                bg: 'bg-indigo-50 hover:bg-indigo-100', border: 'border-indigo-100 hover:border-indigo-200', text: 'text-indigo-700', icon2: 'text-indigo-600' },
+                bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },    
+             { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
+                bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
             ].map((link, idx) => (
               <Link
                 key={idx}
@@ -444,7 +444,34 @@ export default function AlumniFeed() {
 
         {/* Promotions Carousel / Scroll Grid (Birthday wish card removed) */}
         <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
-          {[
+          {[  {
+              title: 'Get Your Story Published!',
+              desc: 'Share it on the Post and inspire the community',
+              btn: 'Post Now',
+              icon: FileText,
+              href: '/alumni/newscorner',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-teal-50 to-white',
+                border: 'border-teal-100 hover:border-teal-300',
+                glow: 'hover:shadow-teal-100',
+                iconBg: 'bg-gradient-to-br from-teal-400 to-teal-600',
+                btnBg: 'bg-teal-600 hover:bg-teal-700',
+              },
+            },
+            {
+              title: 'Memories Fade, Photos',
+              desc: 'Share Photos of your time here and help us preserve them',
+              btn: 'Share Photos',
+              icon: ImageIcon,
+              href: '/alumni/gallery',
+              theme: {
+                cardBg: 'bg-gradient-to-br from-pink-50 to-white',
+                border: 'border-pink-100 hover:border-pink-300',
+                glow: 'hover:shadow-pink-100',
+                iconBg: 'bg-gradient-to-br from-pink-400 to-pink-600',
+                btnBg: 'bg-pink-600 hover:bg-pink-700',
+              },
+            },
             {
               title: 'Are You Startup Owner?',
               desc: 'List your Startup here and stand out in the community!',
@@ -485,34 +512,6 @@ export default function AlumniFeed() {
                 glow: 'hover:shadow-blue-100',
                 iconBg: 'bg-gradient-to-br from-blue-400 to-[#003D7A]',
                 btnBg: 'bg-[#003D7A] hover:bg-[#002b56]',
-              },
-            },
-            {
-              title: 'Get Your Story Published!',
-              desc: 'Share it on the Post and inspire the community',
-              btn: 'Post Now',
-              icon: FileText,
-              href: '/alumni/newscorner',
-              theme: {
-                cardBg: 'bg-gradient-to-br from-teal-50 to-white',
-                border: 'border-teal-100 hover:border-teal-300',
-                glow: 'hover:shadow-teal-100',
-                iconBg: 'bg-gradient-to-br from-teal-400 to-teal-600',
-                btnBg: 'bg-teal-600 hover:bg-teal-700',
-              },
-            },
-            {
-              title: 'Memories Fade, Photos',
-              desc: 'Share Photos of your time here and help us preserve them',
-              btn: 'Share Photos',
-              icon: ImageIcon,
-              href: '/alumni/gallery',
-              theme: {
-                cardBg: 'bg-gradient-to-br from-pink-50 to-white',
-                border: 'border-pink-100 hover:border-pink-300',
-                glow: 'hover:shadow-pink-100',
-                iconBg: 'bg-gradient-to-br from-pink-400 to-pink-600',
-                btnBg: 'bg-pink-600 hover:bg-pink-700',
               },
             },
             ].map((promo, idx) => (

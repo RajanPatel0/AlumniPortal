@@ -96,28 +96,39 @@ export async function POST(
     }
 
     const emailSubject = mode === 'remind' ? 'Reminder: Complete Your PTU Alumni Registration' : 'PTU Alumni Invitation';
-    const emailBodySentence = mode === 'remind'
+    const emailIntro = mode === 'remind'
       ? 'This is a reminder to complete your alumni registration profile.'
-      : 'You are invited to complete your alumni registration profile.';
+      : "We're excited to welcome you to the IKGPTU Alumni Portal — a space where old connections can be rekindled, new relationships can be built, and opportunities can be shared.<br/>No matter when you graduated or where your journey has taken you, you will always be a part of the IKGPTU community. This Community is here to help us stay connected, support one another, and grow together as professionals and lifelong learners.";
 
     const emailResult = await sendEmail({
       to: [{ email: alumni.email, name: alumni.name }],
       subject: emailSubject,
       htmlContent: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;">
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333;">
           <h2 style="color:#12388f;margin-bottom:8px;">Welcome to PTU Alumni Connect</h2>
           <p>Hello ${alumni.name},</p>
-          <p>${emailBodySentence}</p>
+          <p>${emailIntro}</p>
+          
+          <h3 style="color:#12388f;margin-top:16px;">What can you expect here?</h3>
+          <ul style="padding-left:20px;margin-bottom:20px;">
+            <li>Connect with fellow alumni across industries and locations</li>
+            <li>Share career opportunities, insights, and experiences</li>
+            <li>Seek and offer mentorship</li>
+            <li>Collaborate on projects, ideas, and initiatives</li>
+            <li>Celebrate achievements and milestones</li>
+            <li>Stay engaged with the growing IKGPTU alumni network</li>
+          </ul>
+
           <p>
-            <a href="${inviteLink}" style="display:inline-block;padding:10px 16px;background:#12388f;color:#fff;text-decoration:none;border-radius:8px;">
+            <a href="${inviteLink}" style="display:inline-block;padding:10px 16px;background:#12388f;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">
               Complete Registration
             </a>
           </p>
-          <p>If the button does not work, copy this URL:</p>
-          <p>${inviteLink}</p>
+          <p style="font-size:12px;color:#666;">If the button does not work, copy this URL:</p>
+          <p style="font-size:12px;color:#12388f;word-break:break-all;">${inviteLink}</p>
         </div>
       `,
-      textContent: `Hello ${alumni.name}, ${emailBodySentence} Link: ${inviteLink}`,
+      textContent: `Hello ${alumni.name}, Welcome to IKGPTU Alumni Portal. Link: ${inviteLink}`,
       tags: ['alumni-invitation', `batch-${batchId}`],
     });
 

@@ -289,7 +289,6 @@ export default async function HomePage() {
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Quick Navigation</h4>
               <ul className="space-y-2.5 text-xs font-semibold">
-                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">About Association</a></li>
                 <li><a href="#events" className="hover:text-[#C41E3A] transition-colors">Events & Reunions</a></li>
                 <li><a href="#news" className="hover:text-[#C41E3A] transition-colors">News Updates</a></li>
                 <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Support Desk</a></li>
@@ -298,18 +297,17 @@ export default async function HomePage() {
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Compliance</h4>
               <ul className="space-y-2.5 text-xs font-semibold">
-                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Privacy Charter</a></li>
-                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-[#C41E3A] transition-colors">Platform Guidelines</a></li>
+                <li><a href="/guidelines" className="hover:text-[#C41E3A] transition-colors">Platform Guidelines</a></li>
+                <li><a href="/privacy" className="hover:text-[#C41E3A] transition-colors">Privacy Charter</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Connect Safely</h4>
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
-                <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
-                <a href="#" className="hover:text-white transition-colors">Facebook</a>
-                <a href="#" className="hover:text-white transition-colors">Twitter</a>
-                <a href="#" className="hover:text-white transition-colors">Instagram</a>
+                <a href="https://www.linkedin.com/in/tandpikgptu/" className="hover:text-white transition-colors">LinkedIn</a>
+                <a href="https://www.facebook.com/IKGujralPTU/" className="hover:text-white transition-colors">Facebook</a>
+                <a href="https://x.com/IKGujralPTU" className="hover:text-white transition-colors">Twitter</a>
+                <a href="https://www.instagram.com/ikgujralptu/" className="hover:text-white transition-colors">Instagram</a>
               </div>
             </div>
           </div>

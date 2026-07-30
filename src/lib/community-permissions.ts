@@ -16,7 +16,7 @@ export interface CommunityPermissions {
  */
 export function getCommunityPermissions(
   roleTag?: CommunityRoleTagType | null,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
 ): CommunityPermissions {
   if (isAdmin) {
     return {
@@ -30,8 +30,10 @@ export function getCommunityPermissions(
     };
   }
 
-  const isLeader = roleTag === "LEADER" || roleTag === "COORDINATOR" || roleTag === "ADVISOR";
-  const isMember = isLeader || roleTag === "CORE_MEMBER" || roleTag === "MEMBER";
+  const isLeader =
+    roleTag === "LEADER" || roleTag === "COORDINATOR" || roleTag === "ADVISOR";
+  const isMember =
+    isLeader || roleTag === "CORE_MEMBER" || roleTag === "MEMBER";
 
   return {
     canEditCommunity: isLeader,
@@ -48,7 +50,9 @@ export function getCommunityPermissions(
  * Checks if a member role tag constitutes community leadership (LEADER, COORDINATOR, ADVISOR).
  */
 export function isLeadershipRole(roleTag?: string | null): boolean {
-  return roleTag === "LEADER" || roleTag === "COORDINATOR" || roleTag === "ADVISOR";
+  return (
+    roleTag === "LEADER" || roleTag === "COORDINATOR" || roleTag === "ADVISOR"
+  );
 }
 
 /**
@@ -56,7 +60,7 @@ export function isLeadershipRole(roleTag?: string | null): boolean {
  */
 export function isLeaderOrAdmin(
   isAdmin: boolean = false,
-  memberRoleTag?: string | null
+  memberRoleTag?: string | null,
 ): boolean {
   return isAdmin || isLeadershipRole(memberRoleTag);
 }
@@ -70,11 +74,13 @@ export function canDeletePost(
   authorStaffId?: string | null,
   currentAlumniId?: string | null,
   currentStaffId?: string | null,
-  canDeletePostsPermission: boolean = false
+  canDeletePostsPermission: boolean = false,
 ): boolean {
   if (canDeletePostsPermission) return true;
-  if (currentAlumniId && authorAlumniId && currentAlumniId === authorAlumniId) return true;
-  if (currentStaffId && authorStaffId && currentStaffId === authorStaffId) return true;
+  if (currentAlumniId && authorAlumniId && currentAlumniId === authorAlumniId)
+    return true;
+  if (currentStaffId && authorStaffId && currentStaffId === authorStaffId)
+    return true;
   return false;
 }
 
@@ -87,11 +93,13 @@ export function canEditPost(
   authorStaffId?: string | null,
   currentAlumniId?: string | null,
   currentStaffId?: string | null,
-  canEditPostsPermission: boolean = false
+  canEditPostsPermission: boolean = false,
 ): boolean {
   if (canEditPostsPermission) return true;
-  if (currentAlumniId && authorAlumniId && currentAlumniId === authorAlumniId) return true;
-  if (currentStaffId && authorStaffId && currentStaffId === authorStaffId) return true;
+  if (currentAlumniId && authorAlumniId && currentAlumniId === authorAlumniId)
+    return true;
+  if (currentStaffId && authorStaffId && currentStaffId === authorStaffId)
+    return true;
   return false;
 }
 
@@ -109,9 +117,10 @@ export const COMMUNITY_CATEGORIES = [
   "Tech",
   "Culture",
   "Sports",
+  "NSS",
+  "NCC",
   "Research",
-  "Grants",
-  "Workshops",
+  "Patent",
   "Events",
   "General",
 ] as const;

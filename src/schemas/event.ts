@@ -34,10 +34,8 @@ export const NEWSCORNER_CATEGORIES = [
 /** Categories that appear in the calendar Events page (staff-posted) */
 export const CALENDAR_CATEGORIES = [
   'Reunion',
-  'Workshop',
   'Networking',
   'Mentorship',
-  'Panel',
   'Webinar',
   'Sports',
   'General',
