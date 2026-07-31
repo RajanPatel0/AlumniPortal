@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
             performedBy: admin.email || admin.id,
           },
         });
-      });
+      }, { timeout: 30000 });
 
       return NextResponse.json({
         message: `Mapped ${selectedColleges.length} college variants (${updatedAlumniCount} alumni, ${updatedRequestsCount} requests) to constituent campus "${targetCampus.name}".`,
@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
             performedBy: admin.email || admin.id,
           },
         });
-      });
+      }, { timeout: 30000 });
 
       return NextResponse.json({
         message: `Mapped ${selectedColleges.length} college variants (${updatedAlumniCount} alumni, ${updatedRequestsCount} requests) to affiliated college "${targetAff.name}".`,

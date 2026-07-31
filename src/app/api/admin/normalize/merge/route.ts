@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
           performedBy: staff.email || staff.id,
         },
       }),
-    ]);
+    ], { timeout: 30000 });
 
     return NextResponse.json({
       message: `Successfully merged ${alumniResult.count} alumni rows and ${requestResult.count} registration requests into "${canonicalTarget}".`,

@@ -956,9 +956,9 @@ model Newsletter {
 model NormalizationMergeLog {
   id          String   @id @default(cuid())
   field       String   // 'college' | 'branch' | 'course'
-  fromValues  String   @db.Text // JSON array of original text values that were merged
+  fromValues  String   @db.LongText // JSON array of original text values that were merged
   toValue     String
-  affectedIds String   @db.Text // JSON array of Alumni/RegistrationRequest ids that were updated
+  affectedIds String   @db.LongText // JSON array of Alumni/RegistrationRequest ids that were updated
   performedBy String   // admin staff id or email
   createdAt   DateTime @default(now())
 

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import { BASE_PATH } from "@/lib/api";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,10 +19,9 @@ export const metadata: Metadata = {
   title: "PTU Alumni",
   description: "PTU Alumni Connect – Stay connected with your IKGPTU community",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: `${BASE_PATH}/icon.png`,
+    apple: `${BASE_PATH}/icon.png`,
   },
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -49,12 +49,12 @@ export default function RootLayout({
     >
       <head>
         {/* PWA meta tags */}
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href={`${BASE_PATH}/manifest.json`} />
         <meta name="theme-color" content="#003D7A" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PTU Alumni" />
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href={`${BASE_PATH}/icon.png`} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>

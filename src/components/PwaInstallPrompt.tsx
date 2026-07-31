@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
+import { BASE_PATH } from '@/lib/api';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -46,7 +47,7 @@ export default function PwaInstallPrompt() {
   useEffect(() => {
     // Register service worker
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register(`${BASE_PATH}/sw.js`).catch(() => {});
     }
 
     // Don't show on desktop, already-installed PWA, or if dismissed recently
@@ -133,7 +134,7 @@ export default function PwaInstallPrompt() {
                 className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
                 style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
               >
-                <Image src="/icon.png" alt="PTU Alumni" width={44} height={44} className="rounded-xl" />
+                <Image src={`${BASE_PATH}/icon.png`} alt="PTU Alumni" width={44} height={44} className="rounded-xl" />
               </div>
               <div>
                 <p className="text-white/60 text-[11px] font-semibold uppercase tracking-widest">PTU Alumni</p>

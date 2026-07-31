@@ -122,6 +122,7 @@ export default function DataNormalizationPage() {
     createdAt: string;
   }[]>([]);
   const [cleaningOrphans, setCleaningOrphans] = useState(false);
+  const [auditPage, setAuditPage] = useState(1);
 
   useEffect(() => {
     fetchStats();
@@ -464,11 +465,15 @@ export default function DataNormalizationPage() {
   const totalBcaMcaPages = Math.ceil(bcaMcaMismatchRows.length / ITEMS_PER_PAGE) || 1;
   const totalAlumniReviewPages = Math.ceil(needsReviewAlumni.length / ITEMS_PER_PAGE) || 1;
   const totalRequestsReviewPages = Math.ceil(needsReviewRequests.length / ITEMS_PER_PAGE) || 1;
+  
+  const AUDIT_ITEMS_PER_PAGE = 15;
+  const totalAuditPages = Math.ceil(mergeLogs.length / AUDIT_ITEMS_PER_PAGE) || 1;
 
   const paginatedVariants = paginate(currentVariantsList, variantsPage);
   const paginatedBcaMca = paginate(bcaMcaMismatchRows, bcaMcaPage);
   const paginatedAlumniReview = paginate(needsReviewAlumni, alumniReviewPage);
   const paginatedRequestsReview = paginate(needsReviewRequests, requestsReviewPage);
+  const paginatedMergeLogs = paginate(mergeLogs, auditPage, AUDIT_ITEMS_PER_PAGE);
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -1503,14 +1508,17 @@ export default function DataNormalizationPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {mergeLogs.map((log) => (
+                  {paginatedMergeLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50">
                       <td className="p-3">
                         <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 font-bold uppercase text-[10px] rounded">
                           {log.field}
                         </span>
                       </td>
-                      <td className="p-3 font-mono text-[11px] text-rose-700 font-semibold max-w-xs truncate">
+                      <td 
+                        className="p-3 font-mono text-[11px] text-rose-700 font-semibold max-w-xs truncate cursor-help"
+                        title={log.fromValues.join(', ')}
+                      >
                         {log.fromValues.join(', ')}
                       </td>
                       <td className="p-3 font-semibold text-emerald-800">
@@ -1529,6 +1537,18 @@ export default function DataNormalizationPage() {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Audit Pagination */}
+              {totalAuditPages > 1 && (
+                <div className="flex items-center justify-between text-xs text-gray-500 p-3 bg-slate-50 border-t">
+                  <span>Showing {(auditPage - 1) * AUDIT_ITEMS_PER_PAGE + 1}–{Math.min(auditPage * AUDIT_ITEMS_PER_PAGE, mergeLogs.length)} of {mergeLogs.length}</span>
+                  <div className="flex gap-2">
+                    <button disabled={auditPage <= 1} onClick={() => setAuditPage((p) => p - 1)} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">← Prev</button>
+                    <span className="py-1 font-semibold text-gray-700">Page {auditPage} of {totalAuditPages}</span>
+                    <button disabled={auditPage >= totalAuditPages} onClick={() => setAuditPage((p) => p + 1)} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Next →</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
