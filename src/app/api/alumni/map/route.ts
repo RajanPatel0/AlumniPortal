@@ -29,8 +29,10 @@ export async function GET(req: NextRequest) {
   // Search filter parameters
   const batchYear = searchParams.get('batchYear') ? parseInt(searchParams.get('batchYear')!) : null;
   const branch = searchParams.get('branch');
+  const course = searchParams.get('course');
   const company = searchParams.get('company');
   const country = searchParams.get('country');
+  const city = searchParams.get('city');
 
   // Build prisma where query
   // Unauthenticated visitors (landing page public map) only see PUBLIC visibility alumni.
@@ -60,6 +62,9 @@ export async function GET(req: NextRequest) {
   if (branch) {
     where.branch = { contains: branch };
   }
+  if (course) {
+    where.course = { contains: course };
+  }
   if (company) {
     where.currentCompany = { contains: company };
   }
@@ -67,6 +72,12 @@ export async function GET(req: NextRequest) {
     where.location = {
       ...where.location,
       country: { contains: country },
+    };
+  }
+  if (city) {
+    where.location = {
+      ...where.location,
+      city: { contains: city },
     };
   }
 

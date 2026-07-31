@@ -15,7 +15,12 @@ export async function resolveLocation(
   city?: string
 ): Promise<ResolvedLocationResult> {
   const normalizedCountry = country.trim();
-  const normalizedPincode = pincode.trim();
+  let normalizedPincode = (pincode || '').trim();
+
+  // If pincode is missing but city is present, generate a virtual pincode key
+  if (!normalizedPincode && city?.trim()) {
+    normalizedPincode = `CITY:${city.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  }
 
   const emptyResult = { locationId: null, city: null, state: null, countryCode: null, country: null };
 
@@ -56,7 +61,10 @@ export async function resolveLocation(
 
   // Call Nominatim
   try {
-    const queryParts = [normalizedPincode];
+    const queryParts: string[] = [];
+    if (!normalizedPincode.startsWith('CITY:')) {
+      queryParts.push(normalizedPincode);
+    }
     if (city?.trim()) queryParts.push(city.trim());
     if (state?.trim()) queryParts.push(state.trim());
     queryParts.push(normalizedCountry);
@@ -77,9 +85,17 @@ export async function resolveLocation(
 
     let results = await response.json();
 
-    // Fallback: If detailed search fails, query using only pincode and country
+    // Fallback: If detailed search fails, query using only pincode and country (or city and country if no pincode)
     if (!results || results.length === 0) {
-      const fallbackQuery = encodeURIComponent(`${normalizedPincode}, ${normalizedCountry}`);
+      const fallbackQueryParts: string[] = [];
+      if (!normalizedPincode.startsWith('CITY:')) {
+        fallbackQueryParts.push(normalizedPincode);
+      } else if (city?.trim()) {
+        fallbackQueryParts.push(city.trim());
+      }
+      fallbackQueryParts.push(normalizedCountry);
+      
+      const fallbackQuery = encodeURIComponent(fallbackQueryParts.join(', '));
       const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${fallbackQuery}&limit=1`;
       
       const fallbackResponse = await fetch(fallbackUrl, {
