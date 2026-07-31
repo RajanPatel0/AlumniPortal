@@ -64,6 +64,52 @@ interface FeedPost {
   };
 }
 
+// Inline Expandable Post Content Component
+function PostTextContent({ content }: { content: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!content) return null;
+
+  const MAX_LENGTH = 180;
+  const isLong = content.length > MAX_LENGTH || content.split('\n').length > 4;
+
+  if (!isLong) {
+    return (
+      <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-line">
+        {content}
+      </p>
+    );
+  }
+
+  return (
+    <div className="text-sm text-slate-800 leading-relaxed font-medium">
+      {isExpanded ? (
+        <p className="whitespace-pre-line">
+          {content}
+          <button
+            type="button"
+            onClick={() => setIsExpanded(false)}
+            className="text-slate-400 font-bold hover:text-slate-600 text-xs ml-2 cursor-pointer inline-flex items-center"
+          >
+            Show less
+          </button>
+        </p>
+      ) : (
+        <p className="whitespace-pre-line">
+          {content.slice(0, MAX_LENGTH)}...
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="text-[#003D7A] font-extrabold hover:text-[#C41E3A] hover:underline text-xs ml-1 cursor-pointer inline-flex items-center"
+          >
+            more
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AlumniFeed() {
   const [shareText, setShareText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +119,9 @@ export default function AlumniFeed() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fullscreen Image Lightbox Preview modal state
+  const [selectedMediaUrl, setSelectedMediaUrl] = useState<string | null>(null);
 
   // Mobile sidebar state
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -566,10 +615,12 @@ export default function AlumniFeed() {
               const isPostAdmin = post.author?.isAdmin;
               
               return (
-                <div key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                  
+                <div key={post.id} className="bg-white rounded-2xl shadow-xs hover:shadow-md border border-slate-200/80 hover:border-slate-300 transition-all duration-300 overflow-hidden group">
+                  {/* Decorative Brand Gradient Accent */}
+                  <div className="h-1 w-full bg-gradient-to-r from-[#003D7A] via-indigo-500 to-[#C41E3A] opacity-80 group-hover:opacity-100 transition-opacity" />
+
                   {/* Post Header */}
-                  <div className="p-4 flex items-center justify-between border-b border-slate-50">
+                  <div className="p-4 flex items-center justify-between border-b border-slate-100/70 bg-gradient-to-b from-slate-50/50 to-white">
                     {(() => {
                       const authorProfileUrl = isPostAdmin || !post.author.id
                         ? null
@@ -579,29 +630,31 @@ export default function AlumniFeed() {
 
                       const authorInfo = (
                         <>
-                          <div className="w-10 h-10 rounded-full bg-indigo-50 border border-slate-100 flex items-center justify-center text-[#003D7A] font-bold text-sm overflow-hidden flex-shrink-0">
-                            {post.author.avatarUrl ? (
-                              <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
-                            ) : (
-                              getInitials(post.author.name)
-                            )}
+                          <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A] flex items-center justify-center flex-shrink-0 shadow-xs">
+                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-[#003D7A] font-extrabold text-xs overflow-hidden">
+                              {post.author.avatarUrl ? (
+                                <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
+                              ) : (
+                                getInitials(post.author.name)
+                              )}
+                            </div>
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="text-sm font-bold text-gray-900 hover:text-[#003D7A] cursor-pointer">
+                              <h4 className="text-sm font-bold text-gray-900 group-hover/author:text-[#003D7A] transition-colors">
                                 {post.author.name}
                               </h4>
                               {isPostAdmin ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#012140] text-white tracking-wider">
-                                  ADMIN
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-gradient-to-r from-[#012140] to-[#003D7A] text-amber-300 border border-amber-400/30 tracking-wider shadow-2xs">
+                                  ★ OFFICIAL ADMIN
                                 </span>
                               ) : post.author.batchYear ? (
-                                <span className="text-[11px] font-semibold text-slate-400">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#003D7A] border border-blue-100/80">
                                   Class of &apos;{String(post.author.batchYear).slice(-2)}
                                 </span>
                               ) : null}
                             </div>
-                            <p className="text-[10px] font-semibold text-slate-500 font-medium">
+                            <p className="text-[10px] font-semibold text-slate-500">
                               {isPostAdmin ? 'System Administrator at IKGPTU' : `${post.author.currentRole || 'Alumni'} ${post.author.currentCompany ? `at ${post.author.currentCompany}` : ''}`}
                             </p>
                             <p className="text-[9px] font-medium text-slate-400 mt-0.5">
@@ -612,7 +665,7 @@ export default function AlumniFeed() {
                       );
 
                       return authorProfileUrl ? (
-                        <Link href={authorProfileUrl} className="flex items-center gap-3 hover:opacity-90 transition">
+                        <Link href={authorProfileUrl} className="flex items-center gap-3 group/author hover:opacity-95 transition">
                           {authorInfo}
                         </Link>
                       ) : (
@@ -632,19 +685,19 @@ export default function AlumniFeed() {
                         <div className="relative">
                           <button 
                             onClick={() => setActiveMenuPostId(activeMenuPostId === post.id ? null : post.id)}
-                            className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition"
+                            className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition cursor-pointer"
                             title="Post Options"
                           >
                             <MoreHorizontal size={18} />
                           </button>
                           {activeMenuPostId === post.id && (
                             <div 
-                              className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-20 animate-fadeIn"
+                              className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-20 animate-fadeIn"
                               onMouseLeave={() => setActiveMenuPostId(null)}
                             >
                               <button
                                 onClick={() => handleDeletePost(post.id)}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition"
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
                               >
                                 <Trash2 size={14} />
                                 Delete Post
@@ -656,27 +709,34 @@ export default function AlumniFeed() {
                     })()}
                   </div>
 
-                  {/* Post Content */}
+                  {/* Post Content with Inline Expandable Text */}
                   <div className="px-5 py-4">
-                    <p className="text-sm text-gray-800 leading-relaxed font-medium whitespace-pre-line">
-                      {post.content}
-                    </p>
+                    <PostTextContent content={post.content} />
                   </div>
 
-                  {/* Post Media Area */}
+                  {/* Post Media Area - Clickable Image Lightbox Preview */}
                   {post.media && post.media.url && (
-                    <div className="border-t border-slate-50 bg-slate-50 relative group overflow-hidden">
-                      <div className="w-full max-h-[480px] overflow-hidden flex items-center justify-center bg-slate-100">
+                    <div 
+                      onClick={() => setSelectedMediaUrl(post.media!.url)}
+                      className="border-t border-slate-100 bg-slate-900/5 relative group/img cursor-pointer overflow-hidden"
+                      title="Click to expand image"
+                    >
+                      <div className="w-full max-h-[480px] overflow-hidden flex items-center justify-center bg-slate-100 relative">
                         <img 
                           src={post.media.url} 
                           alt="Attached media" 
-                          className="w-full h-auto max-h-[480px] object-contain group-hover:scale-[1.01] transition duration-500"
+                          className="w-full h-auto max-h-[480px] object-contain group-hover/img:scale-[1.02] transition-transform duration-300"
                         />
+                        {/* Subtle Zoom/Expand Overlay Hint */}
+                        <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                          <span className="bg-white/95 text-slate-900 text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 transform translate-y-1 group-hover/img:translate-y-0 transition-transform">
+                            <ImageIcon size={14} className="text-[#003D7A]" />
+                            View Full Photo
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Engagement bar and buttons removed */}
 
                 </div>
               );
@@ -764,19 +824,21 @@ export default function AlumniFeed() {
                 </div>
               </div>
 
-              {/* Quick Links Panel */}
+              {/* Quick Links Panel in Mobile Drawer */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                 <h4 className="text-sm font-bold text-gray-900 mb-3">Quick links</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
-                      bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
+                    { label: 'Campus Clubs', icon: Users, href: '/alumni/communities',
+                      bg: 'bg-indigo-50 hover:bg-indigo-100', border: 'border-indigo-100 hover:border-indigo-200', text: 'text-indigo-700', icon2: 'text-indigo-600' },
                     { label: 'Mentorship', icon: GraduationCap, href: '/alumni/networking',
                       bg: 'bg-purple-50 hover:bg-purple-100', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-700', icon2: 'text-purple-600' },
                     { label: 'Events', icon: Calendar, href: '/alumni/events',
                       bg: 'bg-orange-50 hover:bg-orange-100', border: 'border-orange-100 hover:border-orange-200', text: 'text-orange-700', icon2: 'text-orange-600' },
                     { label: 'Jobs & Internships', icon: Briefcase, href: '/alumni/jobs',
                       bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-100 hover:border-emerald-200', text: 'text-emerald-700', icon2: 'text-emerald-600' },
+                    { label: 'Business Connect', icon: Award, href: '/alumni/startups', 
+                      bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-100 hover:border-blue-200', text: 'text-[#003D7A]', icon2: 'text-[#003D7A]' },
                   ].map((link, idx) => (
                     <Link
                       key={idx}
@@ -795,12 +857,54 @@ export default function AlumniFeed() {
         </div>
       )}
 
+      {/* Fullscreen Image Click Preview Lightbox Modal with X button */}
+      {selectedMediaUrl && (
+        <div
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fadeIn"
+          onClick={() => setSelectedMediaUrl(null)}
+        >
+          {/* Top Bar with Close X Button */}
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+            <a
+              href={selectedMediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="px-3.5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition backdrop-blur-md"
+            >
+              Open Original
+            </a>
+            <button
+              type="button"
+              onClick={() => setSelectedMediaUrl(null)}
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-rose-600 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer shadow-lg active:scale-95"
+              title="Close Preview (ESC)"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          <div
+            className="relative max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl flex items-center justify-center p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedMediaUrl}
+              alt="Enlarged Post View"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl animate-scaleUp"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Profile Completion Nudge Modal */}
       <ProfileCompletionModal profile={profile} />
 
       {/* My Posts Modal */}
-      <MyPostsModal isOpen={myPostsModalOpen} onClose={() => setMyPostsModalOpen(false)} />
-
+      <MyPostsModal 
+        isOpen={myPostsModalOpen}
+        onClose={() => setMyPostsModalOpen(false)}
+      />
     </div>
   );
 }

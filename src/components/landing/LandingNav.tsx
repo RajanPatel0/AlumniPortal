@@ -55,7 +55,7 @@ export default function LandingNav() {
             <a 
               key={link.href} 
               href={link.href} 
-              className="text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all duration-200 uppercase tracking-wider relative hover:bg-white/5 active:scale-95"
+              className="text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all duration-200 uppercase tracking-wider relative hover:bg-[#C41E3A] active:scale-95"
             >
               {link.label}
             </a>

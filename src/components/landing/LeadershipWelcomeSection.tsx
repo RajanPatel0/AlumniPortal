@@ -70,33 +70,35 @@ export default function LeadershipWelcomeSection({
           )}
         </div>
 
-        {/* Mobile Layout: Compact card with photo on top + text below */}
+        {/* Mobile Layout: Clean card with full leader photo + leader details & message below */}
         <div className="block lg:hidden">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {/* Leader Photo — compact for mobile */}
-            <div className="relative h-52 w-full bg-slate-50">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-md overflow-hidden">
+            {/* Leader Photo — ample height & top object positioning so face is clearly visible */}
+            <div className="relative h-72 sm:h-80 w-full bg-slate-100 overflow-hidden">
               <img
                 key={current.photo || current.name}
                 src={current.photo}
                 alt={current.name}
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-cover object-top transition-transform duration-500 hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-              {/* Name overlay */}
-              <div className="absolute bottom-4 left-4 right-4">
-                <h4 className="font-extrabold text-white text-base leading-tight">{current.name}</h4>
-                <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5 drop-shadow">
-                  {current.designation}
-                </p>
-              </div>
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
             </div>
+
+            {/* Leader Details Header Bar */}
+            <div className="px-5 pt-4 pb-2 border-b border-slate-100 bg-slate-50/70">
+              <h4 className="font-extrabold text-slate-900 text-lg leading-tight">{current.name}</h4>
+              <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5">
+                {current.designation}
+              </p>
+            </div>
+
             {/* Message content */}
             <div className="p-5">
-              <h2 className="text-xl font-black text-gray-900 mb-3 tracking-tight leading-tight">
+              <h2 className="text-lg font-extrabold text-gray-900 mb-3 tracking-tight leading-snug">
                 {current.title}
               </h2>
               <div
-                className="text-gray-600 text-sm leading-relaxed font-light line-clamp-5"
+                className="text-gray-600 text-sm leading-relaxed font-light"
                 dangerouslySetInnerHTML={{ __html: current.body }}
               />
             </div>

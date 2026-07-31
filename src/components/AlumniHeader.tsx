@@ -1,22 +1,32 @@
+'use client';
+
 import Link from 'next/link';
-import { BASE_PATH } from '@/lib/api';
+import { LogOut, ArrowLeftCircle } from 'lucide-react';
+import { apiFetch, BASE_PATH } from '@/lib/api';
 
 interface AlumniHeaderProps {
   isStaff?: boolean;
 }
 
 export default function AlumniHeader({ isStaff = false }: AlumniHeaderProps) {
+  const handleLogout = async () => {
+    try {
+      await apiFetch('/alumni/logout', { method: 'POST' });
+    } catch {}
+    window.location.href = `${BASE_PATH}/alumni/login`;
+  };
+
   return (
     <header className="sticky top-0 z-[1050] w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 flex justify-between items-center">
+        <div className="flex items-center gap-2 sm:gap-3.5">
           {/* Refined Institutional Crest Wrapper */}
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider flex-shrink-0">
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider flex-shrink-0">
             <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
           </div>
           
-          <Link href="/" className="group block focus:outline-none max-w-[160px] sm:max-w-none">
-            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-slate-900 group-hover:text-[#003D7A] transition-colors leading-tight">
+          <Link href="/" className="group block focus:outline-none max-w-[150px] sm:max-w-none">
+            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-slate-900 group-hover:text-[#003D7A] transition-colors leading-tight truncate sm:whitespace-normal">
               I.K.G. Punjab Technical University
             </h1>
             <p className="hidden sm:block text-[10px] font-semibold text-slate-500 tracking-wider uppercase transition-colors group-hover:text-[#C41E3A] mt-0.5">
@@ -56,13 +66,27 @@ export default function AlumniHeader({ isStaff = false }: AlumniHeaderProps) {
           )}
         </div>
 
-        {/* Quick Live Status Dot */}
-        <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10 flex-shrink-0">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="hidden sm:inline">Portal Connected</span>
-          <span className="sm:hidden">Connected</span>
+        {/* Right Corner Controls: Connected Dot + Logout */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Quick Live Status Dot */}
+          <div className="hidden xs:flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden sm:inline">Portal Connected</span>
+            <span className="sm:hidden">Connected</span>
+          </div>
+
+          {/* Logout Button in Upper Nav Right Corner */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 transition-all text-xs font-bold shadow-2xs active:scale-95 cursor-pointer"
+            title="Logout"
+          >
+            <LogOut size={14} className="text-rose-600" />
+            <span className="text-[11px] font-bold">Logout</span>
+          </button>
         </div>
       </div>
     </header>
   );
 }
+
