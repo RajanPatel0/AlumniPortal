@@ -24,7 +24,16 @@ interface ExternalLinksBarProps {
 }
 
 export function ExternalLinksBar({ links }: ExternalLinksBarProps) {
-  if (!links || Object.keys(links).length === 0) return null;
+  let parsedLinks = links;
+  if (typeof links === "string") {
+    try {
+      parsedLinks = JSON.parse(links);
+    } catch {
+      parsedLinks = null;
+    }
+  }
+
+  if (!parsedLinks || typeof parsedLinks !== "object" || Object.keys(parsedLinks).length === 0) return null;
 
   const getIcon = (key: string) => {
     const k = key.toLowerCase();
@@ -39,7 +48,7 @@ export function ExternalLinksBar({ links }: ExternalLinksBarProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {Object.entries(links).map(([name, url]) => {
+      {Object.entries(parsedLinks).map(([name, url]) => {
         if (!url || typeof url !== "string" || !url.trim()) return null;
         const formattedUrl = url.startsWith("http") ? url : `https://${url}`;
 

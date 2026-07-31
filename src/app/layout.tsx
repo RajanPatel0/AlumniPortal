@@ -14,14 +14,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "PTU Alumni",
   description: "PTU Alumni Connect – Stay connected with your IKGPTU community",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: `${basePath}/icon.png`,
+    apple: `${basePath}/icon.png`,
   },
-  manifest: "/manifest.json",
+  manifest: `${basePath}/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -49,12 +51,12 @@ export default function RootLayout({
     >
       <head>
         {/* PWA meta tags */}
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href={`${basePath}/manifest.json`} />
         <meta name="theme-color" content="#003D7A" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PTU Alumni" />
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href={`${basePath}/icon.png`} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>

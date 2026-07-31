@@ -211,7 +211,16 @@ export default async function CommunityMainPage({ params, searchParams }: Commun
           </div>
 
           {/* Social External Links Bar */}
-          {community.externalLinks && (
+          {community.externalLinks && (() => {
+            try {
+              const links = typeof community.externalLinks === "string"
+                ? JSON.parse(community.externalLinks)
+                : community.externalLinks;
+              return links && Object.values(links).some(v => typeof v === "string" && v.trim() !== "");
+            } catch {
+              return false;
+            }
+          })() && (
             <div className="pt-2 border-t border-slate-100">
               <ExternalLinksBar links={community.externalLinks as Record<string, string>} />
             </div>
