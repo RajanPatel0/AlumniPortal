@@ -7,8 +7,10 @@ import { AlumniMarkerData } from '../utils/cluster';
 export interface MapFilters {
   batchYear: string;
   branch: string;
+  course?: string;
   company: string;
   country: string;
+  city?: string;
 }
 
 export interface MapBounds {
@@ -39,8 +41,10 @@ async function fetchMapAlumni(
 
   if (filters.batchYear) queryParams.append('batchYear', filters.batchYear);
   if (filters.branch) queryParams.append('branch', filters.branch);
+  if (filters.course) queryParams.append('course', filters.course);
   if (filters.company) queryParams.append('company', filters.company);
   if (filters.country) queryParams.append('country', filters.country);
+  if (filters.city) queryParams.append('city', filters.city);
 
   const res = await apiFetch(`/alumni/map?${queryParams.toString()}`, { signal });
   if (!res.ok) {

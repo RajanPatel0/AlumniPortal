@@ -87,6 +87,8 @@ export async function GET(req: NextRequest) {
         currentRole: true,
         currentCompany: true,
         city: true,
+        country: true,
+        pincode: true,
         avatarUrl: true,
         campusId: true,
         campus: { select: { id: true, name: true } },
@@ -158,6 +160,10 @@ export async function GET(req: NextRequest) {
       campusId: scopedCampusId,
       campusName: staff.campus?.name ?? null,
     },
+  }, {
+    headers: {
+      'Cache-Control': 'private, max-age=10, stale-while-revalidate=20',
+    }
   });
 }
 

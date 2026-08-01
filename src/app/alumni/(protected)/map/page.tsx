@@ -22,12 +22,16 @@ export default function MapPage() {
   const [branch, setBranch] = useState('');
   const [company, setCompany] = useState('');
   const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [course, setCourse] = useState('');
 
   // Dropdown list states loaded from endpoints
   const [availableYears, setAvailableYears] = useState<{ year: number; count: number }[]>([]);
   const [availableBranches, setAvailableBranches] = useState<string[]>([]);
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
 
   // Load initial dropdown list data on mount
   useEffect(() => {
@@ -39,13 +43,15 @@ export default function MapPage() {
       })
       .catch((err) => console.error('Failed to load years:', err));
 
-    // Fetch branches, companies, and countries from options endpoint
+    // Fetch branches, companies, countries, and cities from options endpoint
     apiFetch('/alumni/options')
       .then((res) => res.json())
       .then((data) => {
         if (data.branches) setAvailableBranches(data.branches);
+        if (data.courses) setAvailableCourses(data.courses);
         if (data.companies) setAvailableCompanies(data.companies);
         if (data.countries) setAvailableCountries(data.countries);
+        if (data.cities) setAvailableCities(data.cities);
       })
       .catch((err) => console.error('Failed to load options:', err));
   }, []);
@@ -78,8 +84,10 @@ export default function MapPage() {
   const [debouncedFilters, setDebouncedFilters] = useState({
     batchYear: '',
     branch: '',
+    course: '',
     company: '',
     country: '',
+    city: '',
   });
 
   useEffect(() => {
@@ -88,17 +96,19 @@ export default function MapPage() {
       setDebouncedFilters({
         batchYear,
         branch,
+        course,
         company,
         country,
+        city,
       });
     }, 200);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [batchYear, branch, company, country]);
+  }, [batchYear, branch, course, company, country, city]);
 
-  const activeFiltersCount = [batchYear, branch, company, country].filter(Boolean).length;
+  const activeFiltersCount = [batchYear, branch, course, company, country, city].filter(Boolean).length;
   const totalAlumniCount = availableYears.reduce((acc, y) => acc + y.count, 0);
 
   return (
@@ -199,6 +209,23 @@ export default function MapPage() {
             </select>
           </div>
 
+          {/* Course Select Dropdown */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Course</label>
+            <select
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#003D7A] focus:ring-4 focus:ring-blue-50/50 bg-white cursor-pointer transition-all duration-200"
+            >
+              <option value="">All Courses</option>
+              {availableCourses.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Current Company Input with Autocomplete Datalist */}
           <div className="space-y-1.5">
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Company</label>
@@ -219,7 +246,28 @@ export default function MapPage() {
               </datalist>
             </div>
           </div>
-
+          
+          {/* City Input with Autocomplete Datalist */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">City</label>
+            <div className="relative">
+              <input
+                type="text"
+                list="cities-datalist"
+                placeholder="Search or select city..."
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#003D7A] focus:ring-4 focus:ring-blue-50/50 placeholder:text-slate-400 transition-all duration-200"
+              />
+              <Search className="absolute left-3.5 top-3 text-slate-400" size={13} />
+              <datalist id="cities-datalist">
+                {availableCities.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+          
           {/* Country Input */}
           <div className="space-y-1.5">
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Country</label>
@@ -238,13 +286,17 @@ export default function MapPage() {
             </datalist>
           </div>
 
-          {/* Reset Filters button */}
+         
+
+           {/* Reset Filters button */}
           <button
             onClick={() => {
               setBatchYear('');
               setBranch('');
+              setCourse('');
               setCompany('');
               setCountry('');
+              setCity('');
             }}
             className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 text-xs font-bold rounded-xl transition-all duration-200"
           >
