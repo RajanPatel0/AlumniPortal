@@ -282,7 +282,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">IKGPTU Alumni</h4>
-              <p className="text-[11px] leading-relaxed font-light text-slate-400">
+              <p className="text-[14px] leading-relaxed font-light text-slate-400">
                 Fostering lifelong alliances across technology, management research, and creative design domains globally since 1997.
               </p>
             </div>
@@ -311,7 +311,7 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-800/80 pt-8 text-center text-[11px] font-medium tracking-wide text-slate-500">
+          <div className="border-t border-slate-800/80 pt-8 text-center text-[13px] font-medium tracking-wide text-slate-500">
             <p>&copy; {new Date().getFullYear()} IKGPTU Alumni Network. Designed to University Excellence Standards. All rights Reserved.</p>
           </div>
         </div>
