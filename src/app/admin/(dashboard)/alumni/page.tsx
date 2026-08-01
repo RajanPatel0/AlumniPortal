@@ -7,11 +7,16 @@ import * as XLSX from 'xlsx';
 import { 
   Search, Filter, Download, Eye, Mail, 
   ChevronLeft, ChevronRight, RefreshCw, 
-  Users, GraduationCap, MapPin, Briefcase,
-  CheckCircle, Clock, XCircle, UserCheck, UserX, X, ExternalLink,
-  Trash2
+  Users, MapPin,
+  CheckCircle, Clock, UserCheck, UserX, ExternalLink,
+  Trash2, Edit
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+
+const EditAlumniModal = dynamic(() => import('@/components/admin/EditAlumniModal'), {
+  ssr: false,
+});
 
 interface AlumniData {
   id: string;
@@ -36,6 +41,8 @@ interface AlumniData {
   linkedinId?: string | null;
   campus?: { id: string; name: string } | null;
   avatarUrl?: string | null;
+  country?: string | null;
+  pincode?: string | null;
 }
 
 interface PaginationData {
@@ -48,6 +55,8 @@ interface PaginationData {
 export default function AlumniPage() {
   const [selectedAlumni, setSelectedAlumni] = useState<AlumniData | null>(null);
   const [showModal, setShowModal] = useState(false); 
+  const [selectedAlumniForEdit, setSelectedAlumniForEdit] = useState<AlumniData | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [alumni, setAlumni] = useState<AlumniData[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<PaginationData>({
@@ -511,6 +520,16 @@ export default function AlumniPage() {
                           <Eye size={18}/>
                         </button>
                         <button
+                          onClick={() => {
+                            setSelectedAlumniForEdit(alum);
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Alumni"
+                        >
+                          <Edit size={18}/>
+                        </button>
+                        <button
                           onClick={() => handleDelete(alum.id, alum.name)}
                           className="p-1.5 text-[#C41E3A] hover:bg-[#C41E3A]/10 rounded-lg transition"
                           title="Delete Alumni"
@@ -673,7 +692,18 @@ export default function AlumniPage() {
         )}
       </div>
 
-      {/* Detail view modal would go here – optional, you can implement on click of the eye icon */}
+      {/* Edit Alumni Modal */}
+      {showEditModal && selectedAlumniForEdit && (
+        <EditAlumniModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedAlumniForEdit(null);
+          }}
+          alumni={selectedAlumniForEdit}
+          onSaveSuccess={fetchAlumni}
+        />
+      )}
     </div>
   );
 }
