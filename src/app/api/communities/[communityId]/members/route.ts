@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCommunitySession } from "@/lib/auth/community-auth";
+import { isLeaderOrAdmin } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -41,6 +43,11 @@ export async function POST(
   { params }: { params: Promise<{ communityId: string }> }
 ) {
   try {
+    const session = await getCommunitySession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Access denied" }, { status: 401 });
+    }
+
     const { communityId } = await params;
     const body = await request.json();
     const { alumniId, staffId, roleTag, customTitle, isFollowingNewsletter } = body;
@@ -55,6 +62,31 @@ export async function POST(
 
     if (!community) {
       return NextResponse.json({ success: false, error: "Community not found" }, { status: 404 });
+    }
+
+    const isSelfAlumni = session.alumniId && session.alumniId === alumniId;
+    const isSelfStaff = session.staffId && session.staffId === staffId;
+    const isSelf = isSelfAlumni || isSelfStaff;
+
+    const requesterMember = await prisma.communityMember.findFirst({
+      where: {
+        communityId: community.id,
+        alumniId: session.alumniId || undefined,
+        staffId: session.staffId || undefined,
+      },
+    });
+
+    const isLeader = isLeaderOrAdmin(session.isAdmin, requesterMember?.roleTag);
+
+    if (!isSelf && !isLeader) {
+      return NextResponse.json({ success: false, error: "Forbidden: You are not authorized to manage other members" }, { status: 403 });
+    }
+
+    // Role elevation restriction: only leaders/admins can set leadership/custom roles
+    if (roleTag && roleTag !== "FOLLOWER" && roleTag !== "MEMBER") {
+      if (!isLeader) {
+        return NextResponse.json({ success: false, error: "Forbidden: Only leaders or admins can assign advanced role tags" }, { status: 403 });
+      }
     }
 
     const member = await prisma.communityMember.upsert({
@@ -92,6 +124,11 @@ export async function DELETE(
   { params }: { params: Promise<{ communityId: string }> }
 ) {
   try {
+    const session = await getCommunitySession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Access denied" }, { status: 401 });
+    }
+
     const { communityId } = await params;
     const { searchParams } = new URL(request.url);
     const alumniId = searchParams.get("alumniId");
@@ -103,6 +140,24 @@ export async function DELETE(
 
     if (!community) {
       return NextResponse.json({ success: false, error: "Community not found" }, { status: 404 });
+    }
+
+    const isSelfAlumni = session.alumniId && session.alumniId === alumniId;
+    const isSelfStaff = session.staffId && session.staffId === staffId;
+    const isSelf = isSelfAlumni || isSelfStaff;
+
+    const requesterMember = await prisma.communityMember.findFirst({
+      where: {
+        communityId: community.id,
+        alumniId: session.alumniId || undefined,
+        staffId: session.staffId || undefined,
+      },
+    });
+
+    const isLeader = isLeaderOrAdmin(session.isAdmin, requesterMember?.roleTag);
+
+    if (!isSelf && !isLeader) {
+      return NextResponse.json({ success: false, error: "Forbidden: You are not authorized to remove this member" }, { status: 403 });
     }
 
     if (alumniId) {

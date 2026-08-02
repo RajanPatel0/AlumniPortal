@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedStaff, resolveCampusScope, CampusScopeError } from "@/lib/auth/staff-auth";
+import { getAuthenticatedStaff, resolveCampusScope, CampusScopeError, hasCampusAccess } from "@/lib/auth/staff-auth";
 import { StaffRole } from "@prisma/client";
 
 export async function GET(request: Request) {
@@ -66,6 +66,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const staff = await getAuthenticatedStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Staff authentication required" }, { status: 401 });
+    }
     const body = await request.json();
     const { name, slug, description, logoUrl, bannerUrl, category, campusId, externalLinks } = body;
 
@@ -76,9 +79,15 @@ export async function POST(request: Request) {
     let targetCampusId = campusId || null;
 
     // Enforce campus assignment rules based on StaffRole
-    if (staff && staff.role !== StaffRole.ADMIN) {
-      // Sub-Admin or Coordinator locked to their assigned campus
-      targetCampusId = staff.campusId || null;
+    if (!hasCampusAccess(staff, campusId)) {
+      return NextResponse.json({ success: false, error: "Forbidden: You can only create communities for your assigned campus" }, { status: 403 });
+    }
+
+    if (staff.role !== StaffRole.ADMIN) {
+      if (!staff.campusId) {
+        return NextResponse.json({ success: false, error: "Forbidden: Your account is not linked to any campus" }, { status: 403 });
+      }
+      targetCampusId = staff.campusId;
     }
 
     const generatedSlug = (slug || name)

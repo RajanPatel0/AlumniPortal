@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { deleteFile } from '@/lib/fileUpload';
+import { hasCampusAccess } from '@/lib/auth/staff-auth';
 
 async function checkAdminAuth() {
   const cookieStore = await cookies();
@@ -41,9 +42,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { title, description, category, eventDate, venue, coverImageUrl, rsvpDeadline, isPublished } = body;
 
     // Check if event exists
-    const existingEvent = await prisma.event.findUnique({ where: { id } });
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
+    });
     if (!existingEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    const staff = auth.staff!;
+    const eventCampusId = existingEvent.postedByStaff?.campusId || existingEvent.postedByAlumni?.campusId || null;
+    if (!hasCampusAccess(staff, eventCampusId)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit events from another campus' }, { status: 403 });
     }
 
     // Delete old cover image if changed
@@ -101,9 +114,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   try {
     // Check if event exists
-    const existingEvent = await prisma.event.findUnique({ where: { id } });
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
+    });
     if (!existingEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    const staff = auth.staff!;
+    const eventCampusId = existingEvent.postedByStaff?.campusId || existingEvent.postedByAlumni?.campusId || null;
+    if (!hasCampusAccess(staff, eventCampusId)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to delete events from another campus' }, { status: 403 });
     }
 
     // Delete cover image from disk

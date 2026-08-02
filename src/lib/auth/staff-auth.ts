@@ -73,3 +73,13 @@ export async function assertBatchCampusAccess(
   });
   return count > 0;
 }
+
+/** Verify if a resource campus ID is within the staff's permitted scope */
+export function hasCampusAccess(
+  staff: { role: StaffRole; campusId: string | null },
+  resourceCampusId: string | null
+): boolean {
+  if (staff.role === StaffRole.ADMIN) return true;
+  if (!resourceCampusId) return true;
+  return resourceCampusId === staff.campusId;
+}

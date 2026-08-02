@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentAlumni, getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
-import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
+import { getAuthenticatedStaff, hasCampusAccess } from '@/lib/auth/staff-auth';
 import { jobSchema, type JobSchemaType } from '@/schemas/job';
 import { Prisma } from '@prisma/client';
 
@@ -440,6 +440,20 @@ export async function toggleAdminJobStatusAction(id: string, isActive: boolean):
       return { success: false, error: 'Forbidden: Access denied to opportunities module' };
     }
 
+    const job = await prisma.job.findUnique({
+      where: { id },
+      select: {
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
+    });
+    if (!job) return { success: false, error: 'Opportunity not found' };
+
+    const jobCampusId = job.postedByStaff?.campusId || job.postedByAlumni?.campusId || null;
+    if (!hasCampusAccess(staff, jobCampusId)) {
+      return { success: false, error: 'Forbidden: You do not have permission to manage opportunities from another campus' };
+    }
+
     await prisma.job.update({ where: { id }, data: { isActive } });
     return { success: true };
   } catch (error: any) {
@@ -455,7 +469,12 @@ export async function deleteJobAction(id: string): Promise<ActionResult> {
 
     const job = await prisma.job.findUnique({
       where: { id },
-      select: { postedByAlumniId: true, postedByStaffId: true },
+      select: {
+        postedByAlumniId: true,
+        postedByStaffId: true,
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
     });
     if (!job) return { success: false, error: 'Opportunity not found' };
 
@@ -463,13 +482,19 @@ export async function deleteJobAction(id: string): Promise<ActionResult> {
       // Caller is staff, check if they have module permission
       const staff = await prisma.staff.findUnique({
         where: { id: identity.staffId },
-        select: { role: true, modules: true },
+        select: { role: true, modules: true, campusId: true },
       });
       if (!staff) return { success: false, error: 'Unauthorized' };
 
       const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
-      if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
-        return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+      if (staff.role !== 'ADMIN') {
+        if (!modules.includes('jobs')) {
+          return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+        }
+        const jobCampusId = job.postedByStaff?.campusId || job.postedByAlumni?.campusId || null;
+        if (!hasCampusAccess(staff, jobCampusId)) {
+          return { success: false, error: 'Forbidden: You do not have permission to delete opportunities from another campus' };
+        }
       }
     } else {
       // Caller is alumni, they can only delete if they posted it
@@ -496,8 +521,20 @@ export async function getJobApplicantsExportDataAction(id: string): Promise<Acti
       return { success: false, error: 'Forbidden: Access denied to opportunities module' };
     }
 
-    const job = await prisma.job.findUnique({ where: { id }, select: { metadata: true } });
+    const job = await prisma.job.findUnique({
+      where: { id },
+      select: {
+        metadata: true,
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
+    });
     if (!job) return { success: false, error: 'Opportunity not found' };
+
+    const jobCampusId = job.postedByStaff?.campusId || job.postedByAlumni?.campusId || null;
+    if (!hasCampusAccess(staff, jobCampusId)) {
+      return { success: false, error: 'Forbidden: You do not have permission to access opportunities from another campus' };
+    }
 
     const meta = normalizeMetadata(job.metadata);
     if (meta.applicants.length === 0) return { success: true, data: [] };
