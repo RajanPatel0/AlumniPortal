@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
-import { isLeaderOrAdmin } from "@/lib/community-permissions";
+import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -76,7 +76,7 @@ export async function POST(
       },
     });
 
-    const isLeader = isLeaderOrAdmin(session.isAdmin, requesterMember?.roleTag);
+    const isLeader = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, requesterMember?.roleTag);
 
     if (!isSelf && !isLeader) {
       return NextResponse.json({ success: false, error: "Forbidden: You are not authorized to manage other members" }, { status: 403 });
@@ -154,7 +154,7 @@ export async function DELETE(
       },
     });
 
-    const isLeader = isLeaderOrAdmin(session.isAdmin, requesterMember?.roleTag);
+    const isLeader = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, requesterMember?.roleTag);
 
     if (!isSelf && !isLeader) {
       return NextResponse.json({ success: false, error: "Forbidden: You are not authorized to remove this member" }, { status: 403 });

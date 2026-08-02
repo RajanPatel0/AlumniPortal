@@ -61,7 +61,8 @@ export default async function CommunityMainPage({ params, searchParams }: Commun
 
   const staff = await getAuthenticatedStaff();
   if (staff) {
-    isAdmin = staff.role === "ADMIN";
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    isAdmin = staff.role === "ADMIN" || (modules.includes("communities") && community.campusId === staff.campusId);
     currentStaffId = staff.id;
     currentUserMember = community.members.find((m) => m.staffId === staff.id) || null;
   } else {

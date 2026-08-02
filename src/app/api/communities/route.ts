@@ -69,6 +69,12 @@ export async function POST(request: Request) {
     if (!staff) {
       return NextResponse.json({ success: false, error: "Unauthorized: Staff authentication required" }, { status: 401 });
     }
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== StaffRole.ADMIN && !modules.includes("communities")) {
+      return NextResponse.json({ success: false, error: "Forbidden: Access denied to community module" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, slug, description, logoUrl, bannerUrl, category, campusId, externalLinks } = body;
 

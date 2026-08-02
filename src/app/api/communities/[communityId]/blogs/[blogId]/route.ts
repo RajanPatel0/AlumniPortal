@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
-import { isLeaderOrAdmin } from "@/lib/community-permissions";
+import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function DELETE(
   request: Request,
@@ -45,7 +45,7 @@ export async function DELETE(
     }
 
     const userMember = community.members[0];
-    const isLeadership = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const isLeadership = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     const isAuthor =
       (session.alumniId && blogItem.authorAlumniId === session.alumniId) ||
@@ -148,7 +148,7 @@ export async function PUT(
     }
 
     const userMember = community.members[0];
-    const isLeadership = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const isLeadership = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     const isAuthor =
       (session.alumniId && blogItem.authorAlumniId === session.alumniId) ||
