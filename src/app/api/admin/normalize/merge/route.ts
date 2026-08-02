@@ -46,36 +46,43 @@ export async function POST(req: NextRequest) {
       ...matchingRequests.map((r) => `req:${r.id}`),
     ];
 
-    // 2. Perform updates and write merge log in transaction
-    const [alumniResult, requestResult] = await prisma.$transaction([
-      prisma.alumni.updateMany({
-        where: {
-          [fieldName]: { in: sourceValues },
-        },
-        data: {
-          [fieldName]: canonicalTarget,
-          needsReview: false,
-        },
-      }),
-      prisma.registrationRequest.updateMany({
-        where: {
-          [fieldName]: { in: sourceValues },
-        },
-        data: {
-          [fieldName]: canonicalTarget,
-          needsReview: false,
-        },
-      }),
-      prisma.normalizationMergeLog.create({
-        data: {
-          field: fieldName,
-          fromValues: JSON.stringify(sourceValues),
-          toValue: canonicalTarget,
-          affectedIds: JSON.stringify(affectedIds),
-          performedBy: staff.email || staff.id,
-        },
-      }),
-    ], { timeout: 30000 });
+    // 2. Perform updates and write merge log in a transaction
+    const { alumniResult, requestResult } = await prisma.$transaction(
+      async (tx) => {
+        const alumniResult = await tx.alumni.updateMany({
+          where: {
+            [fieldName]: { in: sourceValues },
+          },
+          data: {
+            [fieldName]: canonicalTarget,
+            needsReview: false,
+          },
+        });
+
+        const requestResult = await tx.registrationRequest.updateMany({
+          where: {
+            [fieldName]: { in: sourceValues },
+          },
+          data: {
+            [fieldName]: canonicalTarget,
+            needsReview: false,
+          },
+        });
+
+        await tx.normalizationMergeLog.create({
+          data: {
+            field: fieldName,
+            fromValues: JSON.stringify(sourceValues),
+            toValue: canonicalTarget,
+            affectedIds: JSON.stringify(affectedIds),
+            performedBy: staff.email || staff.id,
+          },
+        });
+
+        return { alumniResult, requestResult };
+      },
+      { timeout: 30000 }
+    );
 
     return NextResponse.json({
       message: `Successfully merged ${alumniResult.count} alumni rows and ${requestResult.count} registration requests into "${canonicalTarget}".`,

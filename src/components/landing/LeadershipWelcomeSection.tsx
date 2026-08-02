@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface WelcomeNote {
@@ -18,6 +18,30 @@ export default function LeadershipWelcomeSection({
   welcomeNotes: WelcomeNote[];
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const intervalRef = useRef<number | null>(null);
+  const AUTO_SCROLL_DELAY_MS = 4000;
+
+  const resetAutoScroll = () => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+    }
+
+    intervalRef.current = window.setInterval(() => {
+      setCurrentIndex((prev) => (prev === welcomeNotes.length - 1 ? 0 : prev + 1));
+    }, AUTO_SCROLL_DELAY_MS);
+  };
+
+  useEffect(() => {
+    if (welcomeNotes.length <= 1) return;
+
+    resetAutoScroll();
+
+    return () => {
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+      }
+    };
+  }, [welcomeNotes.length]);
 
   if (!welcomeNotes || welcomeNotes.length === 0) return null;
 
@@ -26,10 +50,12 @@ export default function LeadershipWelcomeSection({
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev === 0 ? welcomeNotes.length - 1 : prev - 1));
+    resetAutoScroll();
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev === welcomeNotes.length - 1 ? 0 : prev + 1));
+    resetAutoScroll();
   };
 
   return (
@@ -148,7 +174,10 @@ export default function LeadershipWelcomeSection({
             {welcomeNotes.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentIndex(idx)}
+                onClick={() => {
+                  setCurrentIndex(idx);
+                  resetAutoScroll();
+                }}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   idx === currentIndex ? 'w-8 bg-[#003D7A]' : 'w-2 bg-slate-200 hover:bg-slate-300'
                 }`}
