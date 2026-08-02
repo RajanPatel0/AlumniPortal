@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   Edit3, Save, X, Mail, Briefcase, MapPin, Plus, Trash2, 
-  Calendar, GraduationCap, Phone, CheckCircle, Camera, FileText, Link2
+  Calendar, GraduationCap, Phone, CheckCircle, Camera, FileText, Link2, Eye
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -385,13 +385,22 @@ function ProfilePageClient() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => setEditingMode(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#003D7A] rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
-              >
-                <Edit3 size={14} />
-                <span>Edit Profile</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => profile?.id && router.push(`/alumni/profile/${profile.id}`)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#003D7A] hover:bg-[#002b56] text-white rounded-xl text-xs font-bold shadow-md transition"
+                >
+                  <Eye size={14} />
+                  <span>Preview Profile</span>
+                </button>
+                <button
+                  onClick={() => setEditingMode(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#003D7A] rounded-xl text-xs font-bold shadow-md border border-slate-200 transition"
+                >
+                  <Edit3 size={14} />
+                  <span>Edit Profile</span>
+                </button>
+              </div>
             )}
           </div>
         )}

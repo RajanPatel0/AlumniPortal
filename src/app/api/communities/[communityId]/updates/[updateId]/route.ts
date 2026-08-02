@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
-import { isLeaderOrAdmin } from "@/lib/community-permissions";
+import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function DELETE(
   request: Request,
@@ -43,9 +43,8 @@ export async function DELETE(
     if (!updateItem) {
       return NextResponse.json({ success: false, error: "Update post not found" }, { status: 404 });
     }
-
     const userMember = community.members[0];
-    const isLeadership = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const isLeadership = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     const isAuthor =
       (session.alumniId && updateItem.authorAlumniId === session.alumniId) ||
@@ -108,9 +107,8 @@ export async function PUT(
     if (!updateItem) {
       return NextResponse.json({ success: false, error: "Update post not found" }, { status: 404 });
     }
-
     const userMember = community.members[0];
-    const isLeadership = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const isLeadership = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     const isAuthor =
       (session.alumniId && updateItem.authorAlumniId === session.alumniId) ||

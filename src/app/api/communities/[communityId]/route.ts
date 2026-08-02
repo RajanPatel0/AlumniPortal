@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedStaff } from "@/lib/auth/staff-auth";
+import { getAuthenticatedStaff, hasCampusAccess } from "@/lib/auth/staff-auth";
 import { getServerSession } from "next-auth";
 import { alumniAuthConfig } from "@/lib/alumni/auth";
 import { getCommunitySession } from "@/lib/auth/community-auth";
-import { getCommunityPermissions, isLeaderOrAdmin } from "@/lib/community-permissions";
+import { getCommunityPermissions, isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -57,7 +57,8 @@ export async function GET(
     // Check staff auth first
     const staff = await getAuthenticatedStaff();
     if (staff) {
-      isAdmin = staff.role === "ADMIN";
+      const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+      isAdmin = staff.role === "ADMIN" || (modules.includes("communities") && community.campusId === staff.campusId);
       currentUserMember =
         community.members.find((m) => m.staffId === staff.id) || null;
     } else {
@@ -137,13 +138,22 @@ export async function PATCH(
     }
 
     const userMember = community.members[0];
-    const canManageOverview = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const canManageOverview = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     if (!canManageOverview) {
       return NextResponse.json(
         { success: false, error: "Forbidden. Admin or leader role required to edit community overview." },
         { status: 403 }
       );
+    }
+
+    if (session.isStaff && !session.isAdmin) {
+      if (campusId !== undefined && campusId !== session.campusId) {
+        return NextResponse.json(
+          { success: false, error: "Forbidden: You cannot assign this community to another campus" },
+          { status: 403 }
+        );
+      }
     }
 
     const updated = await prisma.community.update({
@@ -178,6 +188,16 @@ export async function DELETE(
   { params }: { params: Promise<{ communityId: string }> },
 ) {
   try {
+    const staff = await getAuthenticatedStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Staff authentication required" }, { status: 401 });
+    }
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== "ADMIN" && !modules.includes("communities")) {
+      return NextResponse.json({ success: false, error: "Forbidden: Access denied to community module" }, { status: 403 });
+    }
+
     const { communityId } = await params;
 
     const community = await prisma.community.findFirst({
@@ -188,6 +208,20 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: "Community not found" },
         { status: 404 },
+      );
+    }
+
+    // Campus scope enforcement
+    if (staff.role !== "ADMIN" && !community.campusId) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Only global admins can delete global communities" },
+        { status: 403 }
+      );
+    }
+    if (!hasCampusAccess(staff, community.campusId)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: You do not have permission to delete communities from another campus" },
+        { status: 403 }
       );
     }
 

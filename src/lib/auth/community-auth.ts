@@ -9,6 +9,7 @@ export interface SessionContext {
   staffId?: string;
   isStaff: boolean;
   isAdmin: boolean;
+  isCommunityAdmin: boolean;
   campusId?: string | null;
 }
 
@@ -25,14 +26,17 @@ export async function getCommunitySession(): Promise<SessionContext | null> {
       const payload = verifyAccessToken(staffToken);
       const staff = await prisma.staff.findUnique({
         where: { id: payload.id },
-        select: { id: true, role: true, campusId: true },
+        select: { id: true, role: true, campusId: true, modules: true },
       });
 
       if (staff) {
+        const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+        const isCommunityAdmin = staff.role === StaffRole.ADMIN || modules.includes("communities");
         return {
           staffId: staff.id,
           isStaff: true,
           isAdmin: staff.role === StaffRole.ADMIN,
+          isCommunityAdmin,
           campusId: staff.campusId,
         };
       }
@@ -52,6 +56,7 @@ export async function getCommunitySession(): Promise<SessionContext | null> {
           alumniId: alumni.id,
           isStaff: false,
           isAdmin: false,
+          isCommunityAdmin: false,
           campusId: alumni.campusId,
         };
       }

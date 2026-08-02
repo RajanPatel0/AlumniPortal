@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
-import { isLeaderOrAdmin } from "@/lib/community-permissions";
+import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -87,9 +87,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Community not found" }, { status: 404 });
     }
 
-    // Permission check for blog creation
     const userMember = community.members[0];
-    const canCreate = isLeaderOrAdmin(session.isAdmin, userMember?.roleTag);
+    const canCreate = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
 
     if (!canCreate) {
       return NextResponse.json(

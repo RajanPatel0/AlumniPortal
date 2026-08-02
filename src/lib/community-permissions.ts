@@ -151,3 +151,15 @@ export const UPDATE_FILTERS = [
   { label: "Future Plans", value: "FUTURE_PLAN" },
   { label: "Public Suggestions", value: "IDEA_SUGGESTION" },
 ] as const;
+
+/**
+ * Checks if the session user has administrative access to a community based on their role, module, and campus.
+ */
+export function hasCommunityAdminAccess(
+  session: { isCommunityAdmin: boolean; isAdmin: boolean; campusId?: string | null },
+  communityCampusId: string | null
+): boolean {
+  if (session.isAdmin) return true;
+  if (!communityCampusId || !session.isCommunityAdmin) return false;
+  return communityCampusId === session.campusId;
+}

@@ -31,6 +31,7 @@ const availableModules = [
   { name: 'Events', value: 'events' },
   { name: 'Startups', value: 'startups' },
   { name: 'Registration Requests', value: 'requests' },
+  { name: 'Campus Communities', value: 'communities' },
 ];
 
 export default function SubAdminsPage() {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
+import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
 
 export async function GET(
   request: Request,
@@ -104,10 +105,29 @@ export async function POST(
 
     const community = await prisma.community.findFirst({
       where: { OR: [{ id: communityId }, { slug: communityId }] },
+      include: {
+        members: {
+          where: session.alumniId
+            ? { alumniId: session.alumniId }
+            : session.staffId
+            ? { staffId: session.staffId }
+            : undefined,
+        },
+      },
     });
 
     if (!community) {
       return NextResponse.json({ success: false, error: "Community not found" }, { status: 404 });
+    }
+
+    const userMember = community.members[0];
+    const canCreate = hasCommunityAdminAccess(session, community.campusId) || isLeaderOrAdmin(false, userMember?.roleTag);
+
+    if (!canCreate) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden. Admin or leader role required to post community updates." },
+        { status: 403 }
+      );
     }
 
     const update = await prisma.communityUpdate.create({

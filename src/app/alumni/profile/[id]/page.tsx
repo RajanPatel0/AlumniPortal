@@ -7,6 +7,11 @@ import {
 import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
 import AlumniHeader from '@/components/AlumniHeader';
 import AlumniBottomNav from '@/components/AlumniBottomNav';
+import ProfileTabs from './ProfileTabs';
+import { cookies } from 'next/headers';
+import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+
+
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -28,8 +33,27 @@ export default async function PublicProfilePage({ params }: Props) {
   const { id } = await params;
   const staff = await getAuthenticatedStaff();
 
+  const cookieStore = await cookies();
+  const alumniToken = cookieStore.get('alumniAccessToken')?.value;
+
+  let currentAlumniId: string | null = null;
+  let currentAlumni: { id: string; name: string; avatarUrl: string | null } | null = null;
+
+  if (alumniToken) {
+    try {
+      const payload = verifyAlumniAccessToken(alumniToken);
+      if (payload?.id) {
+        currentAlumniId = payload.id;
+        currentAlumni = await prisma.alumni.findUnique({
+          where: { id: payload.id },
+          select: { id: true, name: true, avatarUrl: true }
+        });
+      }
+    } catch {}
+  }
+
   const alumni = await prisma.alumni.findUnique({
-    where: { id },
+    where: { id: id },
     include: {
       education: {
         orderBy: { startDate: 'desc' }
@@ -42,6 +66,93 @@ export default async function PublicProfilePage({ params }: Props) {
       }
     }
   });
+
+  const postsData = await prisma.post.findMany({
+    where: { authorId: id },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          batchYear: true,
+          currentRole: true,
+          currentCompany: true
+        }
+      },
+      images: true,
+      likes: {
+        where: { alumniId: currentAlumniId || '' },
+        select: { id: true }
+      },
+      _count: {
+        select: { likes: true, comments: true }
+      }
+    }
+  });
+
+  const posts = postsData.map(post => ({
+    ...post,
+    likesCount: post._count.likes,
+    commentsCount: post._count.comments,
+    hasLiked: post.likes ? post.likes.length > 0 : false
+  }));
+
+  const activityPostsData = await prisma.post.findMany({
+    where: {
+      OR: [
+        {
+          likes: {
+            some: { alumniId: id }
+          }
+        },
+        {
+          comments: {
+            some: { alumniId: id }
+          }
+        }
+      ]
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          batchYear: true,
+          currentRole: true,
+          currentCompany: true
+        }
+      },
+      images: true,
+      likes: {
+        where: { alumniId: currentAlumniId || '' },
+        select: { id: true }
+      },
+      _count: {
+        select: { likes: true, comments: true }
+      }
+    }
+  });
+
+  const activityPosts = activityPostsData.map(post => ({
+    ...post,
+    likesCount: post._count.likes,
+    commentsCount: post._count.comments,
+    hasLiked: post.likes ? post.likes.length > 0 : false
+  }));
+
+  const currentUser = staff
+    ? { id: staff.id, name: staff.name, isAdmin: staff.role === 'ADMIN' }
+    : currentAlumni
+      ? { id: currentAlumni.id, name: currentAlumni.name, avatarUrl: currentAlumni.avatarUrl || undefined, isAdmin: false }
+      : null;
+
+
 
   if (!alumni) {
     notFound();
@@ -158,163 +269,16 @@ export default async function PublicProfilePage({ params }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Main Info Columns */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Work Experience Card */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2.5">
-                <Briefcase size={20} className="text-[#003D7A]" />
-                <span>Work Experience</span>
-              </h2>
-
-              {alumni.workExperience.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 text-sm">
-                  No work experience specified
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {alumni.workExperience.map((exp, idx) => (
-                    <div key={exp.id} className="relative flex gap-4">
-                      {/* Timeline bar / dot */}
-                      <div className="flex flex-col items-center shrink-0">
-                        <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-[#003D7A] to-[#C41E3A] ring-4 ring-slate-100" />
-                        {idx < alumni.workExperience.length - 1 && (
-                          <div className="w-0.5 flex-1 bg-slate-100 my-2" />
-                        )}
-                      </div>
-                      <div className="space-y-1.5 pb-2">
-                        <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
-                          {exp.title}
-                        </h3>
-                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                          <Building size={14} className="text-slate-400" />
-                          <span>{exp.company}</span>
-                          {exp.location && (
-                            <span className="text-xs text-slate-400 font-medium">({exp.location})</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-slate-400 font-bold flex items-center gap-1.5">
-                          <Calendar size={12} />
-                          <span>
-                            {formatDate(exp.startDate)} – {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
-                          </span>
-                        </p>
-                        {exp.description && (
-                          <p className="text-xs text-slate-500 leading-relaxed pt-1.5 whitespace-pre-line">
-                            {exp.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Education Card */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2.5">
-                <GraduationCap size={22} className="text-[#003D7A]" />
-                <span>Education</span>
-              </h2>
-
-              <div className="space-y-6">
-                {/* Always include institutional info first if available */}
-                <div className="relative flex gap-4">
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#C41E3A] ring-4 ring-rose-50" />
-                    {alumni.education.length > 0 && (
-                      <div className="w-0.5 flex-1 bg-slate-100 my-2" />
-                    )}
-                  </div>
-                  <div className="space-y-1 pb-2">
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
-                      {alumni.branch}
-                    </h3>
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <Award size={14} className="text-[#C41E3A]" />
-                      <span>{alumni.college}</span>
-                    </p>
-                    <p className="text-xs text-slate-400 font-bold flex items-center gap-1.5">
-                      <Calendar size={12} />
-                      <span>Class of {alumni.batchYear}</span>
-                    </p>
-                  </div>
-                </div>
-
-                {alumni.education.map((edu, idx) => (
-                  <div key={edu.id} className="relative flex gap-4">
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className="w-3.5 h-3.5 rounded-full bg-slate-300 ring-4 ring-slate-100" />
-                      {idx < alumni.education.length - 1 && (
-                        <div className="w-0.5 flex-1 bg-slate-100 my-2" />
-                      )}
-                    </div>
-                    <div className="space-y-1.5 pb-2">
-                      <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
-                        {edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}
-                      </h3>
-                      <p className="text-sm font-semibold text-slate-700">
-                        {edu.school}
-                      </p>
-                      <p className="text-xs text-slate-400 font-bold flex items-center gap-1.5">
-                        <Calendar size={12} />
-                        <span>
-                          {formatDate(edu.startDate)} – {edu.isCurrent ? 'Present' : formatDate(edu.endDate)}
-                        </span>
-                      </p>
-                      {edu.description && (
-                        <p className="text-xs text-slate-500 leading-relaxed pt-1.5 whitespace-pre-line">
-                          {edu.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Startups Card */}
-            {alumni.startups.length > 0 && (
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
-                <h2 className="text-lg font-black text-slate-900 flex items-center gap-2.5">
-                  <Rocket size={20} className="text-[#003D7A]" />
-                  <span>Startups & Ventures</span>
-                </h2>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {alumni.startups.map((startup) => (
-                    <div key={startup.id} className="border border-slate-150 rounded-2xl p-4 space-y-3 hover:border-slate-300 transition bg-slate-50/50">
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <h3 className="font-bold text-slate-900 text-sm">{startup.name}</h3>
-                          {startup.industry && (
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mt-0.5">{startup.industry}</p>
-                          )}
-                        </div>
-                        {startup.websiteUrl && (
-                          <a 
-                            href={startup.websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-[#003D7A] transition"
-                          >
-                            <Globe size={16} />
-                          </a>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{startup.description}</p>
-                      {startup.foundedYear && (
-                        <div className="text-[10px] font-bold text-slate-400 mt-2">
-                          Founded {startup.foundedYear}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
+          <div className="lg:col-span-2">
+            <ProfileTabs
+              alumni={alumni}
+              workExperience={alumni.workExperience}
+              education={alumni.education}
+              startups={alumni.startups}
+              posts={posts}
+              activityPosts={activityPosts}
+              currentUser={currentUser}
+            />
           </div>
 
           {/* Sidebar / Additional Info */}
