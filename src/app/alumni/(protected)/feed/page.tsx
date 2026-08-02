@@ -26,6 +26,8 @@ import {
 import { toast } from 'react-hot-toast';
 import ProfileCompletionModal from './ProfileCompletionModal';
 import MyPostsModal from './MyPostsModal';
+import PostCard from '@/components/alumni/PostCard';
+
 
 interface AlumniProfile {
   id?: string;
@@ -610,137 +612,21 @@ export default function AlumniFeed() {
               </div>
             ))
           ) : posts.length > 0 ? (
-            posts.map((post) => {
-              const hasLiked = likedPosts[post.id];
-              const isPostAdmin = post.author?.isAdmin;
-              
-              return (
-                <div key={post.id} className="bg-white rounded-2xl shadow-xs hover:shadow-md border border-slate-200/80 hover:border-slate-300 transition-all duration-300 overflow-hidden group">
-                  {/* Decorative Brand Gradient Accent */}
-                  <div className="h-1 w-full bg-gradient-to-r from-[#003D7A] via-indigo-500 to-[#C41E3A] opacity-80 group-hover:opacity-100 transition-opacity" />
-
-                  {/* Post Header */}
-                  <div className="p-4 flex items-center justify-between border-b border-slate-100/70 bg-gradient-to-b from-slate-50/50 to-white">
-                    {(() => {
-                      const authorProfileUrl = isPostAdmin || !post.author.id
-                        ? null
-                        : post.author.id === (profile as any)?.id
-                          ? '/alumni/profile'
-                          : `/alumni/profile/${post.author.id}`;
-
-                      const authorInfo = (
-                        <>
-                          <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A] flex items-center justify-center flex-shrink-0 shadow-xs">
-                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-[#003D7A] font-extrabold text-xs overflow-hidden">
-                              {post.author.avatarUrl ? (
-                                <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
-                              ) : (
-                                getInitials(post.author.name)
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="text-sm font-bold text-gray-900 group-hover/author:text-[#003D7A] transition-colors">
-                                {post.author.name}
-                              </h4>
-                              {isPostAdmin ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-gradient-to-r from-[#012140] to-[#003D7A] text-amber-300 border border-amber-400/30 tracking-wider shadow-2xs">
-                                  ★ OFFICIAL ADMIN
-                                </span>
-                              ) : post.author.batchYear ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#003D7A] border border-blue-100/80">
-                                  Class of &apos;{String(post.author.batchYear).slice(-2)}
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-[10px] font-semibold text-slate-500">
-                              {isPostAdmin ? 'System Administrator at IKGPTU' : `${post.author.currentRole || 'Alumni'} ${post.author.currentCompany ? `at ${post.author.currentCompany}` : ''}`}
-                            </p>
-                            <p className="text-[9px] font-medium text-slate-400 mt-0.5">
-                              {post.createdAt}
-                            </p>
-                          </div>
-                        </>
-                      );
-
-                      return authorProfileUrl ? (
-                        <Link href={authorProfileUrl} className="flex items-center gap-3 group/author hover:opacity-95 transition">
-                          {authorInfo}
-                        </Link>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {authorInfo}
-                        </div>
-                      );
-                    })()}
-                    
-                    {(() => {
-                      const canDelete = Boolean(
-                        profile?.isAdmin || (profile?.id && post.author?.id === profile.id)
-                      );
-                      if (!canDelete) return null;
-
-                      return (
-                        <div className="relative">
-                          <button 
-                            onClick={() => setActiveMenuPostId(activeMenuPostId === post.id ? null : post.id)}
-                            className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition cursor-pointer"
-                            title="Post Options"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-                          {activeMenuPostId === post.id && (
-                            <div 
-                              className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-20 animate-fadeIn"
-                              onMouseLeave={() => setActiveMenuPostId(null)}
-                            >
-                              <button
-                                onClick={() => handleDeletePost(post.id)}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
-                              >
-                                <Trash2 size={14} />
-                                Delete Post
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Post Content with Inline Expandable Text */}
-                  <div className="px-5 py-4">
-                    <PostTextContent content={post.content} />
-                  </div>
-
-                  {/* Post Media Area - Clickable Image Lightbox Preview */}
-                  {post.media && post.media.url && (
-                    <div 
-                      onClick={() => setSelectedMediaUrl(post.media!.url)}
-                      className="border-t border-slate-100 bg-slate-900/5 relative group/img cursor-pointer overflow-hidden"
-                      title="Click to expand image"
-                    >
-                      <div className="w-full max-h-[480px] overflow-hidden flex items-center justify-center bg-slate-100 relative">
-                        <img 
-                          src={post.media.url} 
-                          alt="Attached media" 
-                          className="w-full h-auto max-h-[480px] object-contain group-hover/img:scale-[1.02] transition-transform duration-300"
-                        />
-                        {/* Subtle Zoom/Expand Overlay Hint */}
-                        <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                          <span className="bg-white/95 text-slate-900 text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 transform translate-y-1 group-hover/img:translate-y-0 transition-transform">
-                            <ImageIcon size={14} className="text-[#003D7A]" />
-                            View Full Photo
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              );
-            })
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUser={profile ? {
+                  id: (profile as any).id,
+                  name: profile.name,
+                  avatarUrl: profile.avatarUrl,
+                  isAdmin: profile.isAdmin
+                } : null}
+                onDeleteSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['alumni-feed-posts'] });
+                }}
+              />
+            ))
           ) : (
             <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 text-slate-500 font-medium">
               No feed posts available. Start connecting with your community!

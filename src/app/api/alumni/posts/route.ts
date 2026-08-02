@@ -1,50 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
-import { verifyAccessToken } from '@/lib/auth/jwt';
+import { getCurrentAlumni, getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 import { prisma } from '@/lib/prisma';
 import { deleteFile } from '@/lib/fileUpload';
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const alumniToken = cookieStore.get('alumniAccessToken')?.value;
-  const staffToken = cookieStore.get('accessToken')?.value;
+  const session = await getCurrentAlumniOrStaff();
 
-  if (!alumniToken && !staffToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let authorized = false;
-  if (alumniToken) {
-    try {
-      verifyAlumniAccessToken(alumniToken);
-      authorized = true;
-    } catch {}
-  }
-  if (!authorized && staffToken) {
-    try {
-      verifyAccessToken(staffToken);
-      authorized = true;
-    } catch {}
-  }
-
-  if (!authorized) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const { searchParams } = new URL(req.url);
+    const searchParams = req.nextUrl.searchParams;
     const selfOnly = searchParams.get('self') === 'true';
 
-    let authorIdFilter: string | undefined = undefined;
-    if (selfOnly && alumniToken) {
-      try {
-        const payload = verifyAlumniAccessToken(alumniToken);
-        if (payload?.id) {
-          authorIdFilter = payload.id;
-        }
-      } catch {}
-    }
+    const currentAlumniId = session.isAdmin ? null : session.alumni.id;
+    const authorIdFilter = selfOnly ? (currentAlumniId || undefined) : undefined;
 
     const posts = await prisma.post.findMany({
       where: authorIdFilter ? { authorId: authorIdFilter } : undefined,
@@ -70,6 +41,10 @@ export async function GET(req: NextRequest) {
           },
         },
         images: true,
+        likes: {
+          where: { alumniId: currentAlumniId || '' },
+          select: { id: true }
+        },
         _count: {
           select: {
             likes: true,
@@ -80,6 +55,7 @@ export async function GET(req: NextRequest) {
     });
 
     const formattedPosts = posts.map((post) => {
+      const hasLiked = post.likes ? post.likes.length > 0 : false;
       if (post.postedByStaff) {
         return {
           id: post.id,
@@ -91,6 +67,7 @@ export async function GET(req: NextRequest) {
           }),
           likesCount: post._count.likes,
           commentsCount: post._count.comments,
+          hasLiked,
           media: post.images.length > 0 ? { type: 'image', url: post.images[0].imageUrl } : null,
           author: {
             id: post.postedByStaff.id,
@@ -114,6 +91,7 @@ export async function GET(req: NextRequest) {
           }),
           likesCount: post._count.likes,
           commentsCount: post._count.comments,
+          hasLiked,
           media: post.images.length > 0 ? { type: 'image', url: post.images[0].imageUrl } : null,
           author: {
             id: post.author?.id || null,
@@ -138,15 +116,8 @@ export async function GET(req: NextRequest) {
 // POST endpoint for alumni self-post on feed page
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const alumniToken = cookieStore.get('alumniAccessToken')?.value;
-
-    if (!alumniToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyAlumniAccessToken(alumniToken);
-    if (!payload?.id) {
+    const alumni = await getCurrentAlumni();
+    if (!alumni) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -161,7 +132,7 @@ export async function POST(req: NextRequest) {
       data: {
         content,
         images: imageUrl ? { create: { imageUrl } } : undefined,
-        authorId: payload.id,
+        authorId: alumni.id,
       },
       include: { images: true }
     });
@@ -181,37 +152,12 @@ export async function POST(req: NextRequest) {
 // DELETE endpoint for post deletion (supports both alumni self-deletion & admin moderation)
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const alumniToken = cookieStore.get('alumniAccessToken')?.value;
-    const staffToken = cookieStore.get('accessToken')?.value;
-
-    let viewerId: string | null = null;
-    let isStaff = false;
-
-    if (staffToken) {
-      try {
-        const payload = verifyAccessToken(staffToken);
-        if (payload?.id) {
-          viewerId = payload.id;
-          isStaff = true;
-        }
-      } catch {}
-    }
-
-    if (!isStaff && alumniToken) {
-      try {
-        const payload = verifyAlumniAccessToken(alumniToken);
-        if (payload?.id) {
-          viewerId = payload.id;
-        }
-      } catch {}
-    }
-
-    if (!viewerId) {
+    const session = await getCurrentAlumniOrStaff();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    const searchParams = req.nextUrl.searchParams;
     const postId = searchParams.get('id');
 
     if (!postId) {
@@ -230,13 +176,40 @@ export async function DELETE(req: NextRequest) {
     // Explicit Authorization Check:
     // Staff/Admin can delete ANY post unconditionally.
     // Non-staff Alumni can ONLY delete posts where authorId === viewerId.
-    if (!isStaff) {
-      if (post.authorId !== viewerId) {
-        return NextResponse.json(
-          { error: 'Forbidden: You can only delete your own posts' }, 
-          { status: 403 }
-        );
+    let authorized = false;
+
+    if (session.isAdmin) {
+      const staffMember = await prisma.staff.findUnique({
+        where: { id: session.staffId }
+      });
+      if (staffMember) {
+        if (staffMember.role === 'ADMIN') {
+          authorized = true;
+        } else if (staffMember.role === 'SUB_ADMIN') {
+          if (post.postedByStaffId === session.staffId) {
+            authorized = true;
+          } else if (post.authorId) {
+            const authorAlumni = await prisma.alumni.findUnique({
+              where: { id: post.authorId },
+              select: { campusId: true }
+            });
+            if (authorAlumni && authorAlumni.campusId === staffMember.campusId) {
+              authorized = true;
+            }
+          }
+        }
       }
+    } else {
+      if (post.authorId === session.alumni.id) {
+        authorized = true;
+      }
+    }
+
+    if (!authorized) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to delete this post' }, 
+        { status: 403 }
+      );
     }
 
     // Safe disk file cleanup - failure does not block DB deletion
