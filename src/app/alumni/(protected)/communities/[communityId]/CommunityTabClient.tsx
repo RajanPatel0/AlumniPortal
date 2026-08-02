@@ -292,7 +292,7 @@ export function CommunityTabClient({
   return (
     <>
       {/* Top Header Action Buttons Overlay */}
-      <div className="flex flex-wrap items-center justify-end gap-3 -mt-16 mb-4 relative z-20 px-6 sm:px-8">
+      <div className="flex flex-wrap items-center justify-end gap-3 mt-4 sm:-mt-16 mb-4 relative z-20 px-6 sm:px-8">
         <button
           onClick={handleToggleFollow}
           className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm cursor-pointer ${
@@ -303,11 +303,11 @@ export function CommunityTabClient({
         >
           {isFollowing ? (
             <>
-              <Check className="w-4 h-4 text-emerald-600" /> Following Newsletter
+              <Check className="w-4 h-4 text-emerald-600" /> Following Community
             </>
           ) : (
             <>
-              <Bell className="w-4 h-4" /> Follow Newsletter
+              <Bell className="w-4 h-4" /> Follow Community
             </>
           )}
         </button>

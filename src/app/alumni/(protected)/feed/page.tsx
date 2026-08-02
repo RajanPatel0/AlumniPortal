@@ -21,7 +21,9 @@ import {
   MessageCircle,
   Loader2,
   Trash2,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ProfileCompletionModal from './ProfileCompletionModal';
@@ -133,6 +135,13 @@ export default function AlumniFeed() {
 
   // My Posts modal state
   const [myPostsModalOpen, setMyPostsModalOpen] = useState(false);
+
+  // Promotions carousel interaction state
+  const promotionsRef = useRef<HTMLDivElement>(null);
+  const promotionsDragStartX = useRef(0);
+  const promotionsDragStartScrollLeft = useRef(0);
+  const promotionsIsDragging = useRef(false);
+  const promotionsSuppressClick = useRef(false);
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -271,6 +280,63 @@ export default function AlumniFeed() {
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  const scrollPromotions = (direction: 'left' | 'right') => {
+    promotionsRef.current?.scrollBy({
+      left: direction === 'right' ? 420 : -420,
+      behavior: 'smooth',
+    });
+  };
+
+  const handlePromotionsPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+
+    const carousel = promotionsRef.current;
+    if (!carousel) return;
+
+    promotionsIsDragging.current = true;
+    promotionsSuppressClick.current = false;
+    promotionsDragStartX.current = event.clientX;
+    promotionsDragStartScrollLeft.current = carousel.scrollLeft;
+    carousel.setPointerCapture(event.pointerId);
+  };
+
+  const handlePromotionsPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!promotionsIsDragging.current) return;
+
+    const carousel = promotionsRef.current;
+    if (!carousel) return;
+
+    const distance = event.clientX - promotionsDragStartX.current;
+    if (Math.abs(distance) > 5) promotionsSuppressClick.current = true;
+    carousel.scrollLeft = promotionsDragStartScrollLeft.current - distance;
+  };
+
+  const handlePromotionsPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    promotionsIsDragging.current = false;
+    promotionsRef.current?.releasePointerCapture(event.pointerId);
+  };
+
+  const handlePromotionsClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!promotionsSuppressClick.current) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    promotionsSuppressClick.current = false;
+  };
+
+  const handlePromotionsWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const carousel = promotionsRef.current;
+    if (!carousel || carousel.scrollWidth <= carousel.clientWidth) return;
+
+    const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      ? event.deltaX
+      : event.deltaY;
+    if (horizontalDelta === 0) return;
+
+    event.preventDefault();
+    carousel.scrollLeft += horizontalDelta;
   };
 
   if (loading) {
@@ -494,7 +560,34 @@ export default function AlumniFeed() {
         </div>
 
         {/* Promotions Carousel / Scroll Grid (Birthday wish card removed) */}
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
+        <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
+          <button
+            type="button"
+            onClick={() => scrollPromotions('left')}
+            aria-label="Show previous promotions"
+            className="absolute left-1 sm:left-2 top-1/4 z-10 hidden -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 text-slate-700 shadow-md transition hover:bg-white hover:text-[#003D7A] md:flex"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollPromotions('right')}
+            aria-label="Show more promotions"
+            className="absolute right-1 sm:right-2 top-1/4 z-10 hidden -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 text-slate-700 shadow-md transition hover:bg-white hover:text-[#003D7A] md:flex"
+          >
+            <ChevronRight size={18} />
+          </button>
+
+          <div
+            ref={promotionsRef}
+            onPointerDown={handlePromotionsPointerDown}
+            onPointerMove={handlePromotionsPointerMove}
+            onPointerUp={handlePromotionsPointerUp}
+            onPointerCancel={handlePromotionsPointerUp}
+            onClickCapture={handlePromotionsClickCapture}
+            onWheel={handlePromotionsWheel}
+            className="flex cursor-grab select-none gap-4 overflow-x-auto pb-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] active:cursor-grabbing"
+          >
           {[  {
               title: 'Get Your Story Published!',
               desc: 'Share it on the Post and inspire the community',
@@ -588,6 +681,7 @@ export default function AlumniFeed() {
                 </Link>
               </div>
             ))}
+          </div>
         </div>
 
         {/* Feed Posts */}
