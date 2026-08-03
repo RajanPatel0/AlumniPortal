@@ -187,7 +187,7 @@ export default function AlumniMap({
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
             {/* Header Banner */}
             <div className="bg-[#003D7A] px-6 py-4 flex items-center justify-between text-white">
-              <h3 className="text-sm sm:text-base font-extrabold tracking-tight">Are you from PTU Alumni?</h3>
+              <h3 className="text-sm sm:text-base font-extrabold tracking-tight">Are you from IKGPTU Alumni Network?</h3>
               <button 
                 onClick={() => setShowLoginModal(false)}
                 className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
