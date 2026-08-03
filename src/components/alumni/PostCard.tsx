@@ -56,6 +56,42 @@ function getInitials(name: string) {
   return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'A';
 }
 
+function shortenText(text: string, maxLength: number = 20): string {
+  if (!text) return '';
+  
+  // Extract abbreviation in parentheses if present, e.g. "Punjab State Board (PSB)" -> "PSB"
+  const parenMatch = text.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inside = parenMatch[1].trim();
+    if (inside.length >= 2 && inside.length <= 6 && /^[A-Za-z0-9&\s]+$/.test(inside)) {
+      return inside;
+    }
+  }
+  
+  // Clean parentheses from text
+  let cleaned = text.replace(/\s*\([^)]*\)/g, '').trim();
+  
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+  
+  // Try taking the first 2 words
+  const words = cleaned.split(/\s+/);
+  if (words.length > 1) {
+    const candidate = words.slice(0, 2).join(' ');
+    if (candidate.length <= maxLength) {
+      return candidate;
+    }
+  }
+  
+  // Fallback to first word or simple truncation
+  if (words[0].length <= maxLength) {
+    return words[0];
+  }
+  
+  return words[0].substring(0, maxLength) + '...';
+}
+
 function PostTextContent({ content }: { content: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   if (!content) return null;
@@ -307,8 +343,8 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4 hover:shadow-md transition duration-300">
       {/* Post Author Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#003D7A] to-[#C41E3A] p-0.5 flex-shrink-0">
             <div className="w-full h-full rounded-[10px] bg-slate-100 overflow-hidden flex items-center justify-center">
               {post.author?.avatarUrl ? (
@@ -346,7 +382,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
               ) : null}
             </div>
             <p className="text-[10px] font-semibold text-slate-400 truncate">
-              {isPostAdmin ? 'System Administrator' : `${post.author?.currentRole || 'Alumni'} ${post.author?.currentCompany ? `at ${post.author.currentCompany}` : ''}`}
+              {isPostAdmin ? 'System Administrator' : `${shortenText(post.author?.currentRole || 'Alumni')} ${post.author?.currentCompany ? `at ${shortenText(post.author.currentCompany)}` : ''}`}
             </p>
           </div>
         </div>
