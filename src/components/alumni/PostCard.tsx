@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
@@ -7,6 +5,9 @@ import {
 } from 'lucide-react';
 import { apiFetch } from "@/lib/api";
 import { toast } from 'react-hot-toast';
+import { getInitials } from '@/lib/utils/avatar';
+import PostTextContent from './PostTextContent';
+import ImageGallery from './ImageGallery';
 
 interface Comment {
   id: string;
@@ -50,88 +51,47 @@ interface PostCardProps {
     isAdmin?: boolean;
   } | null;
   onDeleteSuccess?: (postId: string) => void;
+  priority?: boolean;
 }
 
-function getInitials(name: string) {
-  return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'A';
-}
-
-function PostTextContent({ content }: { content: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  if (!content) return null;
-  const MAX_LENGTH = 180;
-  const isLong = content.length > MAX_LENGTH || content.split('\n').length > 4;
-
-  if (!isLong) {
-    return (
-      <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-line">
-        {content}
-      </p>
-    );
+function shortenText(text: string, maxLength: number = 20): string {
+  if (!text) return '';
+  
+  // Extract abbreviation in parentheses if present, e.g. "Punjab State Board (PSB)" -> "PSB"
+  const parenMatch = text.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inside = parenMatch[1].trim();
+    if (inside.length >= 2 && inside.length <= 6 && /^[A-Za-z0-9&\s]+$/.test(inside)) {
+      return inside;
+    }
   }
-
-  return (
-    <div className="text-sm text-slate-800 leading-relaxed font-medium">
-      {isExpanded ? (
-        <p className="whitespace-pre-line">
-          {content}
-          <button
-            type="button"
-            onClick={() => setIsExpanded(false)}
-            className="text-slate-400 font-bold hover:text-slate-600 text-xs ml-2 cursor-pointer inline-flex items-center"
-          >
-            Show less
-          </button>
-        </p>
-      ) : (
-        <p className="whitespace-pre-line">
-          {content.slice(0, MAX_LENGTH)}...
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="text-[#003D7A] font-extrabold hover:text-[#C41E3A] hover:underline text-xs ml-1 cursor-pointer inline-flex items-center"
-          >
-            more
-          </button>
-        </p>
-      )}
-    </div>
-  );
-}
-
-function ImageGallery({ images }: { images: { imageUrl: string }[] }) {
-  if (images.length === 1) {
-    return (
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 flex items-center justify-center max-h-[360px]">
-        <img
-          src={images[0].imageUrl}
-          alt="Post media"
-          className="w-full h-auto object-contain max-h-[360px]"
-        />
-      </div>
-    );
+  
+  // Clean parentheses from text
+  let cleaned = text.replace(/\s*\([^)]*\)/g, '').trim();
+  
+  if (cleaned.length <= maxLength) {
+    return cleaned;
   }
-  const grid = images.length === 2 ? 'grid-cols-2' : 'grid-cols-2';
-  return (
-    <div className={`grid ${grid} gap-1 rounded-2xl overflow-hidden border border-slate-100`}>
-      {images.slice(0, 4).map((img, i) => (
-        <div
-          key={i}
-          className={`relative bg-slate-50 ${images.length === 3 && i === 0 ? 'row-span-2' : ''}`}
-        >
-          <img src={img.imageUrl} alt="" className="w-full h-full object-cover aspect-square" />
-          {i === 3 && images.length > 4 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
-              +{images.length - 4}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+  
+  // Try taking the first 2 words
+  const words = cleaned.split(/\s+/);
+  if (words.length > 1) {
+    const candidate = words.slice(0, 2).join(' ');
+    if (candidate.length <= maxLength) {
+      return candidate;
+    }
+  }
+  
+  // Fallback to first word or simple truncation
+  if (words[0].length <= maxLength) {
+    return words[0];
+  }
+  
+  return words[0].substring(0, maxLength) + '...';
 }
 
-export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCardProps) {
+
+export default function PostCard({ post, currentUser, onDeleteSuccess, priority = false }: PostCardProps) {
   const [hasLiked, setHasLiked] = useState(post.hasLiked || false);
   const [likesCount, setLikesCount] = useState(post.likesCount ?? 0);
   const [showComments, setShowComments] = useState(false);
@@ -307,8 +267,8 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4 hover:shadow-md transition duration-300">
       {/* Post Author Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#003D7A] to-[#C41E3A] p-0.5 flex-shrink-0">
             <div className="w-full h-full rounded-[10px] bg-slate-100 overflow-hidden flex items-center justify-center">
               {post.author?.avatarUrl ? (
@@ -346,7 +306,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
               ) : null}
             </div>
             <p className="text-[10px] font-semibold text-slate-400 truncate">
-              {isPostAdmin ? 'System Administrator' : `${post.author?.currentRole || 'Alumni'} ${post.author?.currentCompany ? `at ${post.author.currentCompany}` : ''}`}
+              {isPostAdmin ? 'System Administrator' : `${shortenText(post.author?.currentRole || 'Alumni')} ${post.author?.currentCompany ? `at ${shortenText(post.author.currentCompany)}` : ''}`}
             </p>
           </div>
         </div>
@@ -361,7 +321,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
             <div className="relative">
               <button 
                 onClick={() => setActiveMenu(!activeMenu)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
               >
                 <MoreHorizontal size={16} />
               </button>
@@ -372,7 +332,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
                 >
                   <button
                     onClick={handleDeletePost}
-                    className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
+                    className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition"
                   >
                     <Trash2 size={14} />
                     Delete Post
@@ -391,14 +351,14 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
 
       {/* Media Gallery */}
       {postImages.length > 0 && (
-        <ImageGallery images={postImages} />
+        <ImageGallery images={postImages} priority={priority} />
       )}
 
       {/* Action Buttons Footer */}
       <div className="flex items-center gap-4 text-xs font-bold text-slate-400 pt-2 border-t border-slate-100/50">
         <button 
           onClick={handleLikeToggle}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${
             hasLiked 
               ? 'bg-rose-50 text-rose-600' 
               : 'hover:bg-slate-50 hover:text-slate-600'
@@ -410,7 +370,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
 
         <button 
           onClick={toggleCommentsView}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${
             showComments
               ? 'bg-blue-50 text-blue-600'
               : 'hover:bg-slate-50 hover:text-slate-600'
@@ -436,7 +396,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
                   type="button"
                   onClick={() => loadComments(commentsPage + 1)}
                   disabled={isLoadingMoreComments}
-                  className="w-full text-center py-1.5 text-[10px] font-bold text-[#003D7A] hover:text-[#C41E3A] hover:bg-slate-100 transition cursor-pointer flex items-center justify-center gap-1 bg-slate-50 rounded-xl"
+                  className="w-full text-center py-1.5 text-[10px] font-bold text-[#003D7A] hover:text-[#C41E3A] hover:bg-slate-100 transition flex items-center justify-center gap-1 bg-slate-50 rounded-xl"
                 >
                   {isLoadingMoreComments ? (
                     <Loader2 size={10} className="animate-spin text-slate-400" />
@@ -489,7 +449,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
                       {canDeleteComment && (
                         <button
                           onClick={() => handleCommentDelete(comment.id)}
-                          className="opacity-0 group-hover/comment:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-200/50 transition cursor-pointer shrink-0 ml-1"
+                          className="opacity-0 group-hover/comment:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-200/50 transition shrink-0 ml-1"
                           title="Delete Comment"
                         >
                           <Trash2 size={12} />
@@ -515,7 +475,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess }: PostCar
               <button
                 type="submit"
                 disabled={isSubmittingComment || !newCommentText.trim()}
-                className="p-2 bg-[#003D7A] hover:bg-[#002b56] text-white rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer shrink-0"
+                className="p-2 bg-[#003D7A] hover:bg-[#002b56] text-white rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
               >
                 {isSubmittingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>

@@ -5,24 +5,7 @@ import { X, Trash2, Loader2, Calendar, FileText, Sparkles, Image as ImageIcon } 
 import { apiFetch } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-
-interface FeedPost {
-  id: string;
-  content: string | null;
-  createdAt: string;
-  likesCount: number;
-  commentsCount: number;
-  media: { type: string; url: string } | null;
-  author: {
-    id: string | null;
-    name: string;
-    batchYear: number;
-    avatarUrl: string | null;
-    currentRole: string;
-    currentCompany: string;
-    isAdmin: boolean;
-  };
-}
+import { FeedPost } from './AlumniFeedClient';
 
 interface MyPostsModalProps {
   isOpen: boolean;
@@ -39,7 +22,7 @@ export default function MyPostsModal({ isOpen, onClose }: MyPostsModalProps) {
   const fetchMyPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/alumni/posts?self=true');
+      const res = await apiFetch('/alumni/posts?self=true&limit=100');
       if (res.ok) {
         const data = await res.json();
         setPosts(data.posts || []);

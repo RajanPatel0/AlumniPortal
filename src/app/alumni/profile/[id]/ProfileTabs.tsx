@@ -40,48 +40,8 @@ function formatDate(date: Date | string | null) {
   }
 }
 
-function PostTextContent({ content }: { content: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  if (!content) return null;
-  const MAX_LENGTH = 180;
-  const isLong = content.length > MAX_LENGTH || content.split('\n').length > 4;
-
-  if (!isLong) {
-    return (
-      <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-line">
-        {content}
-      </p>
-    );
-  }
-
-  return (
-    <div className="text-sm text-slate-800 leading-relaxed font-medium">
-      {isExpanded ? (
-        <p className="whitespace-pre-line">
-          {content}
-          <button
-            type="button"
-            onClick={() => setIsExpanded(false)}
-            className="text-slate-400 font-bold hover:text-slate-600 text-xs ml-2 cursor-pointer inline-flex items-center"
-          >
-            Show less
-          </button>
-        </p>
-      ) : (
-        <p className="whitespace-pre-line">
-          {content.slice(0, MAX_LENGTH)}...
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="text-[#003D7A] font-extrabold hover:text-[#C41E3A] hover:underline text-xs ml-1 cursor-pointer inline-flex items-center"
-          >
-            more
-          </button>
-        </p>
-      )}
-    </div>
-  );
-}
+import PostTextContent from '@/components/alumni/PostTextContent';
+import ImageGallery from '@/components/alumni/ImageGallery';
 
 // Reusable timeline node so connector-line logic can't drift out of sync between sections
 function TimelineNode({
@@ -92,40 +52,6 @@ function TimelineNode({
     <div className="flex flex-col items-center shrink-0">
       <div className={`w-3.5 h-3.5 rounded-full ring-4 ${dotClass}`} />
       {!isLast && <div className="w-0.5 flex-1 bg-slate-100 my-2 min-h-[16px]" />}
-    </div>
-  );
-}
-
-function ImageGallery({ images }: { images: { imageUrl: string }[] }) {
-  if (images.length === 1) {
-    return (
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 flex items-center justify-center max-h-[360px]">
-        <img
-          src={images[0].imageUrl}
-          alt="Post media"
-          className="w-full h-auto object-contain max-h-[360px]"
-        />
-      </div>
-    );
-  }
-  const grid =
-    images.length === 2 ? 'grid-cols-2' :
-    images.length === 3 ? 'grid-cols-2' : 'grid-cols-2';
-  return (
-    <div className={`grid ${grid} gap-1 rounded-2xl overflow-hidden border border-slate-100`}>
-      {images.slice(0, 4).map((img, i) => (
-        <div
-          key={i}
-          className={`relative bg-slate-50 ${images.length === 3 && i === 0 ? 'row-span-2' : ''}`}
-        >
-          <img src={img.imageUrl} alt="" className="w-full h-full object-cover aspect-square" />
-          {i === 3 && images.length > 4 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
-              +{images.length - 4}
-            </div>
-          )}
-        </div>
-      ))}
     </div>
   );
 }
@@ -325,7 +251,7 @@ export default function ProfileTabs({
               No recent posts to display
             </div>
           ) : (
-            posts.map((post) => (
+            posts.map((post, index) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -333,6 +259,7 @@ export default function ProfileTabs({
                 onDeleteSuccess={() => {
                   router.refresh();
                 }}
+                priority={index === 0}
               />
             ))
           )}
@@ -344,7 +271,7 @@ export default function ProfileTabs({
               No recent activity to display
             </div>
           ) : (
-            activityPosts.map((post) => (
+            activityPosts.map((post, index) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -352,6 +279,7 @@ export default function ProfileTabs({
                 onDeleteSuccess={() => {
                   router.refresh();
                 }}
+                priority={index === 0}
               />
             ))
           )}
