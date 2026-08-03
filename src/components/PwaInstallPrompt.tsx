@@ -109,18 +109,16 @@ export default function PwaInstallPrompt() {
         style={{ animation: 'slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}
       >
         <div
-          className="rounded-3xl overflow-hidden shadow-2xl"
-          style={{
-            background: 'linear-gradient(145deg, #012140 0%, #003D7A 60%, #0a4fa0 100%)',
-            border: '1px solid rgba(255,255,255,0.15)',
-          }}
-        >
-          {/* Close button */}
-          <button
-            onClick={dismiss}
-            className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition"
-            style={{ position: 'absolute', top: 12, right: 12 }}
-            aria-label="Dismiss"
+        className="relative rounded-3xl overflow-hidden shadow-2xl"
+        style={{
+          background: 'linear-gradient(145deg, #012140 0%, #003D7A 60%, #0a4fa0 100%)',
+          border: '1px solid rgba(255,255,255,0.15)',
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={dismiss}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -143,24 +141,6 @@ export default function PwaInstallPrompt() {
               </div>
             </div>
 
-            {/* Feature highlights */}
-            <div className="flex gap-3 mb-5">
-              {[
-                { icon: '⚡', label: 'Instant access' },
-                { icon: '📴', label: 'Works offline' },
-                { icon: '🔔', label: 'Notifications' },
-              ].map((f) => (
-                <div
-                  key={f.label}
-                  className="flex-1 text-center py-2 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-                >
-                  <div className="text-base">{f.icon}</div>
-                  <div className="text-white/60 text-[10px] font-semibold mt-0.5">{f.label}</div>
-                </div>
-              ))}
-            </div>
-
             {/* iOS instructions vs Android button */}
             {isIos ? (
               <div
@@ -168,17 +148,10 @@ export default function PwaInstallPrompt() {
                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
               >
                 <p className="text-white/80 text-xs font-semibold mb-3">To install on iPhone / iPad:</p>
-                <div className="space-y-2.5">
-                  {[
-                    { step: '1', text: 'Tap the Share button', icon: '⬆️' },
-                    { step: '2', text: 'Scroll and tap "Add to Home Screen"', icon: '➕' },
-                    { step: '3', text: 'Tap "Add" to confirm', icon: '✅' },
-                  ].map((s) => (
-                    <div key={s.step} className="flex items-center gap-3">
-                      <span className="text-lg">{s.icon}</span>
-                      <span className="text-white/70 text-xs">{s.text}</span>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  <p className="text-white/70 text-xs leading-snug">1. Tap the Share button</p>
+                  <p className="text-white/70 text-xs leading-snug">2. Scroll and tap "Add to Home Screen"</p>
+                  <p className="text-white/70 text-xs leading-snug">3. Tap "Add" to confirm</p>
                 </div>
                 <button
                   onClick={dismiss}
@@ -207,7 +180,7 @@ export default function PwaInstallPrompt() {
                       Installing…
                     </span>
                   ) : (
-                    '📲 Install App'
+                    'Install App'
                   )}
                 </button>
                 <button

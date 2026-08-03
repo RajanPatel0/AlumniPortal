@@ -56,7 +56,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PTU Alumni" />
-        <link rel="apple-touch-icon" href={`${BASE_PATH}/icon.png`} />
+        <link rel="icon" href={`${BASE_PATH}/icon.png`} sizes="192x192" />
+        <link rel="apple-touch-icon" href={`${BASE_PATH}/icon.png`} sizes="180x180" />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>
