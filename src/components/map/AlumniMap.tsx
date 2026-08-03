@@ -199,7 +199,7 @@ export default function AlumniMap({
             {/* Body Content */}
             <div className="p-6 text-center space-y-6">
               <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
-                Get complete access to alumni portal, if you are member of PTU Alumni
+                Log in to get complete access to the IKG PTU Alumni Network.
               </p>
 
               <a
