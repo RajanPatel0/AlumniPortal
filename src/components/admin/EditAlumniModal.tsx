@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { getAlumniSuggestions } from '@/actions/admin-alumni-suggestions';
 import { useDebounce } from '@/lib/useDebounce';
+import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 interface AlumniData {
   id: string;
@@ -352,11 +353,11 @@ export default function EditAlumniModal({
               </div>
               <div className="sm:col-span-1 md:col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Current Company</label>
-                <input
-                  type="text"
-                  name="currentCompany"
+                <CompanyAutocomplete
                   value={formData.currentCompany}
-                  onChange={handleChange}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, currentCompany: val }))}
+                  name="currentCompany"
+                  placeholder="e.g. Google India"
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:border-[#012140] focus:ring-1 focus:ring-[#012140]"
                 />
               </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 interface Slide {
   id: string;
@@ -12,8 +14,35 @@ interface Slide {
   ctaLink: string;
 }
 
-export default function HeroCarousel({ slides }: { slides: Slide[] }) {
+interface AlumniUser {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  email: string;
+}
+
+export default function HeroCarousel({
+  slides,
+  initialAlumni = null,
+}: {
+  slides: Slide[];
+  initialAlumni?: AlumniUser | null;
+}) {
   const [current, setCurrent] = useState(0);
+  const [alumni, setAlumni] = useState<AlumniUser | null>(initialAlumni);
+
+  useEffect(() => {
+    if (!initialAlumni) {
+      apiFetch('/alumni/me')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.user) setAlumni(data.user);
+        })
+        .catch(() => {});
+    } else {
+      setAlumni(initialAlumni);
+    }
+  }, [initialAlumni]);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -34,8 +63,6 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   if (!slides || slides.length === 0) return null;
 
   return (
-    /* Mobile: 45vh height with min 280px so content is visible but not full screen.
-       Desktop (md+): original 80vh with min 550px for immersive experience. */
     <div className="relative h-[45vh] min-h-[280px] md:h-[80vh] md:min-h-[550px] w-full overflow-hidden bg-slate-950">
       {/* Slides */}
       {slides.map((slide, idx) => (
@@ -45,7 +72,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
             idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
           }`}
         >
-          {/* Background Image — object-cover ensures it fills without distortion */}
+          {/* Background Image */}
           <div
             className={`absolute inset-0 bg-cover bg-center transition-transform duration-[6000ms] ease-out ${
               idx === current ? 'scale-105' : 'scale-100'
@@ -55,7 +82,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/65 to-transparent" />
 
-          {/* Slide Content — scaled down on mobile for compact hero */}
+          {/* Slide Content */}
           <div className="absolute inset-0 flex items-center">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
               <div className="max-w-3xl text-white">
@@ -70,12 +97,23 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
                   {slide.subtext}
                 </p>
                 <div className="flex flex-wrap gap-3 md:gap-4">
-                  <Link
-                    href="/alumni/login"
-                    className="px-5 md:px-8 py-2.5 md:py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-extrabold rounded-xl hover:shadow-xl hover:shadow-red-900/30 transition-all duration-300 text-xs md:text-sm tracking-wide"
-                  >
-                    Are You Alumni?
-                  </Link>
+                  {alumni ? (
+                    <Link
+                      href="/alumni/feed"
+                      className="inline-flex items-center gap-2.5 px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-[#003D7A] via-[#002654] to-[#C41E3A] hover:from-[#002b56] hover:to-[#a0162e] text-white font-extrabold rounded-xl shadow-xl shadow-blue-950/40 hover:scale-105 active:scale-95 transition-all duration-300 text-xs md:text-sm tracking-wide border border-white/20"
+                    >
+                      <Sparkles size={16} className="text-amber-300 animate-pulse" />
+                      <span>Welcome Back, {alumni.name.split(' ')[0]} — Go to Feed</span>
+                      <ArrowRight size={16} />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/alumni/login"
+                      className="px-5 md:px-8 py-2.5 md:py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-extrabold rounded-xl hover:shadow-xl hover:shadow-red-900/30 transition-all duration-300 text-xs md:text-sm tracking-wide"
+                    >
+                      Are You Alumni?
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -123,3 +161,4 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
     </div>
   );
 }
+

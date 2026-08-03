@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Map, Search, SlidersHorizontal, Globe, Building2, GraduationCap } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 const AlumniMap = dynamic(() => import('@/components/map/AlumniMap'), {
   ssr: false,
@@ -43,13 +44,12 @@ export default function MapPage() {
       })
       .catch((err) => console.error('Failed to load years:', err));
 
-    // Fetch branches, companies, countries, and cities from options endpoint
+    // Fetch branches, countries, and cities from options endpoint
     apiFetch('/alumni/options')
       .then((res) => res.json())
       .then((data) => {
         if (data.branches) setAvailableBranches(data.branches);
         if (data.courses) setAvailableCourses(data.courses);
-        if (data.companies) setAvailableCompanies(data.companies);
         if (data.countries) setAvailableCountries(data.countries);
         if (data.cities) setAvailableCities(data.cities);
       })
@@ -226,24 +226,17 @@ export default function MapPage() {
             </select>
           </div>
 
-          {/* Current Company Input with Autocomplete Datalist */}
+          {/* Current Company Search Input */}
           <div className="space-y-1.5">
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Company</label>
             <div className="relative">
-              <input
-                type="text"
-                list="companies-datalist"
-                placeholder="Search or select company..."
+              <CompanyAutocomplete
                 value={company}
-                onChange={(e) => setCompany(e.target.value)}
+                onChange={setCompany}
+                placeholder="Search company..."
                 className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#003D7A] focus:ring-4 focus:ring-blue-50/50 placeholder:text-slate-400 transition-all duration-200"
               />
-              <Search className="absolute left-3.5 top-3 text-slate-400" size={13} />
-              <datalist id="companies-datalist">
-                {availableCompanies.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
+              <Search className="absolute left-3.5 top-3 text-slate-400 z-10 pointer-events-none" size={13} />
             </div>
           </div>
           
