@@ -1,4 +1,5 @@
 import { MapPin, Globe, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 
 export interface StartUpItem {
   id: string;
@@ -113,23 +114,46 @@ export function StartupCard({ startup, onEdit, onDelete }: StartupCardProps) {
 
       {/* Founder Block & Industry Tag */}
       <div className="p-4 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-slate-200 border border-slate-100 flex items-center justify-center text-slate-600 font-bold text-[10px] overflow-hidden flex-shrink-0">
-            {startup.founder?.avatarUrl ? (
-              <img src={startup.founder.avatarUrl} alt={startup.founder.name} className="w-full h-full object-cover" />
-            ) : (
-              getInitials(startup.founder?.name || 'S')
-            )}
+        {startup.founder?.id ? (
+          <Link 
+            href={startup.postedByMe ? '/alumni/profile' : `/alumni/profile/${startup.founder.id}`}
+            className="flex items-center gap-2 hover:opacity-85 transition group cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-full bg-slate-200 border border-slate-100 flex items-center justify-center text-slate-600 font-bold text-[10px] overflow-hidden flex-shrink-0 group-hover:border-[#003D7A]/50 transition">
+              {startup.founder?.avatarUrl ? (
+                <img src={startup.founder.avatarUrl} alt={startup.founder.name} className="w-full h-full object-cover" />
+              ) : (
+                getInitials(startup.founder?.name || 'S')
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-gray-800 leading-tight group-hover:text-[#003D7A] transition">
+                {startup.postedByMe ? 'You' : startup.founder?.name}
+              </p>
+              <p className="text-[9px] text-slate-400 font-semibold mt-0.5 leading-none">
+                {startup.founder?.currentRole || 'Alumnus'}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-slate-200 border border-slate-100 flex items-center justify-center text-slate-600 font-bold text-[10px] overflow-hidden flex-shrink-0">
+              {startup.founder?.avatarUrl ? (
+                <img src={startup.founder.avatarUrl} alt={startup.founder.name} className="w-full h-full object-cover" />
+              ) : (
+                getInitials(startup.founder?.name || 'S')
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-gray-800 leading-tight">
+                {startup.postedByMe ? 'You' : startup.founder?.name}
+              </p>
+              <p className="text-[9px] text-slate-400 font-semibold mt-0.5 leading-none">
+                {startup.founder?.currentRole || 'Alumnus'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-gray-800 leading-tight">
-              {startup.postedByMe ? 'You' : startup.founder?.name}
-            </p>
-            <p className="text-[9px] text-slate-400 font-semibold mt-0.5 leading-none">
-              {startup.founder?.currentRole || 'Alumnus'}
-            </p>
-          </div>
-        </div>
+        )}
         
         {startup.industry && (
           <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-[9px] truncate max-w-[120px]">
