@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const [branchRows, courseRows, companyRows, countryRows, cityRows] = await Promise.all([
+    const [branchRows, courseRows, countryRows, cityRows] = await Promise.all([
       prisma.academicOption.findMany({
         where: { type: 'BRANCH', isActive: true },
         select: { value: true },
@@ -13,17 +13,6 @@ export async function GET() {
         where: { type: 'COURSE', isActive: true },
         select: { value: true },
         orderBy: { value: 'asc' },
-      }),
-      prisma.alumni.findMany({
-        where: {
-          currentCompany: {
-            not: null,
-            notIn: [''],
-          },
-        },
-        select: { currentCompany: true },
-        distinct: ['currentCompany'],
-        orderBy: { currentCompany: 'asc' },
       }),
       prisma.pincodeLocation.findMany({
         where: {
@@ -53,7 +42,6 @@ export async function GET() {
     return NextResponse.json({
       branches: branchRows.map((r) => r.value).filter(Boolean),
       courses: courseRows.map((r) => r.value).filter(Boolean),
-      companies: companyRows.map((r) => r.currentCompany).filter(Boolean),
       countries: countryRows.map((r) => r.country).filter(Boolean),
       cities: cityRows.map((r) => r.city).filter(Boolean),
     });
@@ -65,3 +53,4 @@ export async function GET() {
     );
   }
 }
+

@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from "@/lib/api";
+import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -543,14 +544,10 @@ function ProfilePageClient() {
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Current Company</label>
-                    <input
-                      type="text"
-                      name="alumni_current_company_no_autofill"
-                      autoComplete="off"
+                    <CompanyAutocomplete
                       value={formData?.currentCompany || ''}
-                      onChange={(e) => handleInputChange('currentCompany', e.target.value)}
+                      onChange={(val) => handleInputChange('currentCompany', val)}
                       placeholder="e.g. Google India"
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
                     />
                   </div>
                 </div>
@@ -858,14 +855,11 @@ function ProfilePageClient() {
             <form onSubmit={saveExperience} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Company / Organization *</label>
-                <input
-                  type="text"
-                  name="alumni_experience_company_no_autofill"
-                  autoComplete="off"
-                  required
+                <CompanyAutocomplete
                   value={selectedExp.company || ''}
-                  onChange={(e) => setSelectedExp({ ...selectedExp, company: e.target.value })}
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
+                  onChange={(val) => setSelectedExp({ ...selectedExp, company: val })}
+                  placeholder="e.g. Microsoft"
+                  required
                 />
               </div>
 

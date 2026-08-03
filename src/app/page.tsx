@@ -1,9 +1,8 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
-import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { GET } from '@/app/api/landing-data/route';
 import { BASE_PATH } from '@/lib/api';
 
@@ -26,28 +25,19 @@ async function getLandingData() {
 }
 
 export default async function HomePage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('alumniAccessToken')?.value;
-  let isAuthenticated = false;
-
-  if (token) {
-    try {
-      verifyAlumniAccessToken(token);
-      isAuthenticated = true;
-    } catch {
-      // Token expired – treat as not authenticated
-    }
-  }
-
-  if (isAuthenticated) {
-    redirect('/alumni/feed');
-  }
+  const alumni = await getCurrentAlumni();
+  const initialAlumni = alumni ? {
+    id: alumni.id,
+    name: alumni.name,
+    avatarUrl: alumni.avatarUrl,
+    email: alumni.email,
+  } : null;
 
   // Load landing page data (API route call)
   const data = await getLandingData();
 
   // Static campuses list as requested
-    const staticCampuses = [
+  const staticCampuses = [
     {
       id: 'main-campus',
       name: 'Main Campus',
@@ -112,10 +102,10 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans antialiased text-gray-900 selection:bg-[#C41E3A] selection:text-white">
       {/* Navigation Header */}
-      <LandingNav />
+      <LandingNav initialAlumni={initialAlumni} />
 
       {/* 1. Hero Section (Dynamic rotating carousel) */}
-      <HeroCarousel slides={data.heroSlides} />
+      <HeroCarousel slides={data.heroSlides} initialAlumni={initialAlumni} />
 
       {/* 2. Stats Strip */}
       <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-8 md:py-10 text-white relative overflow-hidden shadow-inner">

@@ -2,11 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BASE_PATH } from '@/lib/api';
+import { BASE_PATH, apiFetch } from '@/lib/api';
+import { ArrowRight, User } from 'lucide-react';
 
-export default function LandingNav() {
+interface AlumniUser {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  email: string;
+}
+
+export default function LandingNav({ initialAlumni = null }: { initialAlumni?: AlumniUser | null }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [alumni, setAlumni] = useState<AlumniUser | null>(initialAlumni);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +24,21 @@ export default function LandingNav() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!initialAlumni) {
+      apiFetch('/alumni/me')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.user) {
+            setAlumni(data.user);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setAlumni(initialAlumni);
+    }
+  }, [initialAlumni]);
 
   const links = [
     { href: '#leadership', label: 'Message' },
@@ -62,14 +86,31 @@ export default function LandingNav() {
           ))}
         </div>
 
-        {/* Action Button - Blended Blue/Red Gradient */}
+        {/* Action Button - Dynamic depending on Auth status */}
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/alumni/login"
-            className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#C41E3A] via-[#b01630] to-[#003D7A] hover:from-[#d31c3a] hover:to-[#004e9a] transition-all duration-300 shadow-md shadow-black/20 hover:scale-105 active:scale-95"
-          >
-            Sign In
-          </Link>
+          {alumni ? (
+            <Link
+              href="/alumni/feed"
+              className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-[#003D7A] via-[#002654] to-[#C41E3A] hover:from-[#002b56] hover:to-[#a0162e] transition-all duration-300 shadow-md shadow-black/20 hover:scale-105 active:scale-95 border border-white/20"
+            >
+              {alumni.avatarUrl ? (
+                <img src={alumni.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/50" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-white/20 text-white font-black text-[10px] flex items-center justify-center">
+                  <User size={12} />
+                </div>
+              )}
+              <span>Enter Portal</span>
+              <ArrowRight size={14} />
+            </Link>
+          ) : (
+            <Link
+              href="/alumni/login"
+              className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#C41E3A] via-[#b01630] to-[#003D7A] hover:from-[#d31c3a] hover:to-[#004e9a] transition-all duration-300 shadow-md shadow-black/20 hover:scale-105 active:scale-95"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         {/* Mobile Toggle Button */}
@@ -99,15 +140,27 @@ export default function LandingNav() {
               </a>
             ))}
           </div>
-          <Link
-            href="/alumni/login"
-            onClick={() => setMobileOpen(false)}
-            className="w-full text-center py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#C41E3A] to-[#003D7A] hover:opacity-90 transition active:scale-98 mt-2"
-          >
-            Sign In
-          </Link>
+          {alumni ? (
+            <Link
+              href="/alumni/feed"
+              onClick={() => setMobileOpen(false)}
+              className="w-full text-center py-3 rounded-xl text-sm font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-[#003D7A] to-[#C41E3A] hover:opacity-90 transition active:scale-98 mt-2 flex items-center justify-center gap-2 border border-white/20 shadow-lg"
+            >
+              <span>Welcome Back, {alumni.name.split(' ')[0]}</span>
+              <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <Link
+              href="/alumni/login"
+              onClick={() => setMobileOpen(false)}
+              className="w-full text-center py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#C41E3A] to-[#003D7A] hover:opacity-90 transition active:scale-98 mt-2"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
     </nav>
   );
 }
+

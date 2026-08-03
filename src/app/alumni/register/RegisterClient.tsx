@@ -10,9 +10,10 @@ import {
   Briefcase, Building, ChevronRight, ChevronLeft, 
   CheckCircle, ShieldAlert, Award, Calendar, BookOpen, MapPin
 } from 'lucide-react';
+import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 type Campus = { id: string; name: string; code: string };
-type AutocompleteOptions = { branches: string[]; courses: string[]; companies: string[] };
+type AutocompleteOptions = { branches: string[]; courses: string[] };
 
 export default function SelfRegisterPage() {
   const router = useRouter();
@@ -27,7 +28,6 @@ export default function SelfRegisterPage() {
   const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOptions>({
     branches: [],
     courses: [],
-    companies: [],
   });
 
   const [courseSelection, setCourseSelection] = useState('');
@@ -121,7 +121,6 @@ export default function SelfRegisterPage() {
           setAutocompleteOptions({
             branches: data.branches || [],
             courses: data.courses || [],
-            companies: data.companies || [],
           });
         }
       })
@@ -667,20 +666,14 @@ export default function SelfRegisterPage() {
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Current Company</label>
                       <div className="relative">
-                        <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                        <input
-                          type="text"
-                          list="companies-list"
-                          placeholder="e.g. Google India"
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
+                        <Building className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400 z-10 pointer-events-none" />
+                        <CompanyAutocomplete
                           value={formData.currentCompany}
-                          onChange={(e) => setFormData({ ...formData, currentCompany: e.target.value })}
+                          onChange={(val) => setFormData({ ...formData, currentCompany: val })}
+                          placeholder="e.g. Google India"
+                          name="currentCompany"
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
                         />
-                        <datalist id="companies-list">
-                          {autocompleteOptions.companies.map((c) => (
-                            <option key={c} value={c} />
-                          ))}
-                        </datalist>
                       </div>
                     </div>
 
