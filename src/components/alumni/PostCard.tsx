@@ -9,6 +9,7 @@ import { getInitials } from '@/lib/utils/avatar';
 import PostTextContent from './PostTextContent';
 import ImageGallery from './ImageGallery';
 import { toggleFollowAlumni } from '@/actions/alumni-follow';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Comment {
   id: string;
@@ -94,6 +95,7 @@ function shortenText(text: string, maxLength: number = 20): string {
 
 
 export default function PostCard({ post, currentUser, onDeleteSuccess, priority = false }: PostCardProps) {
+  const queryClient = useQueryClient();
   const [hasLiked, setHasLiked] = useState(post.hasLiked || false);
   const [likesCount, setLikesCount] = useState(post.likesCount ?? 0);
   const [showComments, setShowComments] = useState(false);
@@ -158,17 +160,51 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
     const nextState = !isFollowing;
     setIsFollowing(nextState);
 
+    // Optimistically update all posts by the same author in the query cache
+    const updateCache = (state: boolean) => {
+      queryClient.setQueriesData(
+        { queryKey: ['alumni-feed-posts'] },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              posts: page.posts.map((p: any) => {
+                if (p.author && p.author.id === post.author.id) {
+                  return {
+                    ...p,
+                    author: {
+                      ...p.author,
+                      isFollowing: state,
+                    },
+                  };
+                }
+                return p;
+              }),
+            })),
+          };
+        }
+      );
+    };
+
+    updateCache(nextState);
+
     try {
       const res = await toggleFollowAlumni(post.author.id);
       if (res.success) {
         toast.success(res.isFollowing ? 'Following user!' : 'Unfollowed user');
-        setIsFollowing(!!res.isFollowing);
+        const finalState = !!res.isFollowing;
+        setIsFollowing(finalState);
+        updateCache(finalState);
       } else {
         setIsFollowing(!nextState);
+        updateCache(!nextState);
         toast.error(res.error || 'Failed to update follow status');
       }
     } catch {
       setIsFollowing(!nextState);
+      updateCache(!nextState);
       toast.error('Failed to update follow status');
     }
   };
