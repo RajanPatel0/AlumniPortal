@@ -13,13 +13,27 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const selfOnly = searchParams.get('self') === 'true';
+    
+    let page = parseInt(searchParams.get('page') || '1', 10);
+    if (isNaN(page) || page <= 0) {
+      page = 1;
+    }
+    
+    let limit = parseInt(searchParams.get('limit') || '10', 10);
+    if (isNaN(limit) || limit <= 0) {
+      limit = 10;
+    }
+    
+    const skip = (page - 1) * limit;
 
-    const currentAlumniId = session.isAdmin ? null : session.alumni.id;
+    const currentAlumniId = session.isAdmin ? null : session.alumni?.id;
     const authorIdFilter = selfOnly ? (currentAlumniId || undefined) : undefined;
 
     const posts = await prisma.post.findMany({
       where: authorIdFilter ? { authorId: authorIdFilter } : undefined,
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         author: {
           select: {
@@ -68,6 +82,7 @@ export async function GET(req: NextRequest) {
           likesCount: post._count.likes,
           commentsCount: post._count.comments,
           hasLiked,
+          images: post.images.map((img) => ({ imageUrl: img.imageUrl })),
           media: post.images.length > 0 ? { type: 'image', url: post.images[0].imageUrl } : null,
           author: {
             id: post.postedByStaff.id,
@@ -92,6 +107,7 @@ export async function GET(req: NextRequest) {
           likesCount: post._count.likes,
           commentsCount: post._count.comments,
           hasLiked,
+          images: post.images.map((img) => ({ imageUrl: img.imageUrl })),
           media: post.images.length > 0 ? { type: 'image', url: post.images[0].imageUrl } : null,
           author: {
             id: post.author?.id || null,
@@ -106,7 +122,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({ posts: formattedPosts });
+    return NextResponse.json({ posts: formattedPosts, hasMore: formattedPosts.length === limit });
   } catch (error) {
     console.error('[API_GET_FEED_POSTS_ERROR]', error);
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
@@ -122,16 +138,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { content, imageUrl } = body;
+    const { content, imageUrl, imageUrls } = body;
 
-    if (!content && !imageUrl) {
+    if (!content && !imageUrl && (!imageUrls || imageUrls.length === 0)) {
       return NextResponse.json({ error: 'Content or Image is required' }, { status: 400 });
     }
 
     const newPost = await prisma.post.create({
       data: {
         content,
-        images: imageUrl ? { create: { imageUrl } } : undefined,
+        images: imageUrls && imageUrls.length > 0
+          ? { create: imageUrls.map((url: string) => ({ imageUrl: url })) }
+          : imageUrl
+            ? { create: { imageUrl } }
+            : undefined,
         authorId: alumni.id,
       },
       include: { images: true }

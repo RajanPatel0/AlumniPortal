@@ -17,18 +17,6 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-function formatDate(date: Date | string | null) {
-  if (!date) return '';
-  try {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      year: 'numeric'
-    });
-  } catch {
-    return String(date);
-  }
-}
-
 export default async function PublicProfilePage({ params }: Props) {
   const { id } = await params;
   const staff = await getAuthenticatedStaff();
@@ -82,6 +70,14 @@ export default async function PublicProfilePage({ params }: Props) {
           currentCompany: true
         }
       },
+      postedByStaff: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          email: true,
+        }
+      },
       images: true,
       likes: {
         where: { alumniId: currentAlumniId || '' },
@@ -93,12 +89,45 @@ export default async function PublicProfilePage({ params }: Props) {
     }
   });
 
-  const posts = postsData.map(post => ({
-    ...post,
-    likesCount: post._count.likes,
-    commentsCount: post._count.comments,
-    hasLiked: post.likes ? post.likes.length > 0 : false
-  }));
+  const posts = postsData.map(post => {
+    const author = post.postedByStaff 
+      ? {
+          id: post.postedByStaff.id,
+          name: post.postedByStaff.name,
+          batchYear: 0,
+          avatarUrl: undefined,
+          currentRole: post.postedByStaff.role,
+          currentCompany: "IKGPTU Staff",
+          isAdmin: true,
+        }
+      : post.author 
+        ? {
+            id: post.author.id,
+            name: post.author.name,
+            avatarUrl: post.author.avatarUrl || undefined,
+            batchYear: post.author.batchYear,
+            currentRole: post.author.currentRole || undefined,
+            currentCompany: post.author.currentCompany || undefined,
+            isAdmin: false,
+          }
+        : {
+            name: "Anonymous",
+            batchYear: 0,
+            isAdmin: false,
+          };
+
+    return {
+      id: post.id,
+      content: post.content || "",
+      createdAt: post.createdAt,
+      likesCount: post._count.likes,
+      commentsCount: post._count.comments,
+      hasLiked: post.likes ? post.likes.length > 0 : false,
+      images: post.images.map(img => ({ imageUrl: img.imageUrl })),
+      media: post.images.length > 0 ? { type: "image" as const, url: post.images[0].imageUrl } : undefined,
+      author,
+    };
+  });
 
   const activityPostsData = await prisma.post.findMany({
     where: {
@@ -128,6 +157,14 @@ export default async function PublicProfilePage({ params }: Props) {
           currentCompany: true
         }
       },
+      postedByStaff: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          email: true,
+        }
+      },
       images: true,
       likes: {
         where: { alumniId: currentAlumniId || '' },
@@ -139,12 +176,45 @@ export default async function PublicProfilePage({ params }: Props) {
     }
   });
 
-  const activityPosts = activityPostsData.map(post => ({
-    ...post,
-    likesCount: post._count.likes,
-    commentsCount: post._count.comments,
-    hasLiked: post.likes ? post.likes.length > 0 : false
-  }));
+  const activityPosts = activityPostsData.map(post => {
+    const author = post.postedByStaff 
+      ? {
+          id: post.postedByStaff.id,
+          name: post.postedByStaff.name,
+          batchYear: 0,
+          avatarUrl: undefined,
+          currentRole: post.postedByStaff.role,
+          currentCompany: "IKGPTU Staff",
+          isAdmin: true,
+        }
+      : post.author 
+        ? {
+            id: post.author.id,
+            name: post.author.name,
+            avatarUrl: post.author.avatarUrl || undefined,
+            batchYear: post.author.batchYear,
+            currentRole: post.author.currentRole || undefined,
+            currentCompany: post.author.currentCompany || undefined,
+            isAdmin: false,
+          }
+        : {
+            name: "Anonymous",
+            batchYear: 0,
+            isAdmin: false,
+          };
+
+    return {
+      id: post.id,
+      content: post.content || "",
+      createdAt: post.createdAt,
+      likesCount: post._count.likes,
+      commentsCount: post._count.comments,
+      hasLiked: post.likes ? post.likes.length > 0 : false,
+      images: post.images.map(img => ({ imageUrl: img.imageUrl })),
+      media: post.images.length > 0 ? { type: "image" as const, url: post.images[0].imageUrl } : undefined,
+      author,
+    };
+  });
 
   const currentUser = staff
     ? { id: staff.id, name: staff.name, isAdmin: staff.role === 'ADMIN' }
