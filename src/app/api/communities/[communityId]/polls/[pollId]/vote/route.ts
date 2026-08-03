@@ -14,8 +14,10 @@ export async function POST(
     const { optionId } = body;
 
     let alumniId: string | null = null;
-    const staff = await getAuthenticatedStaff();
-    const session = await getServerSession(alumniAuthConfig);
+    const [staff, session] = await Promise.all([
+      getAuthenticatedStaff(),
+      getServerSession(alumniAuthConfig),
+    ]);
 
     const userId = (session?.user as { id?: string } | undefined)?.id;
     if (userId) {

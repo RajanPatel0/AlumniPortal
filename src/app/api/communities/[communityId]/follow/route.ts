@@ -24,11 +24,14 @@ export async function POST(
     let alumniId: string | null = null;
     let staffId: string | null = null;
 
-    const staff = await getAuthenticatedStaff();
+    const [staff, session] = await Promise.all([
+      getAuthenticatedStaff(),
+      getServerSession(alumniAuthConfig),
+    ]);
+
     if (staff) {
       staffId = staff.id;
     } else {
-      const session = await getServerSession(alumniAuthConfig);
       const userId = (session?.user as { id?: string } | undefined)?.id;
       if (userId) {
         alumniId = userId;
@@ -47,17 +50,23 @@ export async function POST(
     });
 
     if (existingMember) {
-      await prisma.communityMember.update({
-        where: { id: existingMember.id },
-        data: { isFollowingNewsletter: Boolean(isFollowing) },
-      });
+      if (!isFollowing && existingMember.roleTag === "FOLLOWER") {
+        await prisma.communityMember.delete({
+          where: { id: existingMember.id },
+        });
+      } else {
+        await prisma.communityMember.update({
+          where: { id: existingMember.id },
+          data: { isFollowingNewsletter: Boolean(isFollowing) },
+        });
+      }
     } else {
       await prisma.communityMember.create({
         data: {
           communityId: community.id,
           alumniId,
           staffId,
-          roleTag: "MEMBER",
+          roleTag: "FOLLOWER",
           isFollowingNewsletter: Boolean(isFollowing),
         },
       });
