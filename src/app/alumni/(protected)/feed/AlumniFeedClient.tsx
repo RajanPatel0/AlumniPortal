@@ -26,24 +26,7 @@ import ProfileCompletionModal from './ProfileCompletionModal';
 import MyPostsModal from './MyPostsModal';
 import PostCard from '@/components/alumni/PostCard';
 
-export interface AlumniProfile {
-  id?: string;
-  name: string;
-  email: string;
-  batchYear: number;
-  branch: string;
-  college: string;
-  currentRole?: string;
-  currentCompany?: string;
-  city?: string;
-  avatarUrl?: string;
-  isAdmin?: boolean;
-  phone?: string;
-  bio?: string;
-  linkedinUrl?: string;
-  pincode?: string;
-  workExperience?: any[];
-}
+import { AlumniProfile } from '@/types/alumni';
 
 export interface FeedPost {
   id: string;

@@ -1,6 +1,10 @@
 'use client';
 import { apiFetch } from "@/lib/api";
-import CompanyAutocomplete from '@/components/CompanyAutocomplete';
+import dynamic from 'next/dynamic';
+
+const ExperienceModal = dynamic(() => import('@/components/alumni/ExperienceModal'), { ssr: false });
+const EducationModal = dynamic(() => import('@/components/alumni/EducationModal'), { ssr: false });
+const ProfileEditForm = dynamic(() => import('@/components/alumni/ProfileEditForm'), { ssr: false });
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,51 +15,8 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
-interface EducationItem {
-  id: string;
-  school: string;
-  degree: string;
-  fieldOfStudy?: string;
-  startDate: string;
-  endDate?: string;
-  isCurrent: boolean;
-  description?: string;
-}
-
-interface ExperienceItem {
-  id: string;
-  company: string;
-  title: string;
-  location?: string;
-  startDate: string;
-  endDate?: string;
-  isCurrent: boolean;
-  description?: string;
-}
-
-interface AlumniProfile {
-  id: string;
-  name: string;
-  email: string;
-  batchYear: number;
-  branch: string;
-  college: string;
-  course?: string;
-  phone?: string;
-  currentRole?: string;
-  currentCompany?: string;
-  city?: string;
-  country?: string;
-  pincode?: string;
-  mapVisibility?: 'PUBLIC' | 'ALUMNI_ONLY' | 'HIDDEN';
-  avatarUrl?: string;
-  bio?: string;
-  linkedinUrl?: string;
-  isRegistered?: boolean;
-  education?: EducationItem[];
-  workExperience?: ExperienceItem[];
-  campus?: { id: string; name: string } | null;
-}
+import { AlumniProfile, EducationItem, ExperienceItem } from '@/types/alumni';
+import { getInitials } from "@/lib/utils/avatar";
 
 function ProfilePageClient() {
   const [profile, setProfile] = useState<AlumniProfile | null>(null);
@@ -119,49 +80,6 @@ function ProfilePageClient() {
     fetchProfile();
   }, [fetchProfile]);
 
-  // Auto-resolve city name from pincode to prevent spelling anomalies
-  useEffect(() => {
-    if (!editingMode) return;
-    const pin = formData?.pincode?.trim();
-    const cntry = formData?.country?.trim() || 'India';
-
-    if (pin && pin.length >= 5) {
-      const controller = new AbortController();
-      const delayDebounce = setTimeout(async () => {
-        try {
-          const res = await apiFetch(
-            `/alumni/geocode-pincode?pincode=${encodeURIComponent(pin)}&country=${encodeURIComponent(cntry)}`,
-            { signal: controller.signal }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            if (data.city || data.country) {
-              setFormData((prev) => {
-                if (!prev) return null;
-                const nextData = { ...prev };
-                if (data.city) nextData.city = data.city;
-                if (data.country) nextData.country = data.country;
-                return nextData;
-              });
-              
-              const locationParts = [data.city, data.country].filter(Boolean).join(', ');
-              toast.success(`Resolved Location: ${locationParts}`);
-            }
-          }
-        } catch (err: any) {
-          if (err.name !== 'AbortError') {
-            console.error('Failed to auto-resolve location:', err);
-          }
-        }
-      }, 700);
-
-      return () => {
-        clearTimeout(delayDebounce);
-        controller.abort();
-      };
-    }
-  }, [formData?.pincode, formData?.country, editingMode]);
-
   const handleSave = async () => {
     if (!formData) return;
     setSaving(true);
@@ -172,17 +90,15 @@ function ProfilePageClient() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error('Update failed');
-      const updated = await res.json();
-      setProfile(prev => ({
-        ...prev,
-        ...updated.user,
-      }));
-      setFormData(prev => ({
-        ...prev,
-        ...updated.user,
-      }));
-      setEditingMode(false);
+      
+      // Invalidate react query cache for header and feed completeness checkers
       queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
+      
+      // Re-fetch the complete profile with education/experience details
+      await fetchProfile();
+      
+      setEditingMode(false);
+      router.refresh();
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error(error);
@@ -233,33 +149,6 @@ function ProfilePageClient() {
     }
   };
 
-  // Education CRUD
-  const saveEducation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEdu) return;
-
-    const isEdit = !!selectedEdu.id;
-    const url = '/alumni/education';
-    const method = isEdit ? 'PUT' : 'POST';
-
-    try {
-      const res = await apiFetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedEdu),
-      });
-
-      if (!res.ok) throw new Error('Save failed');
-      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
-      toast.success(isEdit ? 'Education updated!' : 'Education added!');
-      setEduModalOpen(false);
-      fetchProfile();
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to save education');
-    }
-  };
-
   const deleteEducation = async (eduId: string) => {
     if (!window.confirm('Are you sure you want to delete this education?')) return;
 
@@ -275,33 +164,6 @@ function ProfilePageClient() {
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete education');
-    }
-  };
-
-  // Experience CRUD
-  const saveExperience = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedExp) return;
-
-    const isEdit = !!selectedExp.id;
-    const url = '/alumni/experience';
-    const method = isEdit ? 'PUT' : 'POST';
-
-    try {
-      const res = await apiFetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedExp),
-      });
-
-      if (!res.ok) throw new Error('Save failed');
-      queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
-      toast.success(isEdit ? 'Experience updated!' : 'Experience added!');
-      setExpModalOpen(false);
-      fetchProfile();
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to save experience');
     }
   };
 
@@ -322,9 +184,6 @@ function ProfilePageClient() {
     }
   };
 
-  const getInitials = (nameStr: string) => {
-    return nameStr ? nameStr.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'A';
-  };
 
   const formatDateStr = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -508,138 +367,13 @@ function ProfilePageClient() {
                 )}
               </>
             ) : (
-              // Edit inputs for basic info
-              <div className="space-y-3 w-full max-w-xl pt-16 md:pt-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={formData?.name || ''}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Contact Phone</label>
-                    <input
-                      type="text"
-                      value={formData?.phone || ''}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Current Job Title</label>
-                    <input
-                      type="text"
-                      value={formData?.currentRole || ''}
-                      onChange={(e) => handleInputChange('currentRole', e.target.value)}
-                      placeholder="e.g. Senior Architect"
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Current Company</label>
-                    <CompanyAutocomplete
-                      value={formData?.currentCompany || ''}
-                      onChange={(val) => handleInputChange('currentCompany', val)}
-                      placeholder="e.g. Google India"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">LinkedIn Profile URL</label>
-                  <input
-                    type="url"
-                    value={formData?.linkedinUrl || ''}
-                    onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
-                    placeholder="e.g. https://linkedin.com/in/username"
-                    className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">About / Bio</label>
-                  <textarea
-                    rows={3}
-                    value={formData?.bio || ''}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
-                    placeholder="Write a brief professional bio about your achievements, interests, or background..."
-                    className="w-full px-3 py-2 text-slate-800 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">City</label>
-                    <input
-                      type="text"
-                      value={formData?.city || ''}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                      placeholder="e.g. Chandigarh"
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Country</label>
-                    <input
-                      type="text"
-                      value={formData?.country || ''}
-                      onChange={(e) => handleInputChange('country', e.target.value)}
-                      placeholder="e.g. India"
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Pincode</label>
-                    <input
-                      type="text"
-                      value={formData?.pincode || ''}
-                      onChange={(e) => handleInputChange('pincode', e.target.value)}
-                      placeholder="e.g. 160012"
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Map Visibility</label>
-                    <select
-                      value={formData?.mapVisibility || 'PUBLIC'}
-                      onChange={(e) => handleInputChange('mapVisibility', e.target.value)}
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A] bg-white"
-                    >
-                      <option value="PUBLIC">Public</option>
-                      <option value="ALUMNI_ONLY">Alumni Only</option>
-                      <option value="HIDDEN">Hidden</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Branch</label>
-                    <input
-                      type="text"
-                      value={formData?.branch || ''}
-                      onChange={(e) => handleInputChange('branch', e.target.value)}
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Batch Year</label>
-                    <input
-                      type="number"
-                      value={formData?.batchYear || ''}
-                      onChange={(e) => handleInputChange('batchYear', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-1.5 text-slate-800 text-sm font-semibold border border-slate-200 rounded-lg focus:outline-none focus:border-[#003D7A]"
-                    />
-                  </div>
-                </div>
-              </div>
+              formData && (
+                <ProfileEditForm
+                  formData={formData}
+                  setFormData={setFormData}
+                  onChange={handleInputChange}
+                />
+              )
             )}
           </div>
         </div>
@@ -840,212 +574,20 @@ function ProfilePageClient() {
       </div>
 
       {/* Experience CRUD Modal */}
-      {expModalOpen && selectedExp && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-md font-bold text-[#003D7A]">
-                {selectedExp.id ? 'Edit Experience' : 'Add Experience'}
-              </h3>
-              <button onClick={() => setExpModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={saveExperience} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Company / Organization *</label>
-                <CompanyAutocomplete
-                  value={selectedExp.company || ''}
-                  onChange={(val) => setSelectedExp({ ...selectedExp, company: val })}
-                  placeholder="e.g. Microsoft"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Job Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={selectedExp.title || ''}
-                  onChange={(e) => setSelectedExp({ ...selectedExp, title: e.target.value })}
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Location</label>
-                <input
-                  type="text"
-                  value={selectedExp.location || ''}
-                  onChange={(e) => setSelectedExp({ ...selectedExp, location: e.target.value })}
-                  placeholder="e.g. Bangalore, India"
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Start Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={selectedExp.startDate || ''}
-                    onChange={(e) => setSelectedExp({ ...selectedExp, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    disabled={selectedExp.isCurrent}
-                    value={selectedExp.isCurrent ? '' : selectedExp.endDate || ''}
-                    onChange={(e) => setSelectedExp({ ...selectedExp, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A] disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  checked={!!selectedExp.isCurrent}
-                  onChange={(e) => setSelectedExp({ ...selectedExp, isCurrent: e.target.checked })}
-                  className="w-4 h-4 text-[#003D7A]"
-                />
-                <span className="text-xs font-semibold text-slate-600">Currently working in this role</span>
-              </label>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={selectedExp.description || ''}
-                  onChange={(e) => setSelectedExp({ ...selectedExp, description: e.target.value })}
-                  placeholder="Key responsibilities and achievements..."
-                  className="w-full px-3 py-1.5 border rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="flex-1 py-2 bg-[#003D7A] hover:bg-[#002b56] text-white rounded-lg text-xs font-bold transition">
-                  Save
-                </button>
-                <button type="button" onClick={() => setExpModalOpen(false)} className="flex-1 py-2 border rounded-lg text-xs font-bold text-slate-600">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ExperienceModal
+        isOpen={expModalOpen}
+        onClose={() => setExpModalOpen(false)}
+        experience={selectedExp}
+        onSuccess={fetchProfile}
+      />
 
       {/* Education CRUD Modal */}
-      {eduModalOpen && selectedEdu && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-md font-bold text-[#003D7A]">
-                {selectedEdu.id ? 'Edit Education' : 'Add Education'}
-              </h3>
-              <button onClick={() => setEduModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={saveEducation} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">School / University *</label>
-                <input
-                  type="text"
-                  required
-                  value={selectedEdu.school || ''}
-                  onChange={(e) => setSelectedEdu({ ...selectedEdu, school: e.target.value })}
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Degree / Qualification *</label>
-                <input
-                  type="text"
-                  required
-                  value={selectedEdu.degree || ''}
-                  onChange={(e) => setSelectedEdu({ ...selectedEdu, degree: e.target.value })}
-                  placeholder="e.g. MBA, MS"
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Field of Study</label>
-                <input
-                  type="text"
-                  value={selectedEdu.fieldOfStudy || ''}
-                  onChange={(e) => setSelectedEdu({ ...selectedEdu, fieldOfStudy: e.target.value })}
-                  placeholder="e.g. Information Technology"
-                  className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Start Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={selectedEdu.startDate || ''}
-                    onChange={(e) => setSelectedEdu({ ...selectedEdu, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    disabled={selectedEdu.isCurrent}
-                    value={selectedEdu.isCurrent ? '' : selectedEdu.endDate || ''}
-                    onChange={(e) => setSelectedEdu({ ...selectedEdu, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg text-sm text-slate-800 focus:outline-none focus:border-[#003D7A] disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  checked={!!selectedEdu.isCurrent}
-                  onChange={(e) => setSelectedEdu({ ...selectedEdu, isCurrent: e.target.checked })}
-                  className="w-4 h-4 text-[#003D7A]"
-                />
-                <span className="text-xs font-semibold text-slate-600">Currently studying here</span>
-              </label>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={selectedEdu.description || ''}
-                  onChange={(e) => setSelectedEdu({ ...selectedEdu, description: e.target.value })}
-                  placeholder="Additional details, grades, honors..."
-                  className="w-full px-3 py-1.5 border rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#003D7A]"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="flex-1 py-2 bg-[#003D7A] hover:bg-[#002b56] text-white rounded-lg text-xs font-bold transition">
-                  Save
-                </button>
-                <button type="button" onClick={() => setEduModalOpen(false)} className="flex-1 py-2 border rounded-lg text-xs font-bold text-slate-600">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EducationModal
+        isOpen={eduModalOpen}
+        onClose={() => setEduModalOpen(false)}
+        education={selectedEdu}
+        onSuccess={fetchProfile}
+      />
     </div>
   );
 }
