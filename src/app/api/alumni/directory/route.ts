@@ -1,34 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
-import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const alumniToken = cookieStore.get('alumniAccessToken')?.value;
-  const staffToken = cookieStore.get('accessToken')?.value;
-
-  if (!alumniToken && !staffToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let authorized = false;
-  if (alumniToken) {
-    try {
-      verifyAlumniAccessToken(alumniToken);
-      authorized = true;
-    } catch {}
-  }
-  if (!authorized && staffToken) {
-    try {
-      verifyAccessToken(staffToken);
-      authorized = true;
-    } catch {}
-  }
-
-  if (!authorized) {
+  const identity = await getCurrentAlumniOrStaff();
+  if (!identity) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -96,6 +73,8 @@ export async function GET(req: NextRequest) {
       orderBy = [{ name: 'asc' }];
     }
 
+    const viewerId = identity.isAdmin ? null : identity.alumni.id;
+
     const [total, alumni] = await Promise.all([
       prisma.alumni.count({ where }),
       prisma.alumni.findMany({
@@ -112,6 +91,8 @@ export async function GET(req: NextRequest) {
           college: true,
           course: true,
           linkedinUrl: true,
+          followersCount: true,
+          followingCount: true,
         },
         orderBy,
         skip,
@@ -119,8 +100,27 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    const alumniIds = alumni.map((person) => person.id);
+
+    let followedIds = new Set<string>();
+    if (viewerId && alumniIds.length > 0) {
+      const follows = await prisma.alumniFollow.findMany({
+        where: {
+          followerId: viewerId,
+          followingId: { in: alumniIds },
+        },
+        select: { followingId: true },
+      });
+      followedIds = new Set(follows.map((f) => f.followingId));
+    }
+
+    const formattedAlumni = alumni.map((person) => ({
+      ...person,
+      isFollowing: followedIds.has(person.id),
+    }));
+
     return NextResponse.json({
-      alumni,
+      alumni: formattedAlumni,
       total,
       page,
       totalPages: Math.ceil(total / limit),

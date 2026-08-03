@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentAlumniOrStaff } from "@/lib/auth/getCurrentAlumni";
 import { prisma } from "@/lib/prisma";
-import AlumniFeedClient, { AlumniProfile, FeedPost } from "./AlumniFeedClient";
+import AlumniFeedClient, { FeedPost } from "./AlumniFeedClient";
+import { AlumniProfile } from "@/types/alumni";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,16 @@ export default async function FeedPage() {
         bio: alumni.bio || undefined,
         linkedinUrl: alumni.linkedinUrl || undefined,
         pincode: alumni.pincode || undefined,
-        workExperience: alumni.workExperience,
+        workExperience: alumni.workExperience.map((exp) => ({
+          id: exp.id,
+          company: exp.company,
+          title: exp.title,
+          location: exp.location || undefined,
+          startDate: exp.startDate.toISOString(),
+          endDate: exp.endDate ? exp.endDate.toISOString() : undefined,
+          isCurrent: exp.isCurrent,
+          description: exp.description || undefined,
+        })),
         isAdmin: false,
       };
     }
@@ -103,6 +113,22 @@ export default async function FeedPage() {
     },
   });
 
+  const authorIds = Array.from(new Set(
+    postsFromDb.map((p) => p.author?.id).filter((id): id is string => !!id)
+  ));
+
+  let followedIds = new Set<string>();
+  if (currentAlumniId && authorIds.length > 0) {
+    const follows = await prisma.alumniFollow.findMany({
+      where: {
+        followerId: currentAlumniId,
+        followingId: { in: authorIds },
+      },
+      select: { followingId: true },
+    });
+    followedIds = new Set(follows.map((f) => f.followingId));
+  }
+
   const posts: FeedPost[] = postsFromDb.map((post) => {
     const hasLiked = post.likes ? post.likes.length > 0 : false;
     const dateFormatted = post.createdAt.toLocaleDateString("en-US", {
@@ -129,6 +155,7 @@ export default async function FeedPage() {
           currentRole: post.postedByStaff.role,
           currentCompany: "IKGPTU Staff",
           isAdmin: true,
+          isFollowing: false,
         },
       };
     } else {
@@ -150,6 +177,7 @@ export default async function FeedPage() {
           currentRole: post.author?.currentRole || undefined,
           currentCompany: post.author?.currentCompany || undefined,
           isAdmin: false,
+          isFollowing: post.author?.id ? followedIds.has(post.author.id) : false,
         },
       };
     }

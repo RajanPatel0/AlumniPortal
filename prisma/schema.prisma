@@ -257,6 +257,11 @@ model Alumni {
   communityPollVotes   CommunityPollVote[]
   communityBlogs       CommunityBlog[]
 
+  followersCount      Int              @default(0)
+  followingCount      Int              @default(0)
+  followers           AlumniFollow[]   @relation("AlumniFollowing")
+  following           AlumniFollow[]   @relation("AlumniFollower")
+
   @@index([batchYear])
   @@index([branch])
   @@index([college])
@@ -965,6 +970,20 @@ model NormalizationMergeLog {
   @@index([field])
   @@index([createdAt])
   @@map("normalization_merge_logs")
+}
+
+model AlumniFollow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    Alumni   @relation("AlumniFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   Alumni   @relation("AlumniFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("alumni_follows")
 }
 
 

@@ -68,6 +68,22 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const authorIds = Array.from(new Set(
+      posts.map((p) => p.author?.id).filter((id): id is string => !!id)
+    ));
+
+    let followedIds = new Set<string>();
+    if (currentAlumniId && authorIds.length > 0) {
+      const follows = await prisma.alumniFollow.findMany({
+        where: {
+          followerId: currentAlumniId,
+          followingId: { in: authorIds },
+        },
+        select: { followingId: true },
+      });
+      followedIds = new Set(follows.map((f) => f.followingId));
+    }
+
     const formattedPosts = posts.map((post) => {
       const hasLiked = post.likes ? post.likes.length > 0 : false;
       if (post.postedByStaff) {
@@ -92,6 +108,7 @@ export async function GET(req: NextRequest) {
             currentRole: post.postedByStaff.role,
             currentCompany: 'IKGPTU Staff',
             isAdmin: true,
+            isFollowing: false,
           },
         };
       } else {
@@ -117,6 +134,7 @@ export async function GET(req: NextRequest) {
             currentRole: post.author?.currentRole || 'Alumni',
             currentCompany: post.author?.currentCompany || '',
             isAdmin: false,
+            isFollowing: post.author?.id ? followedIds.has(post.author.id) : false,
           },
         };
       }

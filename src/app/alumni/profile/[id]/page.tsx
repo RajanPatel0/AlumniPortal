@@ -10,6 +10,7 @@ import AlumniBottomNav from '@/components/AlumniBottomNav';
 import ProfileTabs from './ProfileTabs';
 import { cookies } from 'next/headers';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+import ProfileFollowSection from '@/components/alumni/ProfileFollowSection';
 
 
 
@@ -38,6 +39,19 @@ export default async function PublicProfilePage({ params }: Props) {
         });
       }
     } catch {}
+  }
+
+  let initialIsFollowing = false;
+  if (currentAlumniId && currentAlumniId !== id) {
+    const followCheck = await prisma.alumniFollow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentAlumniId,
+          followingId: id,
+        },
+      },
+    });
+    initialIsFollowing = !!followCheck;
   }
 
   const alumni = await prisma.alumni.findUnique({
@@ -305,6 +319,14 @@ export default async function PublicProfilePage({ params }: Props) {
                     </span>
                   )}
                 </div>
+
+                <ProfileFollowSection
+                  profileId={alumni.id}
+                  currentUserId={currentAlumniId}
+                  initialIsFollowing={initialIsFollowing}
+                  initialFollowersCount={alumni.followersCount || 0}
+                  initialFollowingCount={alumni.followingCount || 0}
+                />
               </div>
 
               {/* Action Buttons */}

@@ -41,6 +41,8 @@ export interface AlumniProfile {
   isRegistered?: boolean;
   isAdmin?: boolean;
   role?: string;
+  followersCount?: number;
+  followingCount?: number;
   education?: EducationItem[];
   workExperience?: ExperienceItem[];
   campus?: { id: string; name: string } | null;
