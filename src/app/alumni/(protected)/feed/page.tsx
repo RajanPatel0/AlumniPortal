@@ -35,19 +35,30 @@ export default async function FeedPage() {
       };
     }
   } else {
-    profile = {
-      id: session.alumni.id,
-      name: session.alumni.name,
-      email: session.alumni.email,
-      batchYear: session.alumni.batchYear,
-      branch: session.alumni.branch,
-      college: session.alumni.college,
-      currentRole: session.alumni.currentRole || undefined,
-      currentCompany: session.alumni.currentCompany || undefined,
-      city: session.alumni.city || undefined,
-      avatarUrl: session.alumni.avatarUrl || undefined,
-      isAdmin: false,
-    };
+    const alumni = await prisma.alumni.findUnique({
+      where: { id: session.alumni.id },
+      include: { workExperience: true },
+    });
+    if (alumni) {
+      profile = {
+        id: alumni.id,
+        name: alumni.name,
+        email: alumni.email,
+        batchYear: alumni.batchYear,
+        branch: alumni.branch,
+        college: alumni.college,
+        currentRole: alumni.currentRole || undefined,
+        currentCompany: alumni.currentCompany || undefined,
+        city: alumni.city || undefined,
+        avatarUrl: alumni.avatarUrl || undefined,
+        phone: alumni.phone || undefined,
+        bio: alumni.bio || undefined,
+        linkedinUrl: alumni.linkedinUrl || undefined,
+        pincode: alumni.pincode || undefined,
+        workExperience: alumni.workExperience,
+        isAdmin: false,
+      };
+    }
   }
 
   if (!profile) {

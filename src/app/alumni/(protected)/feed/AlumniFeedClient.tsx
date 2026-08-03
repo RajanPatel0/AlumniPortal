@@ -38,6 +38,11 @@ export interface AlumniProfile {
   city?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
+  phone?: string;
+  bio?: string;
+  linkedinUrl?: string;
+  pincode?: string;
+  workExperience?: any[];
 }
 
 export interface FeedPost {
@@ -247,7 +252,6 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
     promotionsSuppressClick.current = false;
     promotionsDragStartX.current = event.clientX;
     promotionsDragStartScrollLeft.current = carousel.scrollLeft;
-    carousel.setPointerCapture(event.pointerId);
   };
 
   const handlePromotionsPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -263,7 +267,6 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
 
   const handlePromotionsPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     promotionsIsDragging.current = false;
-    promotionsRef.current?.releasePointerCapture(event.pointerId);
   };
 
   const handlePromotionsClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
