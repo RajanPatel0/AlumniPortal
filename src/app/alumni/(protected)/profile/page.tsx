@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 const ExperienceModal = dynamic(() => import('@/components/alumni/ExperienceModal'), { ssr: false });
 const EducationModal = dynamic(() => import('@/components/alumni/EducationModal'), { ssr: false });
 const ProfileEditForm = dynamic(() => import('@/components/alumni/ProfileEditForm'), { ssr: false });
+import ProfileFollowSection from '@/components/alumni/ProfileFollowSection';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -355,6 +356,18 @@ function ProfilePageClient() {
                     </a>
                   )}
                 </div>
+
+                {profile?.id && (
+                  <div className="mt-3">
+                    <ProfileFollowSection
+                      profileId={profile.id}
+                      currentUserId={profile.id}
+                      initialIsFollowing={false}
+                      initialFollowersCount={profile.followersCount || 0}
+                      initialFollowingCount={profile.followingCount || 0}
+                    />
+                  </div>
+                )}
 
                 {profile?.bio && (
                   <div className="mt-3.5 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-normal">
