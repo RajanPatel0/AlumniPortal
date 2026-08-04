@@ -548,7 +548,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
                 placeholder="Write a comment..."
                 value={newCommentText}
                 onChange={(e) => setNewCommentText(e.target.value)}
-                className="flex-1 px-4 py-2 text-xs bg-slate-50 border border-slate-200 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl transition font-medium"
+                className="flex-1 px-4 py-2 text-xs text-black bg-slate-50 border border-slate-200 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl transition font-medium"
               />
               <button
                 type="submit"

@@ -580,10 +580,11 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
                     {promo.desc}
                   </p>
                 </div>
-                <Link href={promo.href} className="w-full mt-4">
-                  <button className={`w-full py-1.5 ${promo.theme.btnBg} text-white text-[11px] font-bold rounded-lg transition active:scale-[0.98]`}>
-                    {promo.btn}
-                  </button>
+                <Link 
+                  href={promo.href} 
+                  className={`w-full mt-4 py-1.5 ${promo.theme.btnBg} text-white text-[11px] font-bold rounded-lg transition active:scale-[0.98] flex items-center justify-center text-center`}
+                >
+                  {promo.btn}
                 </Link>
               </div>
             ))}
