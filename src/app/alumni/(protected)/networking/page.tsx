@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from "@/lib/api";
 import Link from 'next/link';
-import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
+import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X, Check, PlusCircle } from 'lucide-react';
 import { ComboboxSelect, ComboboxOption } from '@/components/ComboboxSelect';
+import { toggleFollowAlumni } from '@/actions/alumni-follow';
+import toast from 'react-hot-toast';
 
 // Inline LinkedIn icon
 function LinkedinIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
@@ -29,6 +31,9 @@ interface DirectoryAlumni {
   college: string;
   course?: string;
   linkedinUrl?: string;
+  followersCount?: number;
+  followingCount?: number;
+  isFollowing?: boolean;
 }
 
 interface FilterMeta {
@@ -69,12 +74,23 @@ export default function NetworkingPage() {
     years: [],
   });
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   // Refs to track debounce timer and whether filters changed (vs. page-only change)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFilterChange = useRef(false);
 
   // Fetch Directory Metadata once on mount
   useEffect(() => {
+    apiFetch('/alumni/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setCurrentUser(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load user info:', err));
+
     apiFetch('/alumni/directory/meta')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -164,6 +180,42 @@ export default function NetworkingPage() {
     setBatchYear('All');
     setSort('name_asc');
     setPage(1);
+  };
+
+  const handleCardFollowToggle = async (targetId: string) => {
+    const previousAlumni = [...alumni];
+
+    // Optimistic Update
+    const updatedAlumni = alumni.map((person) => {
+      if (person.id !== targetId) return person;
+      const nextFollowing = !person.isFollowing;
+      return {
+        ...person,
+        isFollowing: nextFollowing,
+        followersCount: (person.followersCount || 0) + (nextFollowing ? 1 : -1),
+      };
+    });
+    setAlumni(updatedAlumni);
+
+    try {
+      const res = await toggleFollowAlumni(targetId);
+      if (res.success) {
+        toast.success(res.isFollowing ? 'Following user!' : 'Unfollowed user');
+        setAlumni((prev) =>
+          prev.map((person) =>
+            person.id === targetId
+              ? { ...person, isFollowing: res.isFollowing }
+              : person
+          )
+        );
+      } else {
+        setAlumni(previousAlumni);
+        toast.error(res.error || 'Failed to update follow status');
+      }
+    } catch {
+      setAlumni(previousAlumni);
+      toast.error('Failed to update follow status');
+    }
   };
 
   return (
@@ -483,34 +535,60 @@ export default function NetworkingPage() {
                     <Briefcase size={12} className="text-[#003D7A] flex-shrink-0" />
                     <span className="truncate">{person.course || 'B.Tech'} · {person.college}</span>
                   </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="text-[#003D7A] font-extrabold">{person.followersCount || 0}</span> Followers
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-3 border-t border-slate-100">
-                  <Link
-                    href={`/alumni/profile/${person.id}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-[#003D7A] text-[#003D7A] text-xs font-bold rounded-lg hover:bg-[#003D7A] hover:text-white transition"
-                  >
-                    <User size={13} />
-                    View Profile
-                  </Link>
-                  {person.linkedinUrl ? (
-                    <a
-                      href={person.linkedinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[#0A66C2] text-white text-xs font-bold rounded-lg hover:bg-[#084398] transition"
+                <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/alumni/profile/${person.id}`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-[#003D7A] text-[#003D7A] text-xs font-bold rounded-lg hover:bg-[#003D7A] hover:text-white transition"
                     >
-                      <LinkedinIcon size={13} />
-                      LinkedIn
-                    </a>
-                  ) : (
+                      <User size={13} />
+                      View Profile
+                    </Link>
+                    {person.linkedinUrl ? (
+                      <a
+                        href={person.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[#0A66C2] text-white text-xs font-bold rounded-lg hover:bg-[#084398] transition"
+                      >
+                        <LinkedinIcon size={13} />
+                        LinkedIn
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed border-none"
+                      >
+                        <LinkedinIcon size={13} />
+                        LinkedIn
+                      </button>
+                    )}
+                  </div>
+
+                  {currentUser && currentUser.id !== person.id && (
                     <button
-                      disabled
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed"
+                      onClick={() => handleCardFollowToggle(person.id)}
+                      className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg cursor-pointer transition border-none ${
+                        person.isFollowing
+                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
                     >
-                      <LinkedinIcon size={13} />
-                      LinkedIn
+                      {person.isFollowing ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" /> Following
+                        </>
+                      ) : (
+                        <>
+                          <PlusCircle className="w-3.5 h-3.5" /> Follow
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

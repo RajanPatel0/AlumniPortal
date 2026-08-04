@@ -10,6 +10,7 @@ import AlumniBottomNav from '@/components/AlumniBottomNav';
 import ProfileTabs from './ProfileTabs';
 import { cookies } from 'next/headers';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+import ProfileFollowSection from '@/components/alumni/ProfileFollowSection';
 
 
 
@@ -38,6 +39,19 @@ export default async function PublicProfilePage({ params }: Props) {
         });
       }
     } catch {}
+  }
+
+  let initialIsFollowing = false;
+  if (currentAlumniId && currentAlumniId !== id) {
+    const followCheck = await prisma.alumniFollow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentAlumniId,
+          followingId: id,
+        },
+      },
+    });
+    initialIsFollowing = !!followCheck;
   }
 
   const alumni = await prisma.alumni.findUnique({
@@ -230,6 +244,11 @@ export default async function PublicProfilePage({ params }: Props) {
 
   const initial = alumni.name.charAt(0).toUpperCase();
 
+  // Resolve current job details from active work experience if present
+  const activeExp = alumni.workExperience.find(exp => exp.isCurrent);
+  const displayRole = activeExp ? activeExp.title : alumni.currentRole;
+  const displayCompany = activeExp ? activeExp.company : alumni.currentCompany;
+
   return (
     <div className="min-h-screen bg-slate-50/60 pb-28 antialiased selection:bg-[#C41E3A]/10">
       <AlumniHeader isStaff={!!staff} />
@@ -249,7 +268,7 @@ export default async function PublicProfilePage({ params }: Props) {
               <span>Verified Alumni Profile</span>
             </div>
           </div>
-
+ 
           <div className="px-6 sm:px-10 pb-10 relative">
             {/* Avatar Circle */}
             <div className="flex justify-start -mt-20 mb-6">
@@ -268,7 +287,7 @@ export default async function PublicProfilePage({ params }: Props) {
                 </div>
               </div>
             </div>
-
+ 
             {/* Core Info */}
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
               <div className="space-y-2.5">
@@ -280,11 +299,11 @@ export default async function PublicProfilePage({ params }: Props) {
                     </span>
                   )}
                 </h1>
-
-                {alumni.currentRole && (
+ 
+                {displayRole && (
                   <p className="text-lg font-bold text-slate-700 flex items-center gap-2">
                     <Briefcase size={18} className="text-[#C41E3A] shrink-0" />
-                    <span>{alumni.currentRole} {alumni.currentCompany && `at ${alumni.currentCompany}`}</span>
+                    <span>{displayRole} {displayCompany && `at ${displayCompany}`}</span>
                   </p>
                 )}
 
@@ -300,6 +319,14 @@ export default async function PublicProfilePage({ params }: Props) {
                     </span>
                   )}
                 </div>
+
+                <ProfileFollowSection
+                  profileId={alumni.id}
+                  currentUserId={currentAlumniId}
+                  initialIsFollowing={initialIsFollowing}
+                  initialFollowersCount={alumni.followersCount || 0}
+                  initialFollowingCount={alumni.followingCount || 0}
+                />
               </div>
 
               {/* Action Buttons */}

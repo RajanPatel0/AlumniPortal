@@ -238,15 +238,67 @@ export function CommunityTabClient({
   };
 
   const handlePollVote = async (pollId: string, optionId: string) => {
-    try {
-      await apiFetch(`/communities/${communityId}/polls/${pollId}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ optionId }),
+    const previousUpdates = [...updates];
+
+    // Optimistic Update
+    const updatedUpdates = updates.map((update) => {
+      if (!update.poll || update.poll.id !== pollId) return update;
+
+      const poll = update.poll;
+      const options = poll.options.map((opt: any) => {
+        if (opt.id === optionId) {
+          const nextHasVoted = !opt.hasVoted;
+          return {
+            ...opt,
+            hasVoted: nextHasVoted,
+            voteCount: opt.voteCount + (nextHasVoted ? 1 : -1),
+          };
+        }
+        if (!poll.allowMultiple && opt.hasVoted) {
+          return {
+            ...opt,
+            hasVoted: false,
+            voteCount: Math.max(0, opt.voteCount - 1),
+          };
+        }
+        return opt;
       });
+
+      const totalVotes = options.reduce(
+        (sum: number, opt: any) => sum + opt.voteCount,
+        0,
+      );
+
+      return {
+        ...update,
+        poll: {
+          ...poll,
+          totalVotes,
+          options,
+        },
+      };
+    });
+
+    setUpdates(updatedUpdates);
+
+    try {
+      const res = await apiFetch(
+        `/communities/${communityId}/polls/${pollId}/vote`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ optionId }),
+        },
+      );
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || "Failed to vote");
+      }
       router.refresh();
     } catch (err) {
       console.error("Poll vote failed:", err);
+      toast.error("Failed to register vote");
+      setUpdates(previousUpdates);
     }
   };
 

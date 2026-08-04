@@ -12,7 +12,8 @@ export interface ProfileCompletenessResult {
  * 2. (Current Role & Company) OR (>=1 Work Experience) (+30%)
  * 3. Location (City or Pincode) (+20%)
  * 4. Phone Number (+15%)
- * 5. Bio or LinkedIn Profile (+15%)
+ * 5. Bio (+5%)
+ * 6. LinkedIn Profile (+10%)
  */
 export function calculateProfileCompleteness(alumni: any): ProfileCompletenessResult {
   if (!alumni) {
@@ -67,14 +68,22 @@ export function calculateProfileCompleteness(alumni: any): ProfileCompletenessRe
     missing.push('Phone Number');
   }
 
-  // 5. Bio or LinkedIn Profile (+15%)
+  // 5. Bio (+5%)
   const hasBio = Boolean(alumni.bio && typeof alumni.bio === 'string' && alumni.bio.trim().length > 0);
-  const hasLinkedin = Boolean(alumni.linkedinUrl && typeof alumni.linkedinUrl === 'string' && alumni.linkedinUrl.trim().length > 0);
-  if (hasBio || hasLinkedin) {
-    score += 15;
-    completed.push('Bio / LinkedIn Profile');
+  if (hasBio) {
+    score += 5;
+    completed.push('Bio');
   } else {
-    missing.push('Bio / LinkedIn Profile');
+    missing.push('Bio');
+  }
+
+  // 6. LinkedIn Profile (+10%)
+  const hasLinkedin = Boolean(alumni.linkedinUrl && typeof alumni.linkedinUrl === 'string' && alumni.linkedinUrl.trim().length > 0);
+  if (hasLinkedin) {
+    score += 10;
+    completed.push('LinkedIn Profile');
+  } else {
+    missing.push('LinkedIn Profile');
   }
 
   return {

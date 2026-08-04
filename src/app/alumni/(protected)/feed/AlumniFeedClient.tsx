@@ -26,19 +26,7 @@ import ProfileCompletionModal from './ProfileCompletionModal';
 import MyPostsModal from './MyPostsModal';
 import PostCard from '@/components/alumni/PostCard';
 
-export interface AlumniProfile {
-  id?: string;
-  name: string;
-  email: string;
-  batchYear: number;
-  branch: string;
-  college: string;
-  currentRole?: string;
-  currentCompany?: string;
-  city?: string;
-  avatarUrl?: string;
-  isAdmin?: boolean;
-}
+import { AlumniProfile } from '@/types/alumni';
 
 export interface FeedPost {
   id: string;
@@ -247,7 +235,6 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
     promotionsSuppressClick.current = false;
     promotionsDragStartX.current = event.clientX;
     promotionsDragStartScrollLeft.current = carousel.scrollLeft;
-    carousel.setPointerCapture(event.pointerId);
   };
 
   const handlePromotionsPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -263,7 +250,6 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
 
   const handlePromotionsPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     promotionsIsDragging.current = false;
-    promotionsRef.current?.releasePointerCapture(event.pointerId);
   };
 
   const handlePromotionsClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {

@@ -8,6 +8,8 @@ import { toast } from 'react-hot-toast';
 import { getInitials } from '@/lib/utils/avatar';
 import PostTextContent from './PostTextContent';
 import ImageGallery from './ImageGallery';
+import { toggleFollowAlumni } from '@/actions/alumni-follow';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Comment {
   id: string;
@@ -42,6 +44,7 @@ interface PostCardProps {
       currentRole?: string | null;
       currentCompany?: string | null;
       isAdmin?: boolean;
+      isFollowing?: boolean;
     };
   };
   currentUser: {
@@ -92,6 +95,7 @@ function shortenText(text: string, maxLength: number = 20): string {
 
 
 export default function PostCard({ post, currentUser, onDeleteSuccess, priority = false }: PostCardProps) {
+  const queryClient = useQueryClient();
   const [hasLiked, setHasLiked] = useState(post.hasLiked || false);
   const [likesCount, setLikesCount] = useState(post.likesCount ?? 0);
   const [showComments, setShowComments] = useState(false);
@@ -101,6 +105,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [activeMenu, setActiveMenu] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(post.author?.isFollowing || false);
 
   // Pagination states
   const [commentsPage, setCommentsPage] = useState(1);
@@ -111,6 +116,7 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
     setHasLiked(post.hasLiked || false);
     setLikesCount(post.likesCount ?? 0);
     setCommentsCount(post.commentsCount ?? 0);
+    setIsFollowing(post.author?.isFollowing || false);
   }, [post]);
 
   const handleLikeToggle = async () => {
@@ -141,6 +147,65 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
       setHasLiked(!nextState);
       setLikesCount(prev => !nextState ? prev + 1 : prev - 1);
       toast.error('Failed to toggle like');
+    }
+  };
+
+  const handlePostFollowToggle = async () => {
+    if (!currentUser) {
+      toast.error('Please log in to follow users');
+      return;
+    }
+    if (!post.author?.id) return;
+
+    const nextState = !isFollowing;
+    setIsFollowing(nextState);
+
+    // Optimistically update all posts by the same author in the query cache
+    const updateCache = (state: boolean) => {
+      queryClient.setQueriesData(
+        { queryKey: ['alumni-feed-posts'] },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              posts: page.posts.map((p: any) => {
+                if (p.author && p.author.id === post.author.id) {
+                  return {
+                    ...p,
+                    author: {
+                      ...p.author,
+                      isFollowing: state,
+                    },
+                  };
+                }
+                return p;
+              }),
+            })),
+          };
+        }
+      );
+    };
+
+    updateCache(nextState);
+
+    try {
+      const res = await toggleFollowAlumni(post.author.id);
+      if (res.success) {
+        toast.success(res.isFollowing ? 'Following user!' : 'Unfollowed user');
+        const finalState = !!res.isFollowing;
+        setIsFollowing(finalState);
+        updateCache(finalState);
+      } else {
+        setIsFollowing(!nextState);
+        updateCache(!nextState);
+        toast.error(res.error || 'Failed to update follow status');
+      }
+    } catch {
+      setIsFollowing(!nextState);
+      updateCache(!nextState);
+      toast.error('Failed to update follow status');
     }
   };
 
@@ -304,6 +369,19 @@ export default function PostCard({ post, currentUser, onDeleteSuccess, priority 
                   Class of &apos;{String(post.author.batchYear).slice(-2)}
                 </span>
               ) : null}
+
+              {!isPostAdmin && post.author?.id && currentUser && currentUser.id !== post.author.id && (
+                <button
+                  onClick={handlePostFollowToggle}
+                  className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold border-none cursor-pointer transition ${
+                    isFollowing
+                      ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                      : 'bg-blue-50 text-[#003D7A] hover:bg-blue-100'
+                  }`}
+                >
+                  {isFollowing ? '✓ Following' : '+ Follow'}
+                </button>
+              )}
             </div>
             <p className="text-[10px] font-semibold text-slate-400 truncate">
               {isPostAdmin ? 'System Administrator' : `${shortenText(post.author?.currentRole || 'Alumni')} ${post.author?.currentCompany ? `at ${shortenText(post.author.currentCompany)}` : ''}`}

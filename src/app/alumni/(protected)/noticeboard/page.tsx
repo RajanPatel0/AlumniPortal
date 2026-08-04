@@ -16,19 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 
-interface AlumniProfile {
-  name: string;
-  email: string;
-  batchYear: number;
-  branch: string;
-  college: string;
-  currentRole?: string;
-  currentCompany?: string;
-  city?: string;
-  avatarUrl?: string;
-  isAdmin?: boolean;
-  role?: string;
-}
+import { AlumniProfile } from '@/types/alumni';
 
 interface EventSnippet {
   id: string;

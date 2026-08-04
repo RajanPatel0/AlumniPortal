@@ -82,6 +82,13 @@ export async function GET(req: NextRequest) {
 
     const { passwordHash, ...alumniWithoutPassword } = alumni;
 
+    // Resolve current job details from active work experience if present
+    const activeExp = alumni.workExperience.find(exp => exp.isCurrent);
+    if (activeExp) {
+      alumniWithoutPassword.currentRole = activeExp.title;
+      alumniWithoutPassword.currentCompany = activeExp.company;
+    }
+
     return NextResponse.json({ user: alumniWithoutPassword, isSelf: true, isAdmin: false });
   } catch (error) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
