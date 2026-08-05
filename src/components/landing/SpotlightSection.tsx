@@ -27,20 +27,20 @@ function SpotlightCard({ alum }: { alum: AlumSpotlight }) {
         />
       </div>
       <h4 className="text-sm md:text-base font-bold text-gray-900">{alum.name}</h4>
-      <p className="text-xs font-medium text-[#C41E3A] uppercase tracking-wider mt-0.5">
+      <p className="text-xs font-semibold text-[#C41E3A] uppercase tracking-wider mt-0.5">
         Class of {alum.batch} | {alum.branch}
       </p>
-      <div className="my-2 md:my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-semibold text-gray-700">
-        {alum.designation} @ <span className="text-[#003D7A]">{alum.company}</span>
+      <div className="my-2 md:my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-bold text-gray-800">
+        {alum.designation} @ <span className="text-[#003D7A] font-extrabold">{alum.company}</span>
       </div>
-      <p className="text-gray-500 text-xs leading-relaxed font-light my-3 md:my-4 line-clamp-3">
+      <p className="text-slate-800 text-xs md:text-sm leading-relaxed font-medium my-3 md:my-4 line-clamp-4">
         &quot;{alum.bio}&quot;
       </p>
       <a
         href={alum.linkedIn}
         target="_blank"
         rel="noreferrer"
-        className="mt-auto pt-3 md:pt-4 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition-colors flex items-center justify-center gap-1.5"
+        className="mt-auto pt-3 md:pt-4 text-xs font-extrabold text-[#003D7A] hover:text-[#C41E3A] transition-colors flex items-center justify-center gap-1.5"
       >
         Connect on LinkedIn ↗
       </a>

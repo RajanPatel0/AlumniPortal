@@ -25,11 +25,11 @@ function NewsCard({ item }: { item: NewsItem }) {
       rel="noopener noreferrer"
       className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group cursor-pointer"
     >
-      <div className="relative h-40 md:h-48 w-full bg-slate-100 overflow-hidden flex-shrink-0">
+      <div className="relative aspect-[16/10] md:aspect-[16/9] w-full bg-slate-100 overflow-hidden flex-shrink-0">
         <img
           src={item.coverImage}
           alt={item.title}
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-500"
         />
         {item.featured && (
           <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
@@ -47,12 +47,12 @@ function NewsCard({ item }: { item: NewsItem }) {
         <h4 className="text-sm md:text-base font-extrabold text-gray-900 mb-2 md:mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
           {item.title}
         </h4>
-        <p className="text-gray-650 text-xs leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 md:mb-6">
+        <p className="text-slate-600 text-xs leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 font-medium">
           {item.summary}
         </p>
-        <div className="mt-auto pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-semibold text-[#003D7A]">
-          <span>Read Full Story →</span>
-          <span className="text-slate-400 font-medium">📍 {item.campusTag}</span>
+        <div className="mt-auto pt-3 md:pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-[#003D7A]">
+          <span className="group-hover:text-[#C41E3A] transition-colors">Read Full Story →</span>
+          <span className="text-slate-500 font-bold">📍 {item.campusTag}</span>
         </div>
       </div>
     </a>
@@ -79,7 +79,7 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Stay Updated</h3>
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">News &amp; Campus Updates</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-2xl mx-auto font-medium">
             Read about student placements, faculty breakthroughs, and alumni milestones.
           </p>
         </div>
@@ -113,7 +113,7 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {news.map((item) => (
-              <div key={item.id} className="w-[250px] flex-shrink-0">
+              <div key={item.id} className="w-[260px] flex-shrink-0">
                 <NewsCard item={item} />
               </div>
             ))}
@@ -122,22 +122,22 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
 
         {/* ── DESKTOP: Scroll if >6, otherwise grid ── */}
         {news.length > 6 ? (
-          <div className="hidden md:block relative group/scroll px-1">
+          <div className="hidden md:block relative group/scroll px-2 sm:px-4">
             <button
               type="button"
               onClick={() => scroll('left')}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              className="absolute -left-3 sm:-left-6 top-1/2 -translate-y-1/2 bg-white hover:bg-[#003D7A] text-[#003D7A] hover:text-white p-3.5 sm:p-4 rounded-full shadow-2xl border-2 border-slate-200/90 z-30 transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
               aria-label="Scroll left"
             >
-              <ChevronLeft size={20} className="stroke-[2.5]" />
+              <ChevronLeft size={24} className="stroke-[3]" />
             </button>
             <button
               type="button"
               onClick={() => scroll('right')}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              className="absolute -right-3 sm:-right-6 top-1/2 -translate-y-1/2 bg-white hover:bg-[#003D7A] text-[#003D7A] hover:text-white p-3.5 sm:p-4 rounded-full shadow-2xl border-2 border-slate-200/90 z-30 transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
               aria-label="Scroll right"
             >
-              <ChevronRight size={20} className="stroke-[2.5]" />
+              <ChevronRight size={24} className="stroke-[3]" />
             </button>
             <div
               ref={scrollRef}

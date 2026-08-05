@@ -37,36 +37,38 @@ export default function VideosSection({ videos }: { videos: VideoItem[] }) {
           </p>
         </div>
 
-        {videos.length > 6 ? (
-          <div className="relative group/scroll px-1">
-            {/* Scroll Buttons */}
+        {videos.length > 2 ? (
+          <div className="relative group/scroll px-2 sm:px-4">
+            {/* Scroll Buttons - Prominently visible at all times */}
             <button
               type="button"
               onClick={() => scroll('left')}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              className="absolute -left-3 sm:-left-6 top-1/2 -translate-y-1/2 bg-white hover:bg-[#003D7A] text-[#003D7A] hover:text-white p-3.5 sm:p-4 rounded-full shadow-2xl border-2 border-slate-200/90 z-30 transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
               aria-label="Scroll left"
             >
-              <ChevronLeft size={20} className="stroke-[2.5]" />
+              <ChevronLeft size={24} className="stroke-[3]" />
             </button>
             <button
               type="button"
               onClick={() => scroll('right')}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-[#003D7A] hover:text-white text-slate-800 p-3 rounded-full shadow-xl border border-slate-100/80 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:scale-110 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+              className="absolute -right-3 sm:-right-6 top-1/2 -translate-y-1/2 bg-white hover:bg-[#003D7A] text-[#003D7A] hover:text-white p-3.5 sm:p-4 rounded-full shadow-2xl border-2 border-slate-200/90 z-30 transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
               aria-label="Scroll right"
             >
-              <ChevronRight size={20} className="stroke-[2.5]" />
+              <ChevronRight size={24} className="stroke-[3]" />
             </button>
 
-            {/* Horizontal Scroll Grid (2 rows, col flow) */}
+            {/* Horizontal Scroll Grid */}
             <div
               ref={scrollRef}
-              className="grid grid-rows-2 grid-flow-col gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
+              className={`flex gap-6 md:gap-8 overflow-x-auto scroll-smooth scrollbar-none pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 ${
+                videos.length > 4 ? 'grid grid-rows-2 grid-flow-col' : ''
+              }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {videos.map((video) => (
                 <div 
                   key={video.id}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col h-full group w-[290px] md:w-[480px] flex-shrink-0"
+                  className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col h-full group w-[300px] sm:w-[420px] md:w-[480px] flex-shrink-0"
                 >
                   <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
                     <video 
@@ -76,12 +78,12 @@ export default function VideosSection({ videos }: { videos: VideoItem[] }) {
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <div className="p-6 flex flex-col flex-grow">
+                  <div className="p-5 md:p-6 flex flex-col flex-grow">
                     <h4 className="text-base font-extrabold text-gray-900 mb-2 leading-snug">
                       {video.title}
                     </h4>
                     {video.description && (
-                      <p className="text-gray-650 text-xs leading-relaxed line-clamp-2">
+                      <p className="text-slate-600 text-xs leading-relaxed line-clamp-2 font-medium">
                         {video.description}
                       </p>
                     )}
@@ -110,7 +112,7 @@ export default function VideosSection({ videos }: { videos: VideoItem[] }) {
                     {video.title}
                   </h4>
                   {video.description && (
-                    <p className="text-gray-650 text-xs leading-relaxed line-clamp-2">
+                    <p className="text-slate-600 text-xs leading-relaxed line-clamp-2 font-medium">
                       {video.description}
                     </p>
                   )}

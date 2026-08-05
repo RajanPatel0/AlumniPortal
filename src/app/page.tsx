@@ -207,10 +207,10 @@ export default async function HomePage() {
               return (
                 <div 
                   key={campus.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[240px] flex-shrink-0 md:w-auto"
+                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[260px] flex-shrink-0 md:w-auto"
                 >
                   {/* Elegant Campus Image */}
-                  <div className="h-28 w-full relative group overflow-hidden border-b border-slate-100 bg-slate-100">
+                  <div className="h-32 md:h-36 w-full relative group overflow-hidden border-b border-slate-100 bg-slate-100">
                     <Image 
                       src={campus.image} 
                       alt={campus.name} 
@@ -219,20 +219,20 @@ export default async function HomePage() {
                       className="object-cover group-hover:scale-110 transition-all duration-500" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent"></div>
-                    <div className="absolute top-2.5 right-2.5 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
-                      <IconComp size={15} />
+                    <div className="absolute top-2.5 right-2.5 p-1.5 bg-white/95 backdrop-blur-sm rounded-lg shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
+                      <IconComp size={16} />
                     </div>
                   </div>
 
                   <div className="p-4 flex flex-col flex-grow">
-                    <h4 className="text-sm font-extrabold text-gray-900 mb-1 leading-tight line-clamp-1">{campus.name}</h4>
-                    <p className="text-[9px] font-bold text-[#C41E3A] uppercase tracking-wider mb-2">📍 {campus.location}</p>
-                    <p className="text-slate-600 text-xs leading-relaxed mb-3 font-normal flex-grow">
+                    <h4 className="text-base font-extrabold text-black mb-1 leading-tight line-clamp-1">{campus.name}</h4>
+                    <p className="text-xs font-bold text-[#C41E3A] uppercase tracking-wider mb-2">📍 {campus.location}</p>
+                    <p className="text-black text-xs md:text-sm leading-relaxed mb-3 font-normal flex-grow">
                       {campus.description}
                     </p>
-                    <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[10px] font-bold text-gray-700 mt-auto">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-black mt-auto">
                       <span>{campus.alumniCount} Alumni</span>
-                      <a href={campus.url} target="_blank" rel="noopener noreferrer" className="text-[#C41E3A] font-medium hover:text-[#003D7A] transition-colors">Visit</a>
+                      <a href={campus.url} target="_blank" rel="noopener noreferrer" className="text-[#C41E3A] font-extrabold hover:text-[#003D7A] transition-colors">Visit ↗</a>
                     </div>
                   </div>
                 </div>

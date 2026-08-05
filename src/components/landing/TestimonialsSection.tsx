@@ -8,6 +8,9 @@ interface Testimonial {
   name: string;
   photo: string;
   batch: string;
+  company?: string;
+  designation?: string;
+  linkedIn?: string;
   quote: string;
   rating?: number;
   status: 'approved' | 'pending';
@@ -17,33 +20,48 @@ interface Testimonial {
 function TestimonialCard({ t }: { t: Testimonial }) {
   return (
     <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative h-full">
-      <div className="absolute top-5 right-5 md:top-8 md:right-8 text-slate-100 text-5xl md:text-6xl font-serif select-none pointer-events-none">
+      <div className="absolute top-5 right-5 md:top-8 md:right-8 text-slate-200 text-5xl md:text-6xl font-serif select-none pointer-events-none opacity-60">
         &ldquo;
       </div>
       <div className="mb-4 md:mb-6">
         {/* Rating */}
         {t.rating && (
-          <div className="flex gap-1 mb-3 md:mb-4 text-amber-400">
+          <div className="flex gap-1 mb-3 md:mb-4 text-amber-400 text-sm">
             {Array.from({ length: t.rating }).map((_, i) => (
               <span key={i}>★</span>
             ))}
           </div>
         )}
-        <p className="text-gray-650 italic text-xs md:text-sm leading-relaxed relative z-10">
+        <p className="text-slate-800 italic text-xs md:text-sm leading-relaxed relative z-10 font-medium">
           &quot;{t.quote}&quot;
         </p>
       </div>
 
       {/* Profile Card */}
-      <div className="flex items-center gap-3 md:gap-4 pt-3 md:pt-4 border-t border-slate-50">
+      <div className="flex items-center gap-3.5 md:gap-4 pt-3 md:pt-4 border-t border-slate-100">
         <img
           src={t.photo}
           alt={t.name}
-          className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border border-slate-200 flex-shrink-0"
+          className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#003D7A]/20 flex-shrink-0 shadow-sm"
         />
-        <div>
-          <h4 className="text-sm font-bold text-gray-900">{t.name}</h4>
-          <p className="text-xs text-gray-500 font-medium">Batch of {t.batch}</p>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm md:text-base font-bold text-gray-900 truncate">{t.name}</h4>
+          <p className="text-xs text-slate-500 font-semibold">Batch of {t.batch}</p>
+          {(t.designation || t.company) && (
+            <p className="text-xs font-bold text-[#003D7A] truncate mt-0.5">
+              {t.designation}{t.designation && t.company ? ' @ ' : ''}{t.company}
+            </p>
+          )}
+          {t.linkedIn && (
+            <a
+              href={t.linkedIn}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-extrabold text-blue-600 hover:text-[#C41E3A] hover:underline inline-flex items-center gap-1 mt-1"
+            >
+              LinkedIn Profile ↗
+            </a>
+          )}
         </div>
       </div>
     </div>
