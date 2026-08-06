@@ -142,6 +142,8 @@ function ProfilePageClient() {
         setProfile(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
         setFormData(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
         queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
+        queryClient.invalidateQueries({ queryKey: ['alumni-feed'] });
+        await fetchProfile();
         toast.success('Profile photo updated!', { id: toastId });
       }
     } catch (error) {

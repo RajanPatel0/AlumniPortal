@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+  if (staff.role !== 'ADMIN' && !modules.includes('alumni')) {
+    return NextResponse.json({ error: 'Forbidden: Access denied to alumni module' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
 
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));

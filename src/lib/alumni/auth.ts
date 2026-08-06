@@ -11,6 +11,7 @@ async function completeOAuthInviteRegistration(
     email: string;
     name: string;
     originalInvitedEmail: string | null;
+    avatarUrl?: string | null;
   },
   user: OAuthUser,
   provider: string | undefined,
@@ -29,7 +30,7 @@ async function completeOAuthInviteRegistration(
     lastLoginAt: new Date(),
     inviteToken: null, //Nullify token to invalidate it after OAuth registration
   };
-  if (user.image) {
+  if (user.image && !alumni.avatarUrl) {
     updateData.avatarUrl = user.image;
   }
 
@@ -129,7 +130,7 @@ export const alumniAuthConfig: NextAuthOptions = {
         if (!alumni) return false;
         if (!providerAccountId) return false;
         return completeOAuthInviteRegistration(
-          { id: alumni.id, email: alumni.email, name: alumni.name, originalInvitedEmail: alumni.originalInvitedEmail },
+          { id: alumni.id, email: alumni.email, name: alumni.name, originalInvitedEmail: alumni.originalInvitedEmail, avatarUrl: alumni.avatarUrl },
           user,
           provider,
           providerAccountId
@@ -142,7 +143,7 @@ export const alumniAuthConfig: NextAuthOptions = {
         });
         if (invitedByEmail && providerAccountId) {
           return completeOAuthInviteRegistration(
-            { id: invitedByEmail.id, email: invitedByEmail.email, name: invitedByEmail.name, originalInvitedEmail: invitedByEmail.originalInvitedEmail },
+            { id: invitedByEmail.id, email: invitedByEmail.email, name: invitedByEmail.name, originalInvitedEmail: invitedByEmail.originalInvitedEmail, avatarUrl: invitedByEmail.avatarUrl },
             user,
             provider,
             providerAccountId
@@ -177,7 +178,10 @@ export const alumniAuthConfig: NextAuthOptions = {
 
       await prisma.alumni.update({
         where: { id: alumni.id },
-        data: { lastLoginAt: new Date(), ...(user.image ? { avatarUrl: user.image } : {}) },
+        data: {
+          lastLoginAt: new Date(),
+          ...(!alumni.avatarUrl && user.image ? { avatarUrl: user.image } : {}),
+        },
       });
       return true;
     },

@@ -29,6 +29,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+  if (staff.role !== 'ADMIN' && !modules.includes('import')) {
+    return NextResponse.json({ error: 'Forbidden: Access denied to import module' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const label = searchParams.get('label')?.trim() || '';
   const status = (searchParams.get('status') || 'ALL').toUpperCase();

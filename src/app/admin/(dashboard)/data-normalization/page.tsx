@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from "@/lib/api";
 import { toast } from 'react-hot-toast';
 import { Database, GitMerge, CheckCircle, AlertTriangle, RefreshCw, Plus, ToggleLeft, ToggleRight, ListChecks, FileText } from 'lucide-react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useRouter } from 'next/navigation';
 
 interface VariantCount {
   branch?: string;
@@ -42,8 +44,16 @@ interface AcademicOptionItem {
 const ITEMS_PER_PAGE = 10;
 
 export default function DataNormalizationPage() {
+  const { user, loading: authLoading } = useAdminAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user && user.role !== 'ADMIN') {
+      router.replace('/admin/dashboard');
+    }
+  }, [authLoading, user, router]);
 
   // Data state from API
   const [branches, setBranches] = useState<VariantCount[]>([]);

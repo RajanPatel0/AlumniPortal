@@ -22,7 +22,7 @@ const allModules: NavItem[] = [
   { name: 'Web Update', href: '/admin/landing-page', icon: Globe, module: 'landing-page' },
   { name: 'Import Alumni', href: '/admin/import', icon: Import, module: 'import' },
   { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
-  { name: 'Data Normalization', href: '/admin/data-normalization', icon: Layers, module: 'alumni' },
+  { name: 'Data Normalization', href: '/admin/data-normalization', icon: Layers, module: 'data-normalization' },
   { name: 'Posts & Gallery', href: '/admin/posts', icon: FileText, module: 'posts' },
   { name: 'Communities', href: '/admin/communities', icon: Users, module: 'communities' },
   { name: 'Yearbook', href: '/admin/yearbook', icon: BookOpen, module: 'yearbook' },
@@ -47,8 +47,11 @@ export default function DashboardLayout({
       if (!user) {
         router.replace('/admin/auth/login');
       } else if (user.role !== 'ADMIN') {
-        // 1. Subadmins cannot access /admin/subadmins
-        if (pathname === '/admin/subadmins' || pathname.startsWith('/admin/subadmins/')) {
+        // 1. Subadmins cannot access admin-only pages (/admin/subadmins, /admin/data-normalization)
+        if (
+          pathname === '/admin/subadmins' || pathname.startsWith('/admin/subadmins/') ||
+          pathname === '/admin/data-normalization' || pathname.startsWith('/admin/data-normalization/')
+        ) {
           const allowedModules = user.modules || [];
           const firstAllowed = allModules.find(item => allowedModules.includes(item.module));
           if (firstAllowed) {

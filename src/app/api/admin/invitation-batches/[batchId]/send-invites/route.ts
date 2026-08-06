@@ -22,6 +22,11 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+  if (staff.role !== 'ADMIN' && !modules.includes('import')) {
+    return NextResponse.json({ error: 'Forbidden: Access denied to import module' }, { status: 403 });
+  }
+
   const { batchId } = await params;
 
   let alumniId: string | undefined;
