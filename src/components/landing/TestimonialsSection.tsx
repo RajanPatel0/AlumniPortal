@@ -19,14 +19,17 @@ interface Testimonial {
 // Shared testimonial card
 function TestimonialCard({ t }: { t: Testimonial }) {
   return (
-    <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative h-full">
-      <div className="absolute top-5 right-5 md:top-8 md:right-8 text-slate-200 text-5xl md:text-6xl font-serif select-none pointer-events-none opacity-60">
+    <div className="bg-gradient-to-b from-white via-sky-50/25 to-white p-6 md:p-8 rounded-3xl shadow-md hover:shadow-xl border border-sky-100/90 hover:border-sky-300/80 flex flex-col justify-between relative h-full group transition-all duration-300">
+      {/* Decorative top accent line */}
+      <div className="absolute top-0 left-6 right-6 h-1 bg-gradient-to-r from-[#003D7A] via-sky-400 to-[#C41E3A] rounded-b-full opacity-70 group-hover:opacity-100 transition-opacity" />
+
+      <div className="absolute top-6 right-6 text-sky-200/70 group-hover:text-sky-300/90 transition-colors text-5xl md:text-6xl font-serif select-none pointer-events-none">
         &ldquo;
       </div>
-      <div className="mb-4 md:mb-6">
+      <div className="mb-4 md:mb-6 pt-2">
         {/* Rating */}
         {t.rating && (
-          <div className="flex gap-1 mb-3 md:mb-4 text-amber-400 text-sm">
+          <div className="flex gap-1 mb-3 text-amber-400 text-sm font-bold">
             {Array.from({ length: t.rating }).map((_, i) => (
               <span key={i}>★</span>
             ))}
@@ -38,26 +41,26 @@ function TestimonialCard({ t }: { t: Testimonial }) {
       </div>
 
       {/* Profile Card */}
-      <div className="flex items-center gap-3.5 md:gap-4 pt-3 md:pt-4 border-t border-slate-100">
+      <div className="flex items-center gap-3.5 md:gap-4 pt-4 border-t border-sky-100/80">
         <img
           src={t.photo}
           alt={t.name}
-          className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#003D7A]/20 flex-shrink-0 shadow-sm"
+          className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-sky-400/40 shadow-md flex-shrink-0"
         />
         <div className="min-w-0 flex-1">
           <h4 className="text-sm md:text-base font-bold text-gray-900 truncate">{t.name}</h4>
-          <p className="text-xs text-slate-500 font-semibold">Batch of {t.batch}</p>
+          <p className="text-xs text-slate-500 font-semibold mb-1">Batch of {t.batch}</p>
           {(t.designation || t.company) && (
-            <p className="text-xs font-bold text-[#003D7A] truncate mt-0.5">
+            <div className="inline-block bg-sky-50 text-[#003D7A] border border-sky-200/80 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold max-w-full truncate">
               {t.designation}{t.designation && t.company ? ' @ ' : ''}{t.company}
-            </p>
+            </div>
           )}
           {t.linkedIn && (
             <a
               href={t.linkedIn}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-extrabold text-blue-600 hover:text-[#C41E3A] hover:underline inline-flex items-center gap-1 mt-1"
+              className="text-[11px] font-extrabold text-[#003D7A] hover:text-[#C41E3A] hover:underline flex items-center gap-1 mt-1.5 transition-colors"
             >
               LinkedIn Profile ↗
             </a>
@@ -119,14 +122,14 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
   };
 
   return (
-    <section id="testimonials" className="py-12 md:py-16 bg-gradient-to-b from-slate-50 via-slate-100/55 to-white scroll-mt-16">
+    <section id="testimonials" className="py-14 md:py-18 bg-gradient-to-b from-slate-50/60 via-sky-50/70 to-blue-50/30 scroll-mt-16 border-b border-sky-100/60">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8 md:mb-10 relative">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Words of Pride</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Testimonials</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">Alumni Testimonials</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Hear from our global alumni community about how their time at IKGPTU shaped their careers.
           </p>
         </div>

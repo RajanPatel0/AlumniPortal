@@ -189,13 +189,13 @@ export default async function HomePage() {
 
 
       {/* 9. Campus Showcase (Statically Fixed) */}
-      <section id="campuses" className="py-16 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
+      <section id="campuses" className="py-14 md:py-18 bg-gradient-to-b from-white via-sky-50/40 to-slate-50/60 scroll-mt-16 border-b border-sky-100/50">
         <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Our Footprint</h3>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Campus Showcase</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">Campus Showcase</h2>
             <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+            <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
               Explore our core campuses fostering engineering, tech research, and professional domains.
             </p>
           </div>

@@ -18,32 +18,37 @@ interface AlumSpotlight {
 // Shared spotlight card
 function SpotlightCard({ alum }: { alum: AlumSpotlight }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 p-5 md:p-6 shadow-md hover:shadow-xl hover:shadow-[#003D7A]/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col text-center h-full">
-      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden mx-auto mb-3 md:mb-4 relative p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A]">
-        <img
-          src={alum.photo}
-          alt={alum.name}
-          className="w-full h-full object-cover rounded-full bg-white"
-        />
+    <div className="bg-gradient-to-b from-white via-sky-50/20 to-white rounded-3xl border border-sky-100 shadow-md hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col text-center h-full relative overflow-hidden group">
+      {/* Decorative top accent gradient bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#003D7A] via-sky-400 to-[#C41E3A]" />
+
+      <div className="p-5 md:p-6 flex flex-col flex-grow items-center">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden mx-auto mb-3 md:mb-4 relative p-1 bg-gradient-to-tr from-[#003D7A] via-sky-400 to-[#C41E3A] shadow-md group-hover:scale-105 transition-transform duration-300">
+          <img
+            src={alum.photo}
+            alt={alum.name}
+            className="w-full h-full object-cover rounded-full bg-white"
+          />
+        </div>
+        <h4 className="text-base md:text-lg font-black text-gray-900 leading-tight mb-1">{alum.name}</h4>
+        <p className="text-xs font-bold text-[#C41E3A] uppercase tracking-wider mb-2">
+          Class of {alum.batch} | {alum.branch}
+        </p>
+        <div className="my-2 text-xs bg-sky-50 border border-sky-200/80 rounded-xl py-1.5 px-3.5 inline-block mx-auto font-bold text-gray-900 shadow-xs">
+          {alum.designation} @ <span className="text-[#003D7A] font-extrabold">{alum.company}</span>
+        </div>
+        <p className="text-slate-700 text-xs md:text-sm leading-relaxed font-medium my-3 line-clamp-4 italic">
+          &quot;{alum.bio}&quot;
+        </p>
+        <a
+          href={alum.linkedIn}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-auto w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] hover:from-[#C41E3A] hover:to-[#e62648] text-white text-xs font-extrabold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-1.5"
+        >
+          Connect on LinkedIn ↗
+        </a>
       </div>
-      <h4 className="text-sm md:text-base font-bold text-gray-900">{alum.name}</h4>
-      <p className="text-xs font-semibold text-[#C41E3A] uppercase tracking-wider mt-0.5">
-        Class of {alum.batch} | {alum.branch}
-      </p>
-      <div className="my-2 md:my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-bold text-gray-800">
-        {alum.designation} @ <span className="text-[#003D7A] font-extrabold">{alum.company}</span>
-      </div>
-      <p className="text-slate-800 text-xs md:text-sm leading-relaxed font-medium my-3 md:my-4 line-clamp-4">
-        &quot;{alum.bio}&quot;
-      </p>
-      <a
-        href={alum.linkedIn}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-auto pt-3 md:pt-4 text-xs font-extrabold text-[#003D7A] hover:text-[#C41E3A] transition-colors flex items-center justify-center gap-1.5"
-      >
-        Connect on LinkedIn ↗
-      </a>
     </div>
   );
 }
@@ -64,13 +69,13 @@ export default function SpotlightSection({ notableAlumni }: { notableAlumni: Alu
   if (!notableAlumni || notableAlumni.length === 0) return null;
 
   return (
-    <section id="spotlight" className="py-12 md:py-16 bg-gradient-to-b from-white via-blue-50/15 to-white scroll-mt-16">
+    <section id="spotlight" className="py-14 md:py-18 bg-gradient-to-b from-sky-50/80 via-blue-50/40 to-slate-50/60 scroll-mt-16 border-y border-sky-100/60">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Hall of Fame</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Alumni Spotlight</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">Alumni Spotlight</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-gray-655 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Celebrating our distinguished alumni leading global enterprise domains and pathbreaking research cells.
           </p>
         </div>

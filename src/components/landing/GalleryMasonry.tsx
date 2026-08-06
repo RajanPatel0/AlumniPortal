@@ -66,14 +66,14 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
   }, [lightboxIndex, handlePrev, handleNext, handleClose]);
 
   return (
-    <section id="gallery" className="py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
+    <section id="gallery" className="py-14 md:py-18 bg-gradient-to-b from-slate-50/60 via-sky-50/50 to-white scroll-mt-16 border-b border-sky-100/50">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Campus Life</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Memories &amp; Gallery</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">Memories &amp; Gallery</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Relive your college days and see snapshots of latest convocations, fests, and alumni meetups.
           </p>
         </div>

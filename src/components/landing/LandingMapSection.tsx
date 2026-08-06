@@ -16,7 +16,7 @@ const AlumniMap = dynamic(() => import('@/components/map/AlumniMap'), {
 
 export default function LandingMapSection() {
   return (
-    <section id="map" className="relative z-0 py-14 md:py-18 bg-gradient-to-b from-white via-slate-50/50 to-white scroll-mt-16">
+    <section id="map" className="relative z-0 py-14 md:py-18 bg-gradient-to-b from-white via-sky-50/40 to-slate-50/50 scroll-mt-16 border-b border-sky-100/50">
       <div className="w-full max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-8">
@@ -25,7 +25,7 @@ export default function LandingMapSection() {
             A Global Community
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#003D7A] to-[#C41E3A] mx-auto rounded-full mt-3 mb-3"></div>
-          <p className="text-sm sm:text-base font-semibold text-slate-500 max-w-xl mx-auto">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Discover our vibrant network of alumni spanning across cities and continents around the world.
           </p>
         </div>

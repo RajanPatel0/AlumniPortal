@@ -19,52 +19,63 @@ interface Event {
 }
 
 // Shared event card UI
-function EventCard({ event, formatDate }: { event: Event; formatDate: (d: string) => string }) {
+function EventCard({ event, formatDate, setRsvpEvent }: { event: Event; formatDate: (d: string) => string; setRsvpEvent: (e: Event) => void }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
+    <div className="bg-gradient-to-b from-white via-sky-50/20 to-white rounded-3xl border border-sky-100 shadow-md hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full overflow-hidden group relative">
+      {/* Decorative top accent gradient bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#003D7A] via-sky-400 to-[#C41E3A]" />
+
       {/* Event Cover Photo */}
       <div className="relative h-44 md:h-48 w-full bg-slate-100 overflow-hidden flex-shrink-0">
         <img
           src={event.bannerImage}
           alt={event.title}
-          className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
         />
-        <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-white shadow-sm ${
-          event.category === 'reunion' ? 'bg-amber-500' :
-          event.category === 'webinar' ? 'bg-[#003D7A]' : 'bg-[#C41E3A]'
+        <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg border border-white/20 ${
+          event.category === 'reunion' ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+          event.category === 'webinar' ? 'bg-gradient-to-r from-[#003D7A] to-blue-600' : 'bg-gradient-to-r from-[#C41E3A] to-[#e62648]'
         }`}>
-          {event.category}
+          ★ {event.category}
         </span>
-        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-semibold">
+        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[11px] font-bold border border-white/20 shadow-md">
           📍 {event.campusTag}
         </span>
       </div>
 
       {/* Event Body */}
       <div className="p-5 md:p-6 flex flex-col flex-grow">
-        <div className="text-[#C41E3A] text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 text-[#C41E3A] border border-rose-200/60 font-extrabold text-xs tracking-wide mb-2.5 w-fit">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           {formatDate(event.dateTime)}
         </div>
-        <h4 className="text-base md:text-lg font-bold text-gray-900 mb-3 hover:text-[#003D7A] transition-colors line-clamp-1">
+        <h4 className="text-base md:text-lg font-black text-slate-900 mb-2 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-1">
           {event.title}
         </h4>
-        <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">
+        <p className="text-slate-600 text-xs md:text-sm leading-relaxed mb-4 line-clamp-3 font-medium">
           {event.description}
         </p>
 
-        {/* Location and Info */}
-        <div className="mt-auto pt-4 md:pt-6 border-t border-slate-100">
-          <div className="flex items-center gap-2 mb-4 text-xs font-medium text-gray-500">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-              event.venueType === 'virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-green-50 text-green-700 border border-green-200'
+        {/* Location and Action Button */}
+        <div className="mt-auto pt-4 border-t border-sky-100/80 flex flex-col gap-3">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+            <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
+              event.venueType === 'virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             }`}>
               {event.venueType}
             </span>
-            <span className="truncate">{event.venue}</span>
+            <span className="truncate max-w-[180px] font-bold text-slate-700">📍 {event.venue}</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setRsvpEvent(event)}
+            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] hover:from-[#C41E3A] hover:to-[#e62648] text-white text-xs font-extrabold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer"
+          >
+            Register / RSVP →
+          </button>
         </div>
       </div>
     </div>
@@ -122,14 +133,14 @@ export default function EventsSection({ events }: { events: Event[] }) {
   };
 
   return (
-    <section id="events" className="py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
+    <section id="events" className="py-14 md:py-18 bg-gradient-to-b from-white via-sky-50/40 to-slate-50/60 scroll-mt-16 border-b border-sky-100/50">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Get Involved</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">Upcoming Alumni Events</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">Upcoming Alumni Events</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-gray-600 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Reconnect in person or tune in virtually to expand your industry insights and mentor networks.
           </p>
           <div className="mt-5">
@@ -200,7 +211,7 @@ export default function EventsSection({ events }: { events: Event[] }) {
               >
                 {filteredEvents.map((event) => (
                   <div key={event.id} className="w-[260px] flex-shrink-0">
-                    <EventCard event={event} formatDate={formatDate} />
+                    <EventCard event={event} formatDate={formatDate} setRsvpEvent={setRsvpEvent} />
                   </div>
                 ))}
               </div>
@@ -232,7 +243,7 @@ export default function EventsSection({ events }: { events: Event[] }) {
                 >
                   {filteredEvents.map((event) => (
                     <div key={event.id} className="w-[360px] flex-shrink-0">
-                      <EventCard event={event} formatDate={formatDate} />
+                      <EventCard event={event} formatDate={formatDate} setRsvpEvent={setRsvpEvent} />
                     </div>
                   ))}
                 </div>
@@ -240,7 +251,7 @@ export default function EventsSection({ events }: { events: Event[] }) {
             ) : (
               <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 {filteredEvents.map((event) => (
-                  <EventCard key={event.id} event={event} formatDate={formatDate} />
+                  <EventCard key={event.id} event={event} formatDate={formatDate} setRsvpEvent={setRsvpEvent} />
                 ))}
               </div>
             )}

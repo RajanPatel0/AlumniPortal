@@ -23,8 +23,11 @@ function NewsCard({ item }: { item: NewsItem }) {
       href={item.linkTo || 'https://ptu.ac.in/news-events'}
       target="_blank"
       rel="noopener noreferrer"
-      className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group cursor-pointer"
+      className="block bg-gradient-to-b from-white via-sky-50/20 to-white rounded-3xl overflow-hidden border border-sky-100 shadow-md hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group cursor-pointer relative"
     >
+      {/* Decorative top accent gradient bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#003D7A] via-sky-400 to-[#C41E3A]" />
+
       <div className="relative aspect-[16/10] md:aspect-[16/9] w-full bg-slate-100 overflow-hidden flex-shrink-0">
         <img
           src={item.coverImage}
@@ -32,27 +35,34 @@ function NewsCard({ item }: { item: NewsItem }) {
           className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-500"
         />
         {item.featured && (
-          <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
+          <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20">
             ★ Featured
           </span>
         )}
-        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded">
+        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-lg border border-white/20 shadow-md">
           {item.category}
         </span>
       </div>
-      <div className="p-4 md:p-6 flex flex-col flex-grow">
-        <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">
-          {item.publishedDate} • By {item.author}
+
+      <div className="p-5 md:p-6 flex flex-col flex-grow">
+        <div className="inline-flex items-center gap-1.5 text-sky-800 text-[11px] font-extrabold uppercase tracking-wider mb-2.5 bg-sky-50 border border-sky-200/60 px-2.5 py-1 rounded-md w-fit">
+          <span>📅 {item.publishedDate}</span>
+          <span>•</span>
+          <span>By {item.author}</span>
         </div>
-        <h4 className="text-sm md:text-base font-extrabold text-gray-900 mb-2 md:mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
+
+        <h4 className="text-base md:text-lg font-black text-slate-900 mb-2 md:mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
           {item.title}
         </h4>
-        <p className="text-slate-600 text-xs leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 font-medium">
+        <p className="text-slate-600 text-xs md:text-sm leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 font-medium">
           {item.summary}
         </p>
-        <div className="mt-auto pt-3 md:pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-[#003D7A]">
-          <span className="group-hover:text-[#C41E3A] transition-colors">Read Full Story →</span>
-          <span className="text-slate-500 font-bold">📍 {item.campusTag}</span>
+
+        <div className="mt-auto pt-4 border-t border-sky-100/80 flex items-center justify-between">
+          <span className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] group-hover:from-[#C41E3A] group-hover:to-[#e62648] text-white text-xs font-extrabold shadow-sm transition-all duration-300">
+            Read Full Story →
+          </span>
+          <span className="text-slate-600 font-bold text-xs">📍 {item.campusTag}</span>
         </div>
       </div>
     </a>
@@ -73,13 +83,13 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
   };
 
   return (
-    <section id="news" className="py-12 md:py-16 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
+    <section id="news" className="py-14 md:py-18 bg-gradient-to-b from-white via-sky-50/40 to-slate-50/60 scroll-mt-16 border-b border-sky-100/50">
       <div className="max-w-[92vw] xl:max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 md:mb-10">
           <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Stay Updated</h3>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 tracking-tight">News &amp; Campus Updates</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">News &amp; Campus Updates</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] mx-auto rounded-full mb-4" />
-          <p className="text-slate-600 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-600 max-w-4xl mx-auto text-xs sm:text-sm md:text-base font-medium leading-relaxed">
             Read about student placements, faculty breakthroughs, and alumni milestones.
           </p>
         </div>
