@@ -77,6 +77,8 @@ export async function GET(req: NextRequest) {
         select: {
           branch: true,
           name: true,
+          currentRole: true,
+          currentCompany: true,
           email: true,
           batchYear: true,
           college: true,
@@ -87,6 +89,8 @@ export async function GET(req: NextRequest) {
       const detailRows = alumniList.map((a) => ({
         'Branch / Department': a.branch || 'Unspecified',
         'Alumni Name': a.name,
+        'Role / Designation': a.currentRole || '-',
+        'Company Name': a.currentCompany || '-',
         Email: a.email,
         'Batch Year': a.batchYear || '-',
         College: a.college || '-',
