@@ -63,14 +63,19 @@ function buildEventWhere(
 }
 
 /** Add RSVP stats to an event (attending count, maybe count, total) */
-async function addRsvpStats<T extends { id: string }>(
+async function addRsvpStats<T extends { id: string; title?: string }>(
   event: T,
   alumniId?: string,
 ): Promise<T & { attendingCount: number; maybeCount: number; totalRsvps: number; myRsvp: { status: RsvpStatus; message: string | null } | null }> {
-  const [attendingCount, maybeCount, totalRsvps, myRsvp] = await Promise.all([
+  const [attendingCount, maybeCount, portalCount, publicCount, myRsvp] = await Promise.all([
     prisma.rsvp.count({ where: { eventId: event.id, status: 'ATTENDING' } }),
     prisma.rsvp.count({ where: { eventId: event.id, status: 'MAYBE' } }),
     prisma.rsvp.count({ where: { eventId: event.id } }),
+    prisma.eventRsvp.count({
+      where: event.title
+        ? { OR: [{ eventId: event.id }, { eventName: event.title }] }
+        : { eventId: event.id },
+    }),
     alumniId
       ? prisma.rsvp.findUnique({
           where: { alumniId_eventId: { alumniId, eventId: event.id } },
@@ -78,7 +83,8 @@ async function addRsvpStats<T extends { id: string }>(
         })
       : Promise.resolve(null),
   ]);
-  return { ...event, attendingCount, maybeCount, totalRsvps, myRsvp: myRsvp ?? null };
+  const totalRsvps = portalCount + publicCount;
+  return { ...event, attendingCount: attendingCount + publicCount, maybeCount, totalRsvps, myRsvp: myRsvp ?? null };
 }
 
 /** Parse and validate event form data */
@@ -437,32 +443,63 @@ export async function getEventRsvpsAction(eventId: string): Promise<RsvpDetailsT
     });
     if (!event) return null;
 
-    const rsvps = await prisma.rsvp.findMany({
-      where: { eventId },
-      orderBy: { respondedAt: 'desc' },
-      include: {
-        alumni: {
-          select: {
-            id: true, name: true, email: true,
-            batchYear: true, branch: true, course: true,
-            currentRole: true, currentCompany: true, avatarUrl: true,
+    const [portalRsvps, publicRsvps] = await Promise.all([
+      prisma.rsvp.findMany({
+        where: { eventId },
+        orderBy: { respondedAt: 'desc' },
+        include: {
+          alumni: {
+            select: {
+              id: true, name: true, email: true,
+              batchYear: true, branch: true, course: true,
+              currentRole: true, currentCompany: true, avatarUrl: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.eventRsvp.findMany({
+        where: { OR: [{ eventId }, { eventName: event.title }] },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
-    const attendingCount = rsvps.filter((r) => r.status === 'ATTENDING').length;
-    const maybeCount = rsvps.filter((r) => r.status === 'MAYBE').length;
-    const notAttendingCount = rsvps.filter((r) => r.status === 'NOT_ATTENDING').length;
+    const formattedPublicRsvps = publicRsvps.map((p) => ({
+      id: `pub-${p.id}`,
+      status: 'ATTENDING' as const,
+      message: p.notes || 'Public Landing Page RSVP',
+      respondedAt: p.createdAt.toISOString(),
+      alumni: {
+        id: `pub-${p.id}`,
+        name: p.name,
+        email: p.email,
+        batchYear: 'Public Guest',
+        branch: 'Landing Page RSVP',
+        course: null,
+        currentRole: 'Public Visitor',
+        currentCompany: p.phone ? `Phone: ${p.phone}` : null,
+        avatarUrl: null,
+      },
+    }));
+
+    const formattedPortalRsvps = portalRsvps.map((r) => ({
+      ...r,
+      respondedAt: r.respondedAt.toISOString(),
+    }));
+
+    const allRsvps = [...formattedPortalRsvps, ...formattedPublicRsvps];
+
+    const attendingCount = allRsvps.filter((r) => r.status === 'ATTENDING').length;
+    const maybeCount = allRsvps.filter((r) => r.status === 'MAYBE').length;
+    const notAttendingCount = allRsvps.filter((r) => r.status === 'NOT_ATTENDING').length;
 
     return {
       eventTitle: event.title,
       eventDate: event.eventDate.toISOString(),
-      totalCount: rsvps.length,
+      totalCount: allRsvps.length,
       attendingCount,
       maybeCount,
       notAttendingCount,
-      rsvps: rsvps as any,
+      rsvps: allRsvps as any,
     };
   } catch (err) {
     console.error('[getEventRsvpsAction]', err);
@@ -487,28 +524,34 @@ export async function exportEventRsvpsAction(eventId: string) {
     });
     if (!event) return { success: false, error: 'Event not found' } as const;
 
-    const rsvps = await prisma.rsvp.findMany({
-      where: { eventId },
-      orderBy: { respondedAt: 'desc' },
-      select: {
-        status: true,
-        message: true,
-        respondedAt: true,
-        alumni: {
-          select: {
-            name: true,
-            email: true,
-            batchYear: true,
-            branch: true,
-            course: true,
-            currentRole: true,
-            currentCompany: true,
+    const [portalRsvps, publicRsvps] = await Promise.all([
+      prisma.rsvp.findMany({
+        where: { eventId },
+        orderBy: { respondedAt: 'desc' },
+        select: {
+          status: true,
+          message: true,
+          respondedAt: true,
+          alumni: {
+            select: {
+              name: true,
+              email: true,
+              batchYear: true,
+              branch: true,
+              course: true,
+              currentRole: true,
+              currentCompany: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.eventRsvp.findMany({
+        where: { OR: [{ eventId }, { eventName: event.title }] },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
-    const data = rsvps.map((r) => ({
+    const portalData = portalRsvps.map((r) => ({
       eventTitle: event.title,
       eventDate: event.eventDate.toISOString(),
       alumniName: r.alumni.name,
@@ -522,6 +565,23 @@ export async function exportEventRsvpsAction(eventId: string) {
       message: r.message,
       respondedAt: r.respondedAt.toISOString(),
     }));
+
+    const publicData = publicRsvps.map((p) => ({
+      eventTitle: event.title,
+      eventDate: event.eventDate.toISOString(),
+      alumniName: p.name,
+      alumniEmail: p.email,
+      batchYear: 'Public Visitor',
+      branch: 'Landing Page RSVP',
+      course: null,
+      currentRole: 'Public Registration',
+      currentCompany: p.phone ? `Phone: ${p.phone}` : null,
+      status: 'ATTENDING',
+      message: p.notes || 'Landing Page RSVP',
+      respondedAt: p.createdAt.toISOString(),
+    }));
+
+    const data = [...portalData, ...publicData];
 
     return { success: true, title: event.title, data } as const;
   } catch (err: any) {

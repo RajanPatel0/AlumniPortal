@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, UserCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface Testimonial {
   id: string;
@@ -42,11 +43,17 @@ function TestimonialCard({ t }: { t: Testimonial }) {
 
       {/* Profile Card */}
       <div className="flex items-center gap-3.5 md:gap-4 pt-4 border-t border-sky-100/80">
-        <img
-          src={t.photo}
-          alt={t.name}
-          className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-sky-400/40 shadow-md flex-shrink-0"
-        />
+        {t.photo ? (
+          <img
+            src={t.photo}
+            alt={t.name}
+            className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-sky-400/40 shadow-md flex-shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-[#003D7A] to-[#012140] text-white flex items-center justify-center border-2 border-sky-400/40 shadow-md flex-shrink-0">
+            <UserCircle size={36} className="text-sky-200" />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <h4 className="text-sm md:text-base font-bold text-gray-900 truncate">{t.name}</h4>
           <p className="text-xs text-slate-500 font-semibold mb-1">Batch of {t.batch}</p>
@@ -94,31 +101,46 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
 
   const approvedTestimonials = testimonials.filter((t) => t.status === 'approved');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !batch || !quote) return;
 
-    const newTestimonial: Testimonial = {
-      id: `temp-${Date.now()}`,
-      name,
-      photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-      batch,
-      quote,
-      rating,
-      status: 'pending',
-    };
+    setSubmitLoading(true);
+    try {
+      const res = await fetch('/api/testimonials/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          batch,
+          quote,
+          rating,
+        }),
+      });
 
-    setTestimonials((prev) => [...prev, newTestimonial]);
-    setSubmitted(true);
-
-    setTimeout(() => {
-      setShowSubmitModal(false);
-      setSubmitted(false);
-      setName('');
-      setBatch('');
-      setQuote('');
-      setRating(5);
-    }, 2000);
+      const data = await res.json();
+      if (res.ok) {
+        setSubmitted(true);
+        toast.success('Testimonial submitted for admin approval!');
+        setTimeout(() => {
+          setShowSubmitModal(false);
+          setSubmitted(false);
+          setName('');
+          setBatch('');
+          setQuote('');
+          setRating(5);
+        }, 2000);
+      } else {
+        toast.error(data.error || 'Failed to submit testimonial');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Connection error submitting testimonial');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   return (
@@ -295,9 +317,17 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all duration-300"
+                    disabled={submitLoading}
+                    className="w-full py-3.5 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
-                    Submit Testimonial
+                    {submitLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Submitting Testimonial...</span>
+                      </>
+                    ) : (
+                      'Submit Testimonial'
+                    )}
                   </button>
                 </form>
               ) : (

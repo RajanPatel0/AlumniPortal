@@ -986,4 +986,52 @@ model AlumniFollow {
   @@map("alumni_follows")
 }
 
+// ─────────────────────────────────────────
+// SUPPORT DESK & PUBLIC RSVPS
+// ─────────────────────────────────────────
+
+enum TicketStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id           String       @id @default(cuid())
+  ticketNo     String       @unique
+  name         String
+  email        String
+  phone        String?
+  enrollmentNo String?
+  category     String       @default("General Support")
+  subject      String
+  message      String       @db.Text
+  status       TicketStatus @default(PENDING)
+  adminNotes   String?      @db.Text
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model EventRsvp {
+  id        String   @id @default(cuid())
+  eventId   String?
+  eventName String
+  name      String
+  email     String
+  phone     String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([email])
+  @@map("event_rsvps")
+}
+
+
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface Event {
   id: string;
@@ -107,17 +108,44 @@ export default function EventsSection({ events }: { events: Event[] }) {
     return event.category === selectedCategory;
   });
 
-  const handleRsvpSubmit = (e: React.FormEvent) => {
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+
+  const handleRsvpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rsvpName || !rsvpEmail) return;
-    console.log(`RSVP submitted for event ${rsvpEvent?.title} by ${rsvpName} (${rsvpEmail})`);
-    setRsvpSubmitted(true);
-    setTimeout(() => {
-      setRsvpEvent(null);
-      setRsvpSubmitted(false);
-      setRsvpName('');
-      setRsvpEmail('');
-    }, 2000);
+    if (!rsvpName || !rsvpEmail || !rsvpEvent) return;
+
+    setRsvpLoading(true);
+    try {
+      const res = await fetch('/api/events/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: rsvpEvent.id,
+          eventTitle: rsvpEvent.title,
+          name: rsvpName,
+          email: rsvpEmail,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setRsvpSubmitted(true);
+        toast.success(data.message || 'RSVP confirmed!');
+        setTimeout(() => {
+          setRsvpEvent(null);
+          setRsvpSubmitted(false);
+          setRsvpName('');
+          setRsvpEmail('');
+        }, 2000);
+      } else {
+        toast.error(data.error || 'Failed to submit RSVP');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Connection error submitting RSVP');
+    } finally {
+      setRsvpLoading(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -303,9 +331,17 @@ export default function EventsSection({ events }: { events: Event[] }) {
                   </div>
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all duration-300"
+                    disabled={rsvpLoading}
+                    className="w-full py-3.5 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
-                    Submit RSVP
+                    {rsvpLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Submitting RSVP...</span>
+                      </>
+                    ) : (
+                      'Submit RSVP'
+                    )}
                   </button>
                 </form>
               ) : (

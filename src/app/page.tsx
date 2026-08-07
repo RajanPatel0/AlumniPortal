@@ -281,7 +281,7 @@ export default async function HomePage() {
               <ul className="space-y-2.5 text-xs font-semibold">
                 <li><Link href="#events" className="hover:text-[#C41E3A] transition-colors">Events & Reunions</Link></li>
                 <li><Link href="#news" className="hover:text-[#C41E3A] transition-colors">News Updates</Link></li>
-                <li><Link href="#" className="hover:text-[#C41E3A] transition-colors">Support Desk</Link></li>
+                <li><Link href="/support-desk" className="hover:text-[#C41E3A] transition-colors">Support Desk</Link></li>
               </ul>
             </div>
             <div>

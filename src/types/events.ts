@@ -50,7 +50,7 @@ export interface RsvpRespondent {
     id: string;
     name: string;
     email: string;
-    batchYear: number;
+    batchYear: number | string | null;
     branch: string;
     course: string | null;
     currentRole: string | null;

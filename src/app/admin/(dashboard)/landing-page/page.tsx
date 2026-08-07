@@ -26,7 +26,8 @@ import {
   Sliders,
   Eye,
   Search,
-  Video
+  Video,
+  UserCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ImageUploader } from '@/components/ImageUploader';
@@ -1748,8 +1749,12 @@ export default function WebUpdatePage() {
                     <div key={t.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-white hover:shadow-md transition flex flex-col justify-between">
                       <div className="p-5 space-y-4">
                         <div className="flex items-center gap-3.5">
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-50 border border-slate-200 flex-shrink-0">
-                            <img src={t.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'} alt={t.name} className="w-full h-full object-cover" />
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-sky-50 border border-sky-200 flex items-center justify-center flex-shrink-0 text-[#003D7A]">
+                            {t.photo ? (
+                              <img src={t.photo} alt={t.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <UserCircle size={28} className="text-[#003D7A]" />
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">

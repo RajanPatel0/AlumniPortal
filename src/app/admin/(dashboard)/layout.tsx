@@ -4,7 +4,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe, Layers } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe, Layers, LifeBuoy } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { BASE_PATH } from '@/lib/api';
 
@@ -30,6 +30,7 @@ const allModules: NavItem[] = [
   { name: 'Events', href: '/admin/events', icon: Calendar, module: 'events' },
   { name: 'Startups', href: '/admin/startups', icon: Rocket, module: 'startups' },
   { name: 'Registration Requests', href: '/admin/requests', icon: Users, module: 'requests' },
+  { name: 'Support Desk', href: '/admin/support-desk', icon: LifeBuoy, module: 'requests' },
 ];
 
 export default function DashboardLayout({
