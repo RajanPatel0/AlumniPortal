@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X, Calendar, User, MapPin, ExternalLink, Info } from 'lucide-react';
 
 interface NewsItem {
   id: string;
@@ -17,13 +17,17 @@ interface NewsItem {
 }
 
 // Shared news card UI
-function NewsCard({ item }: { item: NewsItem }) {
+function NewsCard({
+  item,
+  setSelectedNews,
+}: {
+  item: NewsItem;
+  setSelectedNews: (news: NewsItem) => void;
+}) {
   return (
-    <a
-      href={item.linkTo || 'https://ptu.ac.in/news-events'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block bg-gradient-to-b from-white via-sky-50/20 to-white rounded-3xl overflow-hidden border border-sky-100 shadow-md hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group cursor-pointer relative"
+    <div
+      onClick={() => setSelectedNews(item)}
+      className="bg-gradient-to-b from-white via-sky-50/20 to-white rounded-3xl overflow-hidden border border-sky-100 shadow-md hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group cursor-pointer relative"
     >
       {/* Decorative top accent gradient bar */}
       <div className="h-1.5 w-full bg-gradient-to-r from-[#003D7A] via-sky-400 to-[#C41E3A]" />
@@ -35,11 +39,11 @@ function NewsCard({ item }: { item: NewsItem }) {
           className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-500"
         />
         {item.featured && (
-          <span className="absolute top-4 left-4 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20">
+          <span className="absolute top-3 left-3 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20">
             ★ Featured
           </span>
         )}
-        <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-lg border border-white/20 shadow-md">
+        <span className="absolute bottom-3 right-3 bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-lg border border-white/20 shadow-md">
           {item.category}
         </span>
       </div>
@@ -54,22 +58,31 @@ function NewsCard({ item }: { item: NewsItem }) {
         <h4 className="text-base md:text-lg font-black text-slate-900 mb-2 md:mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
           {item.title}
         </h4>
-        <p className="text-slate-600 text-xs md:text-sm leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 font-medium">
+        <p className="text-slate-600 text-xs md:text-sm leading-relaxed line-clamp-2 md:line-clamp-3 mb-4 font-medium">
           {item.summary}
         </p>
 
-        <div className="mt-auto pt-4 border-t border-sky-100/80 flex items-center justify-between">
-          <span className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] group-hover:from-[#C41E3A] group-hover:to-[#e62648] text-white text-xs font-extrabold shadow-sm transition-all duration-300">
-            Read Full Story →
-          </span>
-          <span className="text-slate-600 font-bold text-xs">📍 {item.campusTag}</span>
+        <div className="mt-auto pt-4 border-t border-sky-100/80 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedNews(item);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] group-hover:from-[#C41E3A] group-hover:to-[#e62648] text-white text-xs font-extrabold shadow-sm transition-all duration-300 flex items-center gap-1 cursor-pointer flex-shrink-0"
+          >
+            <span>Read Story</span>
+            <span className="text-xs">→</span>
+          </button>
+          <span className="text-slate-600 font-bold text-xs truncate max-w-[130px]">📍 {item.campusTag}</span>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
 export default function NewsSection({ news }: { news: NewsItem[] }) {
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -123,8 +136,8 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {news.map((item) => (
-              <div key={item.id} className="w-[260px] flex-shrink-0">
-                <NewsCard item={item} />
+              <div key={item.id} className="w-[280px] flex-shrink-0">
+                <NewsCard item={item} setSelectedNews={setSelectedNews} />
               </div>
             ))}
           </div>
@@ -156,7 +169,7 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
             >
               {news.map((item) => (
                 <div key={item.id} className="w-[360px] flex-shrink-0">
-                  <NewsCard item={item} />
+                  <NewsCard item={item} setSelectedNews={setSelectedNews} />
                 </div>
               ))}
             </div>
@@ -164,11 +177,110 @@ export default function NewsSection({ news }: { news: NewsItem[] }) {
         ) : (
           <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {news.map((item) => (
-              <NewsCard key={item.id} item={item} />
+              <NewsCard key={item.id} item={item} setSelectedNews={setSelectedNews} />
             ))}
+          </div>
+        )}
+
+        {/* ── NEWS ARTICLE DETAILS MODAL ── */}
+        {selectedNews && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-start justify-center z-[9999] pt-20 sm:pt-24 pb-8 px-4 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-100 relative my-auto max-h-[85vh] flex flex-col">
+              {/* Banner Header Image */}
+              <div className="relative h-52 sm:h-64 w-full bg-slate-900 flex-shrink-0 overflow-hidden">
+                <img
+                  src={selectedNews.coverImage}
+                  alt={selectedNews.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+
+                {/* Floating Badges */}
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
+                  {selectedNews.featured && (
+                    <span className="bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20">
+                      ★ Featured
+                    </span>
+                  )}
+                  <span className="bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold border border-white/20 shadow-md">
+                    {selectedNews.category}
+                  </span>
+                </div>
+
+                {/* Floating Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedNews(null)}
+                  className="absolute top-4 right-4 bg-slate-900/70 hover:bg-[#C41E3A] text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all z-10 shadow-lg cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X size={18} />
+                </button>
+
+                {/* Title over Banner */}
+                <div className="absolute bottom-4 left-4 right-4 text-white z-10">
+                  <h2 className="text-xl sm:text-2xl font-black leading-tight drop-shadow-md">
+                    {selectedNews.title}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-grow text-slate-800">
+                {/* Meta Pills */}
+                <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-sky-50/70 border border-sky-100 text-xs sm:text-sm">
+                  <div className="flex items-center gap-1.5 text-sky-900 font-bold">
+                    <Calendar size={15} className="text-[#003D7A]" />
+                    <span>{selectedNews.publishedDate}</span>
+                  </div>
+                  <span className="text-slate-300">•</span>
+                  <div className="flex items-center gap-1.5 text-sky-900 font-bold">
+                    <User size={15} className="text-[#003D7A]" />
+                    <span>By {selectedNews.author}</span>
+                  </div>
+                  <span className="text-slate-300">•</span>
+                  <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                    <MapPin size={15} className="text-[#C41E3A]" />
+                    <span>{selectedNews.campusTag}</span>
+                  </div>
+                </div>
+
+                {/* Full Article Content */}
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#003D7A] mb-2 flex items-center gap-1.5">
+                    <Info size={15} /> Article Summary &amp; Bulletin
+                  </h4>
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
+                    {selectedNews.summary}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedNews(null)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-200 transition cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <a
+                  href={selectedNews.linkTo || 'https://ptu.ac.in/news-events'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#003D7A] to-[#012140] hover:from-[#C41E3A] hover:to-[#e62648] text-white font-extrabold text-xs shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Visit Article Page</span>
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </section>
   );
 }
+
