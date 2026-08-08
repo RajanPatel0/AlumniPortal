@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
-import sharp from 'sharp';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
 
@@ -50,8 +49,16 @@ export async function uploadFile(
   const arrayBuffer = await file.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer);
 
-  const fileExt = path.extname(file.name).toLowerCase() || '.jpg';
-  const mimeType = file.type;
+  // Verify the actual file type using magic numbers (file-type) via dynamic import for ESM compatibility
+  const { fileTypeFromBuffer } = await import('file-type');
+  const detectedType = await fileTypeFromBuffer(buffer);
+  const mimeType = detectedType ? detectedType.mime : file.type;
+  
+  // Set file extension. If it's an image, we force it to .webp since we will process/convert it.
+  const isImage = mimeType.startsWith('image/');
+  const fileExt = isImage 
+    ? '.webp' 
+    : (detectedType ? `.${detectedType.ext}` : (path.extname(file.name).toLowerCase() || '.jpg'));
 
   // Validation
   if (subfolder === 'videos') {
@@ -83,28 +90,27 @@ export async function uploadFile(
   const filename = `${crypto.randomUUID()}${fileExt}`;
   const filePath = path.join(targetDir, filename);
 
-  // Resize and compress images
-  if (mimeType.startsWith('image/')) {
+  // Resize and convert images to WebP (Always re-encode for security sanitization)
+  if (isImage) {
     try {
-      let sharpInstance = sharp(buffer);
-      sharpInstance = sharpInstance.resize({
-        width: 1200,
-        height: 1200,
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
-
-      if (fileExt === '.jpg' || fileExt === '.jpeg') {
-        buffer = await sharpInstance.jpeg({ quality: 80, mozjpeg: true }).toBuffer();
-      } else if (fileExt === '.png') {
-        buffer = await sharpInstance.png({ quality: 80 }).toBuffer();
-      } else if (fileExt === '.webp') {
-        buffer = await sharpInstance.webp({ quality: 80 }).toBuffer();
-      } else {
-        buffer = await sharpInstance.toBuffer();
-      }
+      const sharpModule = await import('sharp');
+      const sharp = sharpModule.default || sharpModule;
+      buffer = await sharp(buffer)
+        .resize({
+          width: 1200,
+          height: 1200,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .webp({ 
+          quality: 75, 
+          effort: 4, 
+          lossless: false 
+        })
+        .toBuffer();
     } catch (err) {
-      console.error('[Sharp processing failed, falling back to original buffer]', err);
+      console.error('[Sharp processing failed]', err);
+      throw new Error('Invalid or corrupted image file, or the image processor module failed to load.');
     }
   }
 

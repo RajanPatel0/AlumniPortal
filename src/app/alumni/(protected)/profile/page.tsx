@@ -135,7 +135,10 @@ function ProfilePageClient() {
         body: uploadData,
       });
 
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Upload failed');
+      }
       const data = await res.json();
 
       if (data.avatarUrl) {
@@ -146,9 +149,9 @@ function ProfilePageClient() {
         await fetchProfile();
         toast.success('Profile photo updated!', { id: toastId });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Failed to upload photo', { id: toastId });
+      toast.error(error.message || 'Failed to upload photo', { id: toastId });
     }
   };
 
