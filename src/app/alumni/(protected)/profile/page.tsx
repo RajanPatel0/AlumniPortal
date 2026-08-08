@@ -122,14 +122,21 @@ function ProfilePageClient() {
 
   // Avatar Image Upload via Cloudinary
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     const toastId = toast.loading('Uploading photo...');
-    const uploadData = new FormData();
-    uploadData.append('file', file);
-
     try {
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
+      const processed = await preprocessImageFile(file);
+      if (processed.error) {
+        throw new Error(processed.error);
+      }
+      file = processed.file;
+
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+
       const res = await apiFetch('/alumni/upload-avatar', {
         method: 'POST',
         body: uploadData,
@@ -144,9 +151,16 @@ function ProfilePageClient() {
       if (data.avatarUrl) {
         setProfile(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
         setFormData(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
-        queryClient.invalidateQueries({ queryKey: ['alumni-profile-me'] });
-        queryClient.invalidateQueries({ queryKey: ['alumni-feed'] });
-        await fetchProfile();
+        
+        // Optimistically update React Query cache directly without triggering background API fetches
+        queryClient.setQueryData(['alumni-profile-me'], (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            avatarUrl: data.avatarUrl,
+          };
+        });
+
         toast.success('Profile photo updated!', { id: toastId });
       }
     } catch (error: any) {
@@ -292,7 +306,7 @@ function ProfilePageClient() {
                 <span className="text-[10px] font-bold uppercase tracking-wider">Change photo</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                   onChange={handleAvatarUpload}
                   className="hidden"
                 />

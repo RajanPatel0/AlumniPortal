@@ -29,20 +29,36 @@ export function ImageUploader({
   folder = 'alumni_portal',
   placeholder = 'Click to upload an image',
   className = '',
-  accept = 'image/*',
+  accept = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif',
 }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     setError(null);
-    setIsUploading(true);
+    // Start with a generic processing fallback state
+    setIsProcessing(true);
 
     try {
+      // Dynamic import of file preprocessor
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
+      const processed = await preprocessImageFile(file);
+      if (processed.error) {
+        throw new Error(processed.error);
+      }
+      file = processed.file;
+      
+      // Update states: if it wasn't a HEIC image, we transition immediately to uploading
+      if (!processed.wasProcessed) {
+        setIsProcessing(false);
+      }
+      setIsUploading(true);
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', folder);
@@ -62,6 +78,7 @@ export function ImageUploader({
     } catch (err: any) {
       setError(err.message || 'Upload failed. Please try again.');
     } finally {
+      setIsProcessing(false);
       setIsUploading(false);
       // Reset input so same file can be re-selected
       if (inputRef.current) inputRef.current.value = '';
@@ -73,6 +90,8 @@ export function ImageUploader({
     setError(null);
     if (inputRef.current) inputRef.current.value = '';
   };
+
+  const isLoading = isUploading || isProcessing;
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -97,16 +116,16 @@ export function ImageUploader({
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isLoading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 hover:bg-white text-slate-800 text-xs font-bold rounded-lg transition cursor-pointer"
             >
-              {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+              {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
               Change
             </button>
             <button
               type="button"
               onClick={handleClear}
-              disabled={isUploading}
+              disabled={isLoading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition cursor-pointer"
             >
               <X size={12} />
@@ -119,13 +138,15 @@ export function ImageUploader({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={isUploading}
+          disabled={isLoading}
           className="w-full h-32 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 hover:border-[#003D7A] hover:bg-slate-550 rounded-xl text-slate-400 hover:text-[#003D7A] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {isUploading ? (
+          {isLoading ? (
             <>
               <Loader2 size={24} className="animate-spin text-[#003D7A]" />
-              <span className="text-xs font-semibold text-[#003D7A]">Uploading…</span>
+              <span className="text-xs font-semibold text-[#003D7A]">
+                {isProcessing ? 'Processing Photo...' : 'Uploading...'}
+              </span>
             </>
           ) : (
             <>

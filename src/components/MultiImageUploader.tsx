@@ -19,6 +19,7 @@ export function MultiImageUploader({
 }: MultiImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFilesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,13 +27,24 @@ export function MultiImageUploader({
     if (files.length === 0) return;
 
     setError(null);
-    setIsUploading(true);
+    setIsProcessing(true);
 
     try {
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
       const uploadedUrls: string[] = [];
-      for (const file of files) {
+
+      for (const rawFile of files) {
+        const processed = await preprocessImageFile(rawFile);
+        if (processed.error) {
+          throw new Error(processed.error);
+        }
+        
+        // Update states: finished processing current file, starting upload
+        setIsProcessing(false);
+        setIsUploading(true);
+
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', processed.file);
         formData.append('folder', folder);
 
         const res = await apiFetch('/upload', { method: 'POST', body: formData });
@@ -47,6 +59,7 @@ export function MultiImageUploader({
     } catch (err: any) {
       setError(err.message || 'Failed to upload images');
     } finally {
+      setIsProcessing(false);
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
@@ -65,6 +78,8 @@ export function MultiImageUploader({
   const handleSetCover = (url: string) => {
     onChange(imageUrls, url);
   };
+
+  const isLoading = isUploading || isProcessing;
 
   return (
     <div className="space-y-3">
@@ -111,13 +126,15 @@ export function MultiImageUploader({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={isUploading}
-        className="w-full h-24 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-slate-200 hover:border-[#003D7A] hover:bg-slate-50/50 rounded-xl text-slate-400 hover:text-[#003D7A] transition-all cursor-pointer disabled:opacity-50"
+        disabled={isLoading}
+        className="w-full h-24 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-slate-200 hover:border-[#003D7A] hover:bg-slate-550 rounded-xl text-slate-400 hover:text-[#003D7A] transition-all cursor-pointer disabled:opacity-50"
       >
-        {isUploading ? (
+        {isLoading ? (
           <>
             <Loader2 size={20} className="animate-spin text-[#003D7A]" />
-            <span className="text-xs font-semibold text-[#003D7A]">Uploading photos…</span>
+            <span className="text-xs font-semibold text-[#003D7A]">
+              {isProcessing ? 'Processing Photos...' : 'Uploading photos…'}
+            </span>
           </>
         ) : (
           <>
@@ -125,7 +142,7 @@ export function MultiImageUploader({
             <span className="text-xs font-semibold">
               {imageUrls.length > 0 ? 'Add more photos' : 'Upload story photos'}
             </span>
-            <span className="text-[10px] text-slate-400">JPG, PNG, WebP · Select multiple</span>
+            <span className="text-[10px] text-slate-400">JPG, PNG, WebP, HEIC · Select multiple</span>
           </>
         )}
       </button>
@@ -134,7 +151,7 @@ export function MultiImageUploader({
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         onChange={handleFilesSelect}
         className="hidden"
       />

@@ -36,6 +36,18 @@ function getSubfolder(folder: string): string {
   }
 }
 
+function getTargetResolution(subfolder: string): number {
+  const RESOLUTION_MAP: Record<string, number> = {
+    'avatars': 400,     // Profile photos
+    'startups': 400,    // Startup logos / Brand graphics
+    'events': 1200,     // Event covers
+    'id-proofs': 1200,  // ID proofs
+    'albums': 1200,     // Photo albums
+    'posts': 1200,      // Feed posts
+  };
+  return RESOLUTION_MAP[subfolder] || 1200;
+}
+
 export async function uploadFile(
   file: File,
   folder: string = 'alumni_portal'
@@ -70,17 +82,17 @@ export async function uploadFile(
       throw new Error('Video files must be less than 50MB.');
     }
   } else if (subfolder === 'id-proofs') {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
     if (!allowedMimeTypes.includes(mimeType)) {
-      throw new Error('Only image files (JPG, PNG, WebP) and PDF documents are allowed for ID proof.');
+      throw new Error('Only image files (JPG, PNG, WebP, HEIC) and PDF documents are allowed for ID proof.');
     }
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('ID proof document must be less than 10MB.');
     }
   } else {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
     if (!allowedMimeTypes.includes(mimeType)) {
-      throw new Error('Only image files (JPG, PNG, WebP) are allowed.');
+      throw new Error('Only image files (JPG, PNG, WebP, HEIC) are allowed.');
     }
     if (file.size > 5 * 1024 * 1024) {
       throw new Error('Image files must be less than 5MB.');
@@ -95,10 +107,13 @@ export async function uploadFile(
     try {
       const sharpModule = await import('sharp');
       const sharp = sharpModule.default || sharpModule;
+      
+      const targetSize = getTargetResolution(subfolder);
+
       buffer = await sharp(buffer)
         .resize({
-          width: 1200,
-          height: 1200,
+          width: targetSize,
+          height: targetSize,
           fit: 'inside',
           withoutEnlargement: true,
         })

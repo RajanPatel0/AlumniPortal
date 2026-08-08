@@ -19,7 +19,9 @@ import {
   Loader2,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle,
+  RotateCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ProfileCompletionModal from './ProfileCompletionModal';
@@ -63,8 +65,15 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Image upload states
-  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  interface UploadItem {
+    id: string;
+    file: File;
+    previewUrl: string;
+    serverUrl?: string;
+    status: 'pending' | 'uploading' | 'success' | 'error';
+    error?: string;
+  }
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fullscreen Image Lightbox Preview modal state
@@ -156,38 +165,105 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
     isLoading: isFetchingNextPage,
   });
 
+  const uploadSingleFile = async (item: UploadItem) => {
+    // Set status to uploading
+    setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'uploading', error: undefined } : p));
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', item.file);
+      formData.append('folder', 'alumni_posts');
+
+      const res = await apiFetch('/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'success', serverUrl: data.url } : p));
+      } else {
+        const errorMsg = data.error || 'Failed to upload';
+        setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: errorMsg } : p));
+        toast.error(`Failed to upload ${item.file.name}: ${errorMsg}`);
+      }
+    } catch (err) {
+      console.error('[IMAGE_UPLOAD_ERROR]', err);
+      setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: 'Connection error' } : p));
+      toast.error(`Connection error uploading ${item.file.name}`);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    setIsUploadingImage(true);
-    const uploaded: string[] = [];
-    for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'alumni_posts');
+    // Dynamically import utility
+    const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
 
-        const res = await apiFetch('/upload', {
-          method: 'POST',
-          body: formData,
-        });
+    // 1. Create items with local blobs immediately to prevent blocking the UI
+    const initialItems: UploadItem[] = files.map(file => {
+      const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9);
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.heic$/i.test(file.name);
+      
+      return {
+        id,
+        file,
+        previewUrl: isHeic ? '' : URL.createObjectURL(file), // HEIC preview is empty until converted
+        status: isHeic ? 'pending' : 'uploading', // HEIC shows pending loader first
+      };
+    });
 
-        const data = await res.json();
-        if (res.ok && data.url) {
-          uploaded.push(data.url);
-        } else {
-          toast.error(data.error || `Failed to upload ${file.name}`);
-        }
-      } catch (err) {
-        console.error('[IMAGE_UPLOAD_ERROR]', err);
-        toast.error(`Failed to upload ${file.name}`);
-      }
-    }
-    setUploadedImageUrls(prev => [...prev, ...uploaded]);
-    setIsUploadingImage(false);
+    // Update state immediately so placeholders render instantly
+    setUploadItems(prev => [...prev, ...initialItems]);
     if (fileInputRef.current) fileInputRef.current.value = '';
+
+    // 2. Process each file asynchronously in parallel
+    initialItems.forEach(async (item) => {
+      let fileToUpload = item.file;
+      const isHeic = item.file.type === 'image/heic' || item.file.type === 'image/heif' || /\.heic$/i.test(item.file.name);
+
+      if (isHeic) {
+        // Toggle status to uploading during conversion
+        setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'uploading' } : p));
+        
+        const processed = await preprocessImageFile(item.file);
+        if (processed.error) {
+          setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: processed.error } : p));
+          return;
+        }
+        
+        fileToUpload = processed.file;
+        setUploadItems(prev => prev.map(p => p.id === item.id ? { ...p, previewUrl: processed.previewUrl, file: processed.file } : p));
+      }
+
+      // 3. Trigger upload for this specific file independently
+      uploadSingleFile({
+        ...item,
+        file: fileToUpload
+      });
+    });
   };
+
+  const handleRetryUpload = (itemId: string) => {
+    const item = uploadItems.find(p => p.id === itemId);
+    if (item) {
+      uploadSingleFile(item);
+    }
+  };
+
+  const handleRemoveUploadItem = (itemId: string) => {
+    setUploadItems(prev => {
+      const item = prev.find(p => p.id === itemId);
+      if (item && item.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter(p => p.id !== itemId);
+    });
+  };
+
+  const isUploadingImage = uploadItems.some(item => item.status === 'uploading' || item.status === 'pending');
+  const uploadedImageUrls = uploadItems.filter(item => item.status === 'success' && item.serverUrl).map(item => item.serverUrl as string);
 
   const handleCreatePost = async () => {
     if (!shareText.trim() && uploadedImageUrls.length === 0) return;
@@ -205,7 +281,13 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
       if (res.ok) {
         toast.success('Posted to community feed!');
         setShareText('');
-        setUploadedImageUrls([]);
+        // Clean up preview URLs
+        uploadItems.forEach(item => {
+          if (item.previewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(item.previewUrl);
+          }
+        });
+        setUploadItems([]);
         // Invalidate the cached feed so new post appears immediately
         queryClient.invalidateQueries({ queryKey: ['alumni-feed-posts'] });
       } else {
@@ -402,15 +484,59 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
           </div>
 
           {/* Uploaded Images Thumbnails Grid */}
-          {uploadedImageUrls.length > 0 && (
+          {uploadItems.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 ml-13 pt-1">
-              {uploadedImageUrls.map((url, idx) => (
-                <div key={idx} className="relative rounded-xl overflow-hidden border border-slate-200 aspect-square group">
-                  <img src={url} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+              {uploadItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  className={`relative rounded-xl overflow-hidden border aspect-square group transition-all ${
+                    item.status === 'error' 
+                      ? 'border-rose-300 ring-2 ring-rose-50' 
+                      : item.status === 'uploading' 
+                      ? 'border-blue-200' 
+                      : 'border-slate-200'
+                  }`}
+                >
+                  <img 
+                    src={item.previewUrl} 
+                    alt={item.file.name} 
+                    className={`w-full h-full object-cover transition-all ${
+                      item.status === 'uploading' ? 'opacity-40 blur-[1px]' : item.status === 'error' ? 'opacity-30 grayscale' : ''
+                    }`} 
+                  />
+
+                  {/* Loading Overlay */}
+                  {item.status === 'uploading' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#003D7A]" />
+                      <span className="text-[9px] font-bold text-slate-600 mt-1">Uploading...</span>
+                    </div>
+                  )}
+
+                  {/* Error Overlay */}
+                  {item.status === 'error' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-1 bg-rose-50/40">
+                      <AlertCircle className="w-5 h-5 text-rose-600" />
+                      <span className="text-[9px] font-black text-rose-700 text-center leading-tight mt-1 line-clamp-1" title={item.error}>
+                        {item.error || 'Failed'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRetryUpload(item.id)}
+                        className="mt-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[8px] font-bold transition shadow-sm cursor-pointer"
+                        title="Retry upload"
+                      >
+                        <RotateCw size={8} />
+                        <span>Retry</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delete Button (Always available to remove/cancel item) */}
                   <button
                     type="button"
-                    onClick={() => setUploadedImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                    className="absolute top-1 right-1 w-5 h-5 bg-rose-600/90 text-white rounded-full flex items-center justify-center hover:bg-rose-700 transition cursor-pointer"
+                    onClick={() => handleRemoveUploadItem(item.id)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-slate-900/70 hover:bg-rose-600 text-white rounded-full flex items-center justify-center transition cursor-pointer z-10"
                     title="Remove image"
                   >
                     <X size={10} />
@@ -459,7 +585,7 @@ export default function AlumniFeedClient({ initialProfile, initialPosts }: Alumn
           <input
             type="file"
             ref={fileInputRef}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
             multiple
             onChange={handleImageUpload}
             className="hidden"
