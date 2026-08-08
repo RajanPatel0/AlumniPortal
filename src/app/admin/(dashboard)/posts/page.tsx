@@ -72,11 +72,18 @@ function InlineImageUploader({
   const [preview, setPreview] = useState('');
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     try {
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
+      const processed = await preprocessImageFile(file);
+      if (processed.error) {
+        throw new Error(processed.error);
+      }
+      file = processed.file;
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', folder);
@@ -132,7 +139,7 @@ function InlineImageUploader({
           )}
         </button>
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFile} />
     </div>
   );
 }
@@ -147,26 +154,44 @@ function AlbumImagesUploader({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setUploading(true);
+    setIsProcessing(true);
     const uploaded: { url: string; caption: string }[] = [];
 
-    for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'admin_gallery');
-        const res = await apiFetch('/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (res.ok) uploaded.push({ url: data.url, caption: '' });
-      } catch {
-        toast.error(`Failed to upload ${file.name}`);
+    try {
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
+      
+      for (const rawFile of files) {
+        try {
+          const processed = await preprocessImageFile(rawFile);
+          if (processed.error) {
+            toast.error(processed.error);
+            continue;
+          }
+
+          setIsProcessing(false);
+          setUploading(true);
+
+          const formData = new FormData();
+          formData.append('file', processed.file);
+          formData.append('folder', 'admin_gallery');
+          const res = await apiFetch('/upload', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (res.ok) uploaded.push({ url: data.url, caption: '' });
+        } catch {
+          toast.error(`Failed to upload ${rawFile.name}`);
+        }
       }
+    } catch (err) {
+      console.error('File preprocessing failed', err);
     }
+
     onChange([...images, ...uploaded]);
+    setIsProcessing(false);
     setUploading(false);
     if (inputRef.current) inputRef.current.value = '';
   };
@@ -180,6 +205,8 @@ function AlbumImagesUploader({
     updated[idx] = { ...updated[idx], caption };
     onChange(updated);
   };
+
+  const isLoading = uploading || isProcessing;
 
   return (
     <div className="space-y-3">
@@ -213,12 +240,19 @@ function AlbumImagesUploader({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={uploading}
+        disabled={isLoading}
         className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:border-[#003D7A] hover:text-[#003D7A] hover:bg-blue-50/30 transition text-sm font-medium"
       >
-        {uploading ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><Upload size={16} /> Add Photos from Device</>}
+        {isLoading ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            <span>{isProcessing ? 'Processing Apple Photos...' : 'Uploading...'}</span>
+          </>
+        ) : (
+          <><Upload size={16} /> Add Photos from Device</>
+        )}
       </button>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple className="hidden" onChange={handleFile} />
     </div>
   );
 }

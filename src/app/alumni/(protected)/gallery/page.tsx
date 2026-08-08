@@ -31,26 +31,44 @@ function AlbumImagesUploader({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setUploading(true);
+    setIsProcessing(true);
     const uploaded: { url: string; caption: string }[] = [];
 
-    for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'alumni_gallery');
-        const res = await apiFetch('/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (res.ok) uploaded.push({ url: data.url, caption: '' });
-      } catch {
-        toast.error(`Failed to upload ${file.name}`);
+    try {
+      const { preprocessImageFile } = await import('@/lib/utils/fileHelper');
+      
+      for (const rawFile of files) {
+        try {
+          const processed = await preprocessImageFile(rawFile);
+          if (processed.error) {
+            toast.error(processed.error);
+            continue;
+          }
+
+          setIsProcessing(false);
+          setUploading(true);
+
+          const formData = new FormData();
+          formData.append('file', processed.file);
+          formData.append('folder', 'alumni_gallery');
+          const res = await apiFetch('/upload', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (res.ok) uploaded.push({ url: data.url, caption: '' });
+        } catch {
+          toast.error(`Failed to upload ${rawFile.name}`);
+        }
       }
+    } catch (err) {
+      console.error('File preprocessing failed', err);
     }
+
     onChange([...images, ...uploaded]);
+    setIsProcessing(false);
     setUploading(false);
     if (inputRef.current) inputRef.current.value = '';
   };
@@ -64,6 +82,8 @@ function AlbumImagesUploader({
     updated[idx] = { ...updated[idx], caption };
     onChange(updated);
   };
+
+  const isLoading = uploading || isProcessing;
 
   return (
     <div className="space-y-3">
@@ -97,12 +117,19 @@ function AlbumImagesUploader({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={uploading}
+        disabled={isLoading}
         className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:border-[#003D7A] hover:text-[#003D7A] hover:bg-blue-50/30 transition text-xs font-semibold cursor-pointer"
       >
-        {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><Upload size={14} /> Add Photos</>}
+        {isLoading ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            <span>{isProcessing ? 'Processing Photos...' : 'Uploading...'}</span>
+          </>
+        ) : (
+          <><Upload size={14} /> Add Photos</>
+        )}
       </button>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple className="hidden" onChange={handleFile} />
     </div>
   );
 }

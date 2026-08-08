@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
-import sharp from 'sharp';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
 
@@ -37,6 +36,18 @@ function getSubfolder(folder: string): string {
   }
 }
 
+function getTargetResolution(subfolder: string): number {
+  const RESOLUTION_MAP: Record<string, number> = {
+    'avatars': 400,     // Profile photos
+    'startups': 400,    // Startup logos / Brand graphics
+    'events': 1200,     // Event covers
+    'id-proofs': 1200,  // ID proofs
+    'albums': 1200,     // Photo albums
+    'posts': 1200,      // Feed posts
+  };
+  return RESOLUTION_MAP[subfolder] || 1200;
+}
+
 export async function uploadFile(
   file: File,
   folder: string = 'alumni_portal'
@@ -50,8 +61,16 @@ export async function uploadFile(
   const arrayBuffer = await file.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer);
 
-  const fileExt = path.extname(file.name).toLowerCase() || '.jpg';
-  const mimeType = file.type;
+  // Verify the actual file type using magic numbers (file-type) via dynamic import for ESM compatibility
+  const { fileTypeFromBuffer } = await import('file-type');
+  const detectedType = await fileTypeFromBuffer(buffer);
+  const mimeType = detectedType ? detectedType.mime : file.type;
+  
+  // Set file extension. If it's an image, we force it to .webp since we will process/convert it.
+  const isImage = mimeType.startsWith('image/');
+  const fileExt = isImage 
+    ? '.webp' 
+    : (detectedType ? `.${detectedType.ext}` : (path.extname(file.name).toLowerCase() || '.jpg'));
 
   // Validation
   if (subfolder === 'videos') {
@@ -63,17 +82,17 @@ export async function uploadFile(
       throw new Error('Video files must be less than 50MB.');
     }
   } else if (subfolder === 'id-proofs') {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
     if (!allowedMimeTypes.includes(mimeType)) {
-      throw new Error('Only image files (JPG, PNG, WebP) and PDF documents are allowed for ID proof.');
+      throw new Error('Only image files (JPG, PNG, WebP, HEIC) and PDF documents are allowed for ID proof.');
     }
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('ID proof document must be less than 10MB.');
     }
   } else {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
     if (!allowedMimeTypes.includes(mimeType)) {
-      throw new Error('Only image files (JPG, PNG, WebP) are allowed.');
+      throw new Error('Only image files (JPG, PNG, WebP, HEIC) are allowed.');
     }
     if (file.size > 5 * 1024 * 1024) {
       throw new Error('Image files must be less than 5MB.');
@@ -83,28 +102,30 @@ export async function uploadFile(
   const filename = `${crypto.randomUUID()}${fileExt}`;
   const filePath = path.join(targetDir, filename);
 
-  // Resize and compress images
-  if (mimeType.startsWith('image/')) {
+  // Resize and convert images to WebP (Always re-encode for security sanitization)
+  if (isImage) {
     try {
-      let sharpInstance = sharp(buffer);
-      sharpInstance = sharpInstance.resize({
-        width: 1200,
-        height: 1200,
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
+      const sharpModule = await import('sharp');
+      const sharp = sharpModule.default || sharpModule;
+      
+      const targetSize = getTargetResolution(subfolder);
 
-      if (fileExt === '.jpg' || fileExt === '.jpeg') {
-        buffer = await sharpInstance.jpeg({ quality: 80, mozjpeg: true }).toBuffer();
-      } else if (fileExt === '.png') {
-        buffer = await sharpInstance.png({ quality: 80 }).toBuffer();
-      } else if (fileExt === '.webp') {
-        buffer = await sharpInstance.webp({ quality: 80 }).toBuffer();
-      } else {
-        buffer = await sharpInstance.toBuffer();
-      }
+      buffer = await sharp(buffer)
+        .resize({
+          width: targetSize,
+          height: targetSize,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .webp({ 
+          quality: 75, 
+          effort: 4, 
+          lossless: false 
+        })
+        .toBuffer();
     } catch (err) {
-      console.error('[Sharp processing failed, falling back to original buffer]', err);
+      console.error('[Sharp processing failed]', err);
+      throw new Error('Invalid or corrupted image file, or the image processor module failed to load.');
     }
   }
 

@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
       select: { avatarUrl: true },
     });
     if (currentAlumni?.avatarUrl) {
-      await deleteFile(currentAlumni.avatarUrl);
+      deleteFile(currentAlumni.avatarUrl).catch(err => 
+        console.error('Non-blocking delete of old avatar failed:', err)
+      );
     }
 
     // Upload file locally to uploads/avatars
