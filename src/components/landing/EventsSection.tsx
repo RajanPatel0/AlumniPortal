@@ -317,17 +317,25 @@ export default function EventsSection({ events }: { events: Event[] }) {
         {selectedDetailEvent && (
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-start justify-center z-[9999] pt-20 sm:pt-24 pb-8 px-4 overflow-y-auto animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-100 relative my-auto max-h-[85vh] flex flex-col">
-              {/* Banner Header with Image */}
-              <div className="relative h-52 sm:h-64 w-full bg-slate-900 flex-shrink-0 overflow-hidden">
+              {/* Dual-Layer Banner Header (No Cropping / No Zooming) */}
+              <div className="relative h-56 sm:h-72 w-full bg-slate-950 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                {/* Background Ambient Blur */}
+                <img
+                  src={selectedDetailEvent.bannerImage}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110 pointer-events-none"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-slate-950/20 pointer-events-none" />
+
+                {/* Foreground Image - Complete Aspect Ratio with Object Contain */}
                 <img
                   src={selectedDetailEvent.bannerImage}
                   alt={selectedDetailEvent.title}
-                  className="w-full h-full object-cover"
+                  className="relative z-10 w-full h-full object-contain p-2"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
-                
+
                 {/* Floating Badges */}
-                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg border border-white/20 ${
                     selectedDetailEvent.category === 'reunion' ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
                     selectedDetailEvent.category === 'webinar' ? 'bg-gradient-to-r from-[#003D7A] to-blue-600' : 'bg-gradient-to-r from-[#C41E3A] to-[#e62648]'
@@ -343,22 +351,22 @@ export default function EventsSection({ events }: { events: Event[] }) {
                 <button
                   type="button"
                   onClick={() => setSelectedDetailEvent(null)}
-                  className="absolute top-4 right-4 bg-slate-900/70 hover:bg-[#C41E3A] text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all z-10 shadow-lg cursor-pointer"
+                  className="absolute top-4 right-4 bg-slate-900/80 hover:bg-[#C41E3A] text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all z-20 shadow-lg cursor-pointer"
                   aria-label="Close modal"
                 >
                   <X size={18} />
                 </button>
-
-                {/* Title over Banner */}
-                <div className="absolute bottom-4 left-4 right-4 text-white z-10">
-                  <h2 className="text-xl sm:text-2xl font-black leading-tight drop-shadow-md">
-                    {selectedDetailEvent.title}
-                  </h2>
-                </div>
               </div>
 
               {/* Modal Content Scroll Area */}
               <div className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-grow text-slate-800">
+                {/* Event Title */}
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug tracking-tight mb-1">
+                    {selectedDetailEvent.title}
+                  </h2>
+                </div>
+
                 {/* Event Meta Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-sky-50/70 border border-sky-100 text-xs sm:text-sm">
                   <div className="flex items-center gap-2.5">
