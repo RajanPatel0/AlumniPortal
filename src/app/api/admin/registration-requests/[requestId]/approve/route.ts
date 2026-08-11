@@ -5,6 +5,7 @@ import { getAuthenticatedStaff, CampusScopeError } from '@/lib/auth/staff-auth';
 import { sendEmail } from '@/lib/brevo';
 import { resolveLocation } from '@/lib/geocoding';
 import { ensureAcademicOptionActive } from '@/lib/academic-options';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function POST(
   req: NextRequest,
@@ -118,6 +119,8 @@ export async function POST(
         },
       });
 
+      const finalApproveCompany = normalizeCompanyName(existingRequest.currentCompany);
+
       const newAlumni = await tx.alumni.create({
         data: {
           name: existingRequest.name,
@@ -137,7 +140,7 @@ export async function POST(
           linkedinId: existingRequest.authProvider === 'LINKEDIN' ? existingRequest.providerId : null,
           passwordHash: existingRequest.authProvider === 'MANUAL' ? existingRequest.passwordHash : null,
           currentRole: existingRequest.currentRole,
-          currentCompany: existingRequest.currentCompany,
+          currentCompany: finalApproveCompany,
           linkedinUrl: existingRequest.linkedinUrl,
           pincode: existingRequest.pincode,
           city: resolvedLocation?.city || existingRequest.city || null,
@@ -150,7 +153,7 @@ export async function POST(
         await tx.workExperience.create({
           data: {
             alumniId: newAlumni.id,
-            company: existingRequest.currentCompany || 'Not Specified',
+            company: finalApproveCompany,
             title: existingRequest.currentRole || 'Not Specified',
             location: existingRequest.city || null,
             startDate: new Date(),

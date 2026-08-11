@@ -11,6 +11,7 @@ import {
   CheckCircle, ShieldAlert, Award, Calendar, BookOpen, MapPin
 } from 'lucide-react';
 import CompanyAutocomplete from '@/components/CompanyAutocomplete';
+import { isCompanyNotSpecified, NOT_SPECIFIED_COMPANY } from '@/lib/company-utils';
 
 type Campus = { id: string; name: string; code: string };
 type AutocompleteOptions = { branches: string[]; courses: string[] };
@@ -670,10 +671,28 @@ export default function SelfRegisterPage() {
                         <CompanyAutocomplete
                           value={formData.currentCompany}
                           onChange={(val) => setFormData({ ...formData, currentCompany: val })}
-                          placeholder="e.g. Google India"
+                          placeholder={isCompanyNotSpecified(formData.currentCompany) ? 'Not Specified' : 'e.g. Google India'}
                           name="currentCompany"
+                          disabled={isCompanyNotSpecified(formData.currentCompany)}
                           className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:border-[#003D7A] focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200"
                         />
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          id="registerNotSpecifiedCompany"
+                          checked={isCompanyNotSpecified(formData.currentCompany)}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              currentCompany: e.target.checked ? NOT_SPECIFIED_COMPANY : '',
+                            });
+                          }}
+                          className="w-3.5 h-3.5 rounded text-[#003D7A] focus:ring-[#003D7A] cursor-pointer"
+                        />
+                        <label htmlFor="registerNotSpecifiedCompany" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">
+                          Not Specified / Unemployed / Prefer Not to Disclose
+                        </label>
                       </div>
                     </div>
 

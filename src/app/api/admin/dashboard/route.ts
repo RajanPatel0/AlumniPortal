@@ -5,6 +5,7 @@ import {
   resolveCampusScope,
   CampusScopeError,
 } from '@/lib/auth/staff-auth';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -184,7 +185,16 @@ export async function GET(req: NextRequest) {
     const distributionGroup = results[16] as any[];
 
     const uniqueBranchesCount = branchRows.filter((b) => b.branch).length;
-    const uniqueCompaniesCount = companyRows.filter((c) => c.currentCompany).length;
+    
+    // Normalize company names in memory to ensure clean aggregation
+    const normalizedCompaniesMap = new Map<string, number>();
+    companyRows.forEach((c) => {
+      if (c.currentCompany) {
+        const norm = normalizeCompanyName(c.currentCompany);
+        normalizedCompaniesMap.set(norm, (normalizedCompaniesMap.get(norm) || 0) + 1);
+      }
+    });
+    const uniqueCompaniesCount = normalizedCompaniesMap.size;
 
     // Process trend data in-memory
     const trendMap = new Map<string, number>();
@@ -235,11 +245,16 @@ export async function GET(req: NextRequest) {
       count: b._count.id,
     }));
 
-    // Top Companies (Bar Chart)
-    const companyDistribution = topCompaniesGroup.map((c) => ({
-      name: c.currentCompany || 'Unknown',
-      count: c._count.id,
-    }));
+    // Top Companies (Bar Chart) — Normalized Top 5
+    const companyAggMap = new Map<string, number>();
+    topCompaniesGroup.forEach((c) => {
+      const norm = normalizeCompanyName(c.currentCompany);
+      companyAggMap.set(norm, (companyAggMap.get(norm) || 0) + c._count.id);
+    });
+    const companyDistribution = Array.from(companyAggMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
     return NextResponse.json({
       stats: {

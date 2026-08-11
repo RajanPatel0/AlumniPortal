@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,57 +11,52 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    // Query distinct companies from Alumni currentCompany and WorkExperience company
-    const [alumniCompanies, expCompanies] = await Promise.all([
+    const qLower = q.toLowerCase();
+
+    // Query registered alumni and work experiences
+    const [alumniRecords, expRecords] = await Promise.all([
       prisma.alumni.findMany({
-        where: {
-          currentCompany: {
-            contains: q,
-          },
-        },
-        select: { currentCompany: true },
+        where: { isRegistered: true },
+        select: { id: true, currentCompany: true },
       }),
       prisma.workExperience.findMany({
-        where: {
-          company: {
-            contains: q,
-          },
-        },
-        select: { company: true },
+        where: { alumni: { isRegistered: true } },
+        select: { alumniId: true, company: true },
       }),
     ]);
 
-    // Aggregate and count occurrences case-insensitively while preserving clean display casing
-    const companyMap = new Map<string, { display: string; count: number }>();
+    // Map company lowercased key -> { display, alumniIds: Set<string> }
+    const companyMap = new Map<string, { display: string; alumniIds: Set<string> }>();
 
-    const addCompany = (rawName: string | null | undefined) => {
-      if (!rawName) return;
-      const trimmed = rawName.trim();
-      if (!trimmed) return;
-      const lower = trimmed.toLowerCase();
+    const addRecord = (alumniId: string, rawCompany?: string | null) => {
+      if (!rawCompany || !rawCompany.trim()) return;
+      const normalized = normalizeCompanyName(rawCompany);
+      const lower = normalized.toLowerCase();
 
-      // Filter to ensure partial match (case-insensitive)
-      if (!lower.includes(q.toLowerCase())) return;
+      // Check if matches query
+      if (!lower.includes(qLower)) return;
 
       const existing = companyMap.get(lower);
       if (existing) {
-        existing.count += 1;
+        existing.alumniIds.add(alumniId);
       } else {
-        companyMap.set(lower, { display: trimmed, count: 1 });
+        companyMap.set(lower, {
+          display: normalized,
+          alumniIds: new Set([alumniId]),
+        });
       }
     };
 
-    alumniCompanies.forEach((a) => addCompany(a.currentCompany));
-    expCompanies.forEach((e) => addCompany(e.company));
+    alumniRecords.forEach((a) => addRecord(a.id, a.currentCompany));
+    expRecords.forEach((e) => addRecord(e.alumniId, e.company));
 
-    // Convert map to array, sort by frequency count descending, then alphabetically
     const suggestions = Array.from(companyMap.values())
-      .sort((a, b) => b.count - a.count || a.display.localeCompare(b.display))
-      .slice(0, 10)
       .map((item) => ({
         value: item.display,
-        count: item.count,
-      }));
+        count: item.alumniIds.size,
+      }))
+      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+      .slice(0, 10);
 
     return NextResponse.json({ suggestions });
   } catch (error) {

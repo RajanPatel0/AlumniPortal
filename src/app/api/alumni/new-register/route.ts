@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkAcademicNeedsReview, getAutoCorrectedBranch } from '@/lib/academic-options';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function POST(req: Request) {
   try {
@@ -167,7 +168,7 @@ export async function POST(req: Request) {
         providerId: providerId || null,
         passwordHash: passwordHash || null,
         currentRole: currentRole?.trim() || null,
-        currentCompany: currentCompany?.trim() || null,
+        currentCompany: normalizeCompanyName(currentCompany),
         linkedinUrl: linkedinUrl?.trim() || null,
         pincode: pincode?.trim() || null,
         city: city?.trim() || null,

@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 import CompanyAutocomplete from '@/components/CompanyAutocomplete';
+import { isCompanyNotSpecified, NOT_SPECIFIED_COMPANY } from '@/lib/company-utils';
 import { ExperienceItem } from '@/types/alumni';
 
 interface ExperienceModalProps {
@@ -92,9 +93,27 @@ export default function ExperienceModal({
             <CompanyAutocomplete
               value={formData.company || ''}
               onChange={(val) => setFormData(prev => ({ ...prev, company: val }))}
-              placeholder="e.g. Microsoft"
-              required
+              placeholder={isCompanyNotSpecified(formData.company) ? 'Not Specified' : 'e.g. Microsoft'}
+              disabled={isCompanyNotSpecified(formData.company)}
+              required={!isCompanyNotSpecified(formData.company)}
             />
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                id="expNotSpecifiedCompany"
+                checked={isCompanyNotSpecified(formData.company)}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    company: e.target.checked ? NOT_SPECIFIED_COMPANY : '',
+                  }));
+                }}
+                className="w-3.5 h-3.5 rounded text-[#003D7A] focus:ring-[#003D7A] cursor-pointer"
+              />
+              <label htmlFor="expNotSpecifiedCompany" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">
+                Not Specified / Unemployed / Prefer Not to Disclose
+              </label>
+            </div>
           </div>
 
           <div>

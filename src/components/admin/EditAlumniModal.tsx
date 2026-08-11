@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { getAlumniSuggestions } from '@/actions/admin-alumni-suggestions';
 import { useDebounce } from '@/lib/useDebounce';
 import CompanyAutocomplete from '@/components/CompanyAutocomplete';
+import { isCompanyNotSpecified, NOT_SPECIFIED_COMPANY } from '@/lib/company-utils';
 
 interface AlumniData {
   id: string;
@@ -357,9 +358,27 @@ export default function EditAlumniModal({
                   value={formData.currentCompany}
                   onChange={(val) => setFormData((prev) => ({ ...prev, currentCompany: val }))}
                   name="currentCompany"
-                  placeholder="e.g. Google India"
+                  placeholder={isCompanyNotSpecified(formData.currentCompany) ? 'Not Specified' : 'e.g. Google India'}
+                  disabled={isCompanyNotSpecified(formData.currentCompany)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:border-[#012140] focus:ring-1 focus:ring-[#012140]"
                 />
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    id="adminEditNotSpecifiedCompany"
+                    checked={isCompanyNotSpecified(formData.currentCompany)}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        currentCompany: e.target.checked ? NOT_SPECIFIED_COMPANY : '',
+                      }));
+                    }}
+                    className="w-3.5 h-3.5 rounded text-[#012140] focus:ring-[#012140] cursor-pointer"
+                  />
+                  <label htmlFor="adminEditNotSpecifiedCompany" className="text-xs text-gray-600 cursor-pointer select-none font-medium">
+                    Not Specified / Unemployed / Prefer Not to Disclose
+                  </label>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">City</label>

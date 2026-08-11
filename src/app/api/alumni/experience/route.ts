@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { prisma } from '@/lib/prisma';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,10 +15,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Company, title, and start date are required' }, { status: 400 });
     }
 
+    const normalizedCompany = normalizeCompanyName(company);
+
     const exp = await prisma.workExperience.create({
       data: {
         alumniId: alumni.id,
-        company,
+        company: normalizedCompany,
         title,
         location: location || null,
         startDate: new Date(startDate),
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
         where: { id: alumni.id },
         data: {
           currentRole: title,
-          currentCompany: company,
+          currentCompany: normalizedCompany,
           city: location || undefined,
         },
       });
@@ -60,10 +63,12 @@ export async function PUT(req: NextRequest) {
     const existing = await prisma.workExperience.findFirst({ where: { id, alumniId: alumni.id } });
     if (!existing) return NextResponse.json({ error: 'Record not found or access denied' }, { status: 404 });
 
+    const normalizedCompany = normalizeCompanyName(company);
+
     const exp = await prisma.workExperience.update({
       where: { id },
       data: {
-        company,
+        company: normalizedCompany,
         title,
         location: location || null,
         startDate: new Date(startDate),

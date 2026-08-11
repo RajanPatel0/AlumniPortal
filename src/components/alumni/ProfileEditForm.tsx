@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 import { apiFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { isCompanyNotSpecified, NOT_SPECIFIED_COMPANY } from '@/lib/company-utils';
 
 import { AlumniProfile } from '@/types/alumni';
 
@@ -20,6 +21,8 @@ export default function ProfileEditForm({
 }: ProfileEditFormProps) {
   // Store the initial pincode to prevent geocoding on initial mount/open
   const initialPincodeRef = useRef(formData?.pincode);
+
+  const isNotSpecified = isCompanyNotSpecified(formData?.currentCompany);
 
   // Auto-resolve city name from pincode to prevent spelling anomalies
   useEffect(() => {
@@ -105,8 +108,27 @@ export default function ProfileEditForm({
           <CompanyAutocomplete
             value={formData.currentCompany || ''}
             onChange={(val) => onChange('currentCompany', val)}
-            placeholder="e.g. Google India"
+            placeholder={isNotSpecified ? 'Not Specified' : 'e.g. Google India'}
+            disabled={isNotSpecified}
           />
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              id="notSpecifiedCompanyToggle"
+              checked={isNotSpecified}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  onChange('currentCompany', NOT_SPECIFIED_COMPANY);
+                } else {
+                  onChange('currentCompany', '');
+                }
+              }}
+              className="w-3.5 h-3.5 rounded text-[#003D7A] focus:ring-[#003D7A] cursor-pointer"
+            />
+            <label htmlFor="notSpecifiedCompanyToggle" className="text-[11px] font-semibold text-slate-600 cursor-pointer select-none">
+              Not Specified / Unemployed / Prefer Not to Disclose
+            </label>
+          </div>
         </div>
       </div>
 

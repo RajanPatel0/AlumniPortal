@@ -19,6 +19,7 @@ interface CompanyAutocompleteProps {
   name?: string;
   autoComplete?: string;
   id?: string;
+  disabled?: boolean;
 }
 
 export default function CompanyAutocomplete({
@@ -30,6 +31,7 @@ export default function CompanyAutocomplete({
   name,
   autoComplete = 'off',
   id,
+  disabled = false,
 }: CompanyAutocompleteProps) {
   const [inputValue, setInputValue] = useState(value || '');
   const [suggestions, setSuggestions] = useState<CompanySuggestion[]>([]);
@@ -136,10 +138,11 @@ export default function CompanyAutocomplete({
           name={name}
           autoComplete={autoComplete}
           required={required}
+          disabled={disabled}
           value={inputValue}
           onChange={handleInputChange}
           onFocus={() => {
-            if (suggestions.length > 0) setIsOpen(true);
+            if (!disabled && suggestions.length > 0) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}

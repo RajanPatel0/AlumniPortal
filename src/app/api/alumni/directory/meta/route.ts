@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
@@ -50,8 +51,8 @@ export async function GET(req: NextRequest) {
     const yearCounts: Record<number, number> = {};
 
     for (const a of alumniList) {
-      if (a.currentCompany && a.currentCompany.trim()) {
-        const comp = a.currentCompany.trim();
+      if (a.currentCompany) {
+        const comp = normalizeCompanyName(a.currentCompany);
         companyCounts[comp] = (companyCounts[comp] || 0) + 1;
       }
       if (a.city && a.city.trim()) {

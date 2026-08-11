@@ -132,7 +132,23 @@ export default function DataNormalizationPage() {
     createdAt: string;
   }[]>([]);
   const [cleaningOrphans, setCleaningOrphans] = useState(false);
+  const [cleaningCompanies, setCleaningCompanies] = useState(false);
   const [auditPage, setAuditPage] = useState(1);
+
+  const handleCleanupCompanies = async () => {
+    setCleaningCompanies(true);
+    try {
+      const res = await apiFetch('/admin/normalize/companies', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Company cleanup failed');
+      toast.success(data.message || 'Company normalization cleanup completed!');
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cleanup company entries');
+    } finally {
+      setCleaningCompanies(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
@@ -500,14 +516,25 @@ export default function DataNormalizationPage() {
               Manage canonical options, consolidate historical spelling variants, enforce degree-to-branch rules, and resolve review queues.
             </p>
           </div>
-          <button
-            onClick={fetchStats}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            Refresh Data
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCleanupCompanies}
+              disabled={cleaningCompanies}
+              className="flex items-center gap-2 px-4 py-2 bg-[#d61c1c] hover:bg-[#b01717] text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-sm"
+              title="Bulk update existing NA / None / Self entries in database to Not Specified"
+            >
+              <RefreshCw size={14} className={cleaningCompanies ? 'animate-spin' : ''} />
+              {cleaningCompanies ? 'Cleaning...' : 'Normalize Legacy Companies'}
+            </button>
+            <button
+              onClick={fetchStats}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              Refresh Data
+            </button>
+          </div>
         </div>
 
         {/* ────────────────────────────────────────────────────────────────────────── */}

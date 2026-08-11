@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
+import { UNDISCLOSED_COMPANY_VARIANTS } from '@/lib/company-utils';
 
 export async function GET(req: NextRequest) {
   const identity = await getCurrentAlumniOrStaff();
@@ -35,7 +36,16 @@ export async function GET(req: NextRequest) {
     }
 
     if (company && company !== 'All') {
-      where.currentCompany = company;
+      if (company === 'Not Specified') {
+        const variantsList = Array.from(UNDISCLOSED_COMPANY_VARIANTS);
+        where.OR = [
+          { currentCompany: { in: variantsList } },
+          { currentCompany: null },
+          { currentCompany: '' },
+        ];
+      } else {
+        where.currentCompany = company;
+      }
     }
 
     if (city && city !== 'All') {

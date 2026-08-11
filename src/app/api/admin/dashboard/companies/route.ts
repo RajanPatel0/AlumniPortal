@@ -6,6 +6,7 @@ import {
   CampusScopeError,
 } from '@/lib/auth/staff-auth';
 import * as XLSX from 'xlsx';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,31 +42,36 @@ export async function GET(req: NextRequest) {
     if (scopedCampusId) {
       baseWhere.campusId = scopedCampusId;
     }
-    if (search) {
-      baseWhere.currentCompany = { contains: search };
-    }
 
-    // Total alumni count with valid company in scope for percentage denominator
-    const companyTotalAlumni = await prisma.alumni.count({
-      where: {
-        ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
-        currentCompany: { not: null, notIn: [''] },
-      },
-    });
-
+    // Fetch company groups and aggregate using normalizeCompanyName
     const companyGroups = await prisma.alumni.groupBy({
       by: ['currentCompany'],
       where: baseWhere,
       _count: { _all: true },
-      orderBy: { _count: { id: 'desc' } },
     });
 
-    const allFormatted = companyGroups.map((g) => {
-      const companyName = g.currentCompany?.trim() || 'Unknown';
+    const companyMap = new Map<string, number>();
+    let companyTotalAlumni = 0;
+
+    for (const g of companyGroups) {
+      const normalized = normalizeCompanyName(g.currentCompany);
       const count = g._count._all;
-      const percentage = companyTotalAlumni > 0 ? Number(((count / companyTotalAlumni) * 100).toFixed(1)) : 0;
-      return { company: companyName, count, percentage };
-    });
+      companyMap.set(normalized, (companyMap.get(normalized) || 0) + count);
+      companyTotalAlumni += count;
+    }
+
+    let allFormatted = Array.from(companyMap.entries())
+      .map(([company, count]) => ({
+        company,
+        count,
+        percentage: companyTotalAlumni > 0 ? Number(((count / companyTotalAlumni) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.count - a.count || a.company.localeCompare(b.company));
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      allFormatted = allFormatted.filter((item) => item.company.toLowerCase().includes(searchLower));
+    }
 
     if (isExport) {
       // Sheet 1: Summary

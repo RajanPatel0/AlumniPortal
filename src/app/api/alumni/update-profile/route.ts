@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { prisma } from '@/lib/prisma';
 import { resolveLocation } from '@/lib/geocoding';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function PUT(req: NextRequest) {
   try {
@@ -55,6 +56,8 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    const finalCompany = currentCompany !== undefined ? normalizeCompanyName(currentCompany) : undefined;
+
     const updated = await prisma.alumni.update({
       where: { id: alumni.id },
       data: {
@@ -64,7 +67,7 @@ export async function PUT(req: NextRequest) {
         college,
         course,
         currentRole,
-        currentCompany,
+        currentCompany: finalCompany,
         city: finalCity,
         phone,
         country: finalCountry || null,
@@ -85,14 +88,14 @@ export async function PUT(req: NextRequest) {
       ]
     });
 
-    if (currentRole || currentCompany) {
+    if (currentRole || finalCompany) {
       if (currentExperiences.length > 0) {
         // Update the latest active one
         await prisma.workExperience.update({
           where: { id: currentExperiences[0].id },
           data: {
             title: currentRole || 'Not Specified',
-            company: currentCompany || 'Not Specified',
+            company: finalCompany || 'Not Specified',
             location: city || null,
           }
         });
@@ -102,7 +105,7 @@ export async function PUT(req: NextRequest) {
           data: {
             alumniId: alumni.id,
             title: currentRole || 'Not Specified',
-            company: currentCompany || 'Not Specified',
+            company: finalCompany || 'Not Specified',
             location: city || null,
             startDate: new Date(),
             isCurrent: true,

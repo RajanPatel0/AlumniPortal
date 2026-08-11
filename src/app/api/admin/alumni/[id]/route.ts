@@ -6,6 +6,7 @@ import {
   CampusScopeError,
 } from '@/lib/auth/staff-auth';
 import { resolveLocation } from '@/lib/geocoding';
+import { normalizeCompanyName } from '@/lib/company-utils';
 
 export async function DELETE(
   req: NextRequest,
@@ -163,6 +164,8 @@ export async function PUT(
       }
     }
 
+    const finalCompany = currentCompany !== undefined ? normalizeCompanyName(currentCompany) : undefined;
+
     // Update in transaction to also handle work experience
     const updatedAlumni = await prisma.$transaction(async (tx) => {
       const updated = await tx.alumni.update({
@@ -177,7 +180,7 @@ export async function PUT(
           course: course !== undefined ? (course || null) : undefined,
           phone: phone !== undefined ? (phone || null) : undefined,
           currentRole: currentRole !== undefined ? (currentRole || null) : undefined,
-          currentCompany: currentCompany !== undefined ? (currentCompany || null) : undefined,
+          currentCompany: finalCompany,
           city: finalCity !== undefined ? (finalCity || null) : undefined,
           country: finalCountry !== undefined ? (finalCountry || null) : undefined,
           pincode: pincode !== undefined ? (pincode || null) : undefined,
