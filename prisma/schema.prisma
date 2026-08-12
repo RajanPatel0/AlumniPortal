@@ -76,6 +76,19 @@ enum ConnectionStatus {
   REJECTED
 }
 
+enum NotificationCampaignStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  ADMIN_ANNOUNCEMENT
+  FOLLOW
+  ANALYTICS_MILESTONE
+}
+
 // ─────────────────────────────────────────
 // MODELS
 // ─────────────────────────────────────────
@@ -149,6 +162,7 @@ model Staff {
   communityMemberships CommunityMember[]
   communityUpdates     CommunityUpdate[]
   communityBlogs       CommunityBlog[]
+  notificationCampaigns NotificationCampaign[]
 
   @@map("staff")
 }
@@ -261,6 +275,10 @@ model Alumni {
   followingCount      Int              @default(0)
   followers           AlumniFollow[]   @relation("AlumniFollowing")
   following           AlumniFollow[]   @relation("AlumniFollower")
+
+  notificationsReadAt DateTime?
+  pushSubscriptions   PushSubscription[]
+  notifications       Notification[]
 
   @@index([batchYear])
   @@index([branch])
@@ -1032,6 +1050,62 @@ model EventRsvp {
   @@index([email])
   @@map("event_rsvps")
 }
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       Alumni   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique @db.VarChar(500)
+  p256dh     String   @db.Text
+  auth       String   @db.Text
+  userAgent  String?  @db.Text
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model NotificationCampaign {
+  id           String                     @id @default(cuid())
+  type         NotificationType
+  title        String
+  body         String                     @db.Text
+  url          String?
+  filter       Json
+  status       NotificationCampaignStatus @default(PENDING)
+  cursor       String?
+  totalTargets Int?
+  sentCount    Int                        @default(0)
+  failedCount  Int                        @default(0)
+  createdById  String?
+  createdBy    Staff?                     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime                   @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("notification_campaigns")
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  user       Alumni           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  title      String
+  body       String           @db.Text
+  url        String?
+  metadata   Json?
+  isRead     Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
 
 
 
