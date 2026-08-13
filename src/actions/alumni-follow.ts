@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { revalidatePath } from 'next/cache';
+import { sendPersonalNotification } from '@/lib/notifications/sendPersonalNotification';
 
 export async function toggleFollowAlumni(targetAlumniId: string) {
   try {
@@ -92,6 +93,20 @@ export async function toggleFollowAlumni(targetAlumniId: string) {
     // Revalidate paths to refresh page data
     revalidatePath(`/alumni/profile/${targetAlumniId}`);
     revalidatePath(`/alumni/profile/${followerId}`);
+
+    // Trigger personal push notification if followed
+    if (isFollowingNow) {
+      // Fire-and-forget push notification
+      sendPersonalNotification({
+        userId: targetAlumniId,
+        type: 'FOLLOW',
+        payload: {
+          followerId: currentAlumni.id,
+          followerName: currentAlumni.name,
+          followerAvatarUrl: currentAlumni.avatarUrl,
+        },
+      }).catch((err) => console.error('Failed to dispatch follow notification:', err));
+    }
 
     return { success: true, isFollowing: isFollowingNow };
   } catch (error: any) {
