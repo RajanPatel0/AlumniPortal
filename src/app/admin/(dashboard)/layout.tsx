@@ -4,7 +4,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe, Layers, LifeBuoy } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink, Globe, Layers, LifeBuoy, Bell } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { BASE_PATH } from '@/lib/api';
 
@@ -19,6 +19,7 @@ interface NavItem {
 // All possible modules (used for filtering)
 const allModules: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: Home, module: 'dashboard' },
+  { name: 'Push Campaigns', href: '/admin/notifications', icon: Bell, module: 'alumni' },
   { name: 'Web Update', href: '/admin/landing-page', icon: Globe, module: 'landing-page' },
   { name: 'Import Alumni', href: '/admin/import', icon: Import, module: 'import' },
   { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
