@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Briefcase, DollarSign, Lock, Unlock, ExternalLink, Calendar, Trash2 } from 'lucide-react';
+import { MapPin, Briefcase, IndianRupee, Lock, Unlock, ExternalLink, Calendar, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { getJobApplicantsExportDataAction } from '@/actions/jobs';
@@ -106,8 +106,8 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
           <span>{job.experienceRange}</span>
         </div>
         <div className="flex items-center gap-1">
-          <DollarSign size={13} className="text-slate-400" />
-          <span>{job.salaryRange || 'Not specified'}</span>
+          <IndianRupee size={13} className="text-slate-400" />
+          <span>{job.salaryRange ? job.salaryRange.replace(/\$/g, '₹') : 'Not specified'}</span>
         </div>
         {job.expireAt && (
           <div className="flex items-center gap-1">
