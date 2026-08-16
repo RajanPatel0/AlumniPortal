@@ -33,10 +33,17 @@ export const notificationFormats: {
   [NotificationType.ADMIN_ANNOUNCEMENT]: NotificationFormatConfig<AdminAnnouncementPayload>;
   [NotificationType.FOLLOW]: NotificationFormatConfig<FollowPayload>;
   [NotificationType.ANALYTICS_MILESTONE]: NotificationFormatConfig<MilestonePayload>;
+  [NotificationType.POST_CREATED]: NotificationFormatConfig<AdminAnnouncementPayload>;
 } = {
   [NotificationType.ADMIN_ANNOUNCEMENT]: {
     icon: '/icon.png',
     renderTitle: (p) => p.title || 'Announcement from Alumni Portal',
+    renderBody: (p) => p.body || '',
+    getUrl: (p) => p.url || '/alumni/feed',
+  },
+  [NotificationType.POST_CREATED]: {
+    icon: '/icon.png',
+    renderTitle: (p) => p.title || 'New Post Published',
     renderBody: (p) => p.body || '',
     getUrl: (p) => p.url || '/alumni/feed',
   },

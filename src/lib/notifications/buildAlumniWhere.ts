@@ -70,6 +70,9 @@ export function buildAlumniWhere(filter: CampaignAudienceFilter = {}): Prisma.Al
 
   if (typeof filter.isRegistered === 'boolean') {
     where.isRegistered = filter.isRegistered;
+  } else {
+    // By default for all campaigns/notifications, target registered alumni ONLY
+    where.isRegistered = true;
   }
 
   return where;

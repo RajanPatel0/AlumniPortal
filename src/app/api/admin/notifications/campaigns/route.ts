@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, body: content, url, type = NotificationType.ADMIN_ANNOUNCEMENT, filter = {} } = body;
+    const { title, body: content, url, type = NotificationType.ADMIN_ANNOUNCEMENT, channel, filter = {} } = body;
 
     if (!title || !title.trim()) {
       return NextResponse.json({ error: 'Notification title is required' }, { status: 400 });
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     // Insert campaign row with status: PENDING
     const campaign = await prisma.notificationCampaign.create({
       data: {
+        channel: channel === 'INAPP_ONLY' ? 'INAPP_ONLY' : 'PUSH_AND_INAPP',
         type: type in NotificationType ? type : NotificationType.ADMIN_ANNOUNCEMENT,
         title: title.trim(),
         body: content.trim(),
@@ -116,6 +117,12 @@ export async function POST(req: NextRequest) {
         failedCount: 0,
         createdById: staff.id,
       },
+    });
+
+    // Fire-and-forget nudge request to local campaign worker
+    const NUDGE_PORT = Number(process.env.WORKER_NUDGE_PORT || 9099);
+    fetch(`http://127.0.0.1:${NUDGE_PORT}/nudge`, { method: 'POST' }).catch((nudgeErr) => {
+      console.warn('[ADMIN_CAMPAIGNS] Worker nudge request failed (cron fallback will process campaign):', nudgeErr.message || nudgeErr);
     });
 
     // Return immediately (202 Accepted) without synchronous push processing

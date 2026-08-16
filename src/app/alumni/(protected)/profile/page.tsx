@@ -6,7 +6,6 @@ const ExperienceModal = dynamic(() => import('@/components/alumni/ExperienceModa
 const EducationModal = dynamic(() => import('@/components/alumni/EducationModal'), { ssr: false });
 const ProfileEditForm = dynamic(() => import('@/components/alumni/ProfileEditForm'), { ssr: false });
 const NotificationSettingsCard = dynamic(() => import('@/components/alumni/NotificationSettingsCard'), { ssr: false });
-const PersonalNotificationsCard = dynamic(() => import('@/components/alumni/PersonalNotificationsCard'), { ssr: false });
 import ProfileFollowSection from '@/components/alumni/ProfileFollowSection';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
@@ -609,9 +608,6 @@ function ProfilePageClient() {
 
       {/* Push Notification Preferences */}
       {isSelf && <NotificationSettingsCard />}
-
-      {/* Personal Activity & Notifications */}
-      {isSelf && <PersonalNotificationsCard />}
 
       {/* Experience CRUD Modal */}
       <ExperienceModal

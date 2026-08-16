@@ -55,10 +55,35 @@ async function runWorkerTick() {
   }
 }
 
+import http from 'http';
+
+const NUDGE_PORT = Number(process.env.WORKER_NUDGE_PORT || 9099);
+
+// Internal HTTP listener for zero-latency campaign nudge requests from Next.js server
+const server = http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url === '/nudge') {
+    if (isRunning) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, status: 'already_running' }));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, status: 'triggered' }));
+      runWorkerTick().catch((err) => console.error('[Worker Nudge Error]', err));
+    }
+  } else {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
+  }
+});
+
+server.listen(NUDGE_PORT, '127.0.0.1', () => {
+  console.log(`📡 Internal Worker Nudge Listener active at http://127.0.0.1:${NUDGE_PORT}/nudge`);
+});
+
 // Schedule tick every 1 minute
 console.log('═══════════════════════════════════════════════════════');
 console.log('🚀 Alumni Portal Notification Campaign Worker Started');
-console.log('🕒 Schedule: Every minute (*/1 * * * *)');
+console.log(`🕒 Schedule: Every minute (*/1 * * * *) | Nudge Port: ${NUDGE_PORT}`);
 console.log('═══════════════════════════════════════════════════════');
 
 cron.schedule('*/1 * * * *', async () => {

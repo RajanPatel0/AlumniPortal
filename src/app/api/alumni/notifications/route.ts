@@ -10,32 +10,33 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
+    const cursor = searchParams.get('cursor');
     const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const skip = (page - 1) * limit;
 
-    const [notifications, total, unreadCount] = await Promise.all([
+    const [notificationsWithExtra, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where: { userId: alumni.id },
-        skip,
-        take: limit,
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.notification.count({ where: { userId: alumni.id } }),
       prisma.notification.count({
         where: { userId: alumni.id, isRead: false },
       }),
     ]);
 
+    let nextCursor: string | null = null;
+    let data = notificationsWithExtra;
+    if (notificationsWithExtra.length > limit) {
+      const nextItem = notificationsWithExtra.pop();
+      nextCursor = nextItem?.id || null;
+      data = notificationsWithExtra;
+    }
+
     return NextResponse.json({
-      data: notifications,
+      data,
+      nextCursor,
       unreadCount,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
     });
   } catch (err: unknown) {
     console.error('Error fetching alumni notifications:', err);

@@ -55,8 +55,29 @@ export async function processCampaignBatch(
     return { done: true };
   }
 
+  // 1. Bulk insert in-app Notification records for all batch alumni (both PUSH_AND_INAPP & INAPP_ONLY)
+  try {
+    await db.notification.createMany({
+      data: batch.map((a) => ({
+        userId: a.id,
+        campaignId: campaign.id,
+        type: campaign.type,
+        title: campaign.title,
+        body: campaign.body,
+        url: campaign.url,
+        metadata: { campaignId: campaign.id },
+        isRead: false,
+      })),
+      skipDuplicates: true,
+    });
+  } catch (inAppErr) {
+    console.error('[processCampaignBatch] Failed to bulk insert in-app notification rows:', inAppErr);
+  }
+
+  // 2. Dispatch OS Web Push notifications ONLY if channel is PUSH_AND_INAPP
+  const isPushEnabled = campaign.channel !== 'INAPP_ONLY';
   // Flatten subscriptions for this batch
-  const subs = batch.flatMap((a) => a.pushSubscriptions);
+  const subs = isPushEnabled ? batch.flatMap((a) => a.pushSubscriptions) : [];
 
   // Format push payload using single source of truth
   const pushPayload = formatPushPayload(campaign.type, {
@@ -68,7 +89,7 @@ export async function processCampaignBatch(
   let sent = 0;
   let failed = 0;
 
-  if (subs.length > 0) {
+  if (isPushEnabled && subs.length > 0) {
     const results = await Promise.allSettled(
       subs.map((s) => sendPush(s, pushPayload))
     );
@@ -93,6 +114,9 @@ export async function processCampaignBatch(
 
     sent = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length;
     failed = subs.length - sent;
+  } else if (!isPushEnabled) {
+    // For INAPP_ONLY, sent count represents in-app notifications created
+    sent = batch.length;
   }
 
   const lastProcessedId = batch[batch.length - 1].id;

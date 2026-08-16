@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { LogOut, ArrowLeftCircle } from 'lucide-react';
 import { apiFetch, BASE_PATH } from '@/lib/api';
 
+import NotificationBell from '@/components/alumni/NotificationBell';
+
 interface AlumniHeaderProps {
   isStaff?: boolean;
 }
@@ -66,8 +68,11 @@ export default function AlumniHeader({ isStaff = false }: AlumniHeaderProps) {
           )}
         </div>
 
-        {/* Right Corner Controls: Connected Dot + Logout */}
+        {/* Right Corner Controls: Bell + Live Status Dot + Logout */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Personal Notification Bell Dropdown */}
+          <NotificationBell />
+
           {/* Quick Live Status Dot */}
           <div className="hidden xs:flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
