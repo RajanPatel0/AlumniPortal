@@ -49,10 +49,16 @@ function NewsCard({
       </div>
 
       <div className="p-5 md:p-6 flex flex-col flex-grow">
-        <div className="inline-flex items-center gap-1.5 text-sky-800 text-[11px] font-extrabold uppercase tracking-wider mb-2.5 bg-sky-50 border border-sky-200/60 px-2.5 py-1 rounded-md w-fit">
-          <span>📅 {item.publishedDate}</span>
-          <span>•</span>
-          <span>By {item.author}</span>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-extrabold uppercase tracking-wider mb-2.5 text-sky-800">
+          <span className="inline-flex items-center gap-1.5 bg-sky-50 border border-sky-200/60 px-2 py-1 rounded-md">
+            <Calendar size={12} className="text-[#003D7A]" />
+            <span>{item.publishedDate}</span>
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="inline-flex items-center gap-1.5 bg-sky-50 border border-sky-200/60 px-2 py-1 rounded-md">
+            <User size={12} className="text-[#003D7A]" />
+            <span>By {item.author}</span>
+          </span>
         </div>
 
         <h4 className="text-base md:text-lg font-black text-slate-900 mb-2 md:mb-3 group-hover:text-[#003D7A] transition-colors leading-snug line-clamp-2">
