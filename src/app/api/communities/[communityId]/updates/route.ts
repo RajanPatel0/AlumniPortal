@@ -176,7 +176,7 @@ export async function POST(
         channel: 'INAPP_ONLY',
         title: `${community.name} Update: ${title}`,
         body: content.length > 150 ? content.slice(0, 150) + "..." : content,
-        url: `/alumni/communities/${community.slug}/updates?updateId=${update.id}`,
+        url: `/alumni/communities/${community.slug}`,
         customTag: !!isNewsletter ? `community:${community.id}:newsletter` : `community:${community.id}:all`,
         createdById: session.staffId || undefined,
       });

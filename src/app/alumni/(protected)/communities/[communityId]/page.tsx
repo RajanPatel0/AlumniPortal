@@ -174,9 +174,9 @@ export default async function CommunityMainPage({ params, searchParams }: Commun
 
       <div className="relative z-10 -mt-16 sm:-mt-20">
         {/* Profile Card Overlay with Interactive Buttons */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xl space-y-6 pointer-events-none">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pointer-events-none">
+            <div className="flex items-center gap-5 pointer-events-auto">
               {community.logoUrl ? (
                 <img
                   src={community.logoUrl}
@@ -222,7 +222,7 @@ export default async function CommunityMainPage({ params, searchParams }: Commun
               return false;
             }
           })() && (
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-100 pointer-events-auto">
               <ExternalLinksBar links={community.externalLinks as Record<string, string>} />
             </div>
           )}
