@@ -28,7 +28,7 @@ interface CampaignItem {
   body: string;
   url?: string | null;
   filter: Record<string, unknown>;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  pushStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   totalTargets: number | null;
   sentCount: number;
   failedCount: number;
@@ -54,7 +54,7 @@ export default function NotificationsPage() {
   const [batchYear, setBatchYear] = useState('');
   const [branch, setBranch] = useState('');
   const [course, setCourse] = useState('');
-  const [inviteStatus, setInviteStatus] = useState('');
+  const [inviteStatus, setInviteStatus] = useState('REGISTERED');
 
   // Live count state
   const [countLoading, setCountLoading] = useState(false);
@@ -68,6 +68,7 @@ export default function NotificationsPage() {
   const [body, setBody] = useState('');
   const [url, setUrl] = useState('/alumni/feed');
   const [type, setType] = useState('ADMIN_ANNOUNCEMENT');
+  const [channel, setChannel] = useState('PUSH_AND_INAPP');
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -129,7 +130,7 @@ export default function NotificationsPage() {
             batchYear: batchYear || null,
             branch: branch || null,
             course: course || null,
-            inviteStatus: inviteStatus || null,
+            inviteStatus: inviteStatus,
           },
         }),
       });
@@ -178,7 +179,7 @@ export default function NotificationsPage() {
   // 4. Auto-poll history if any campaign is PENDING or PROCESSING
   useEffect(() => {
     const hasActiveCampaigns = campaigns.some(
-      (c) => c.status === 'PENDING' || c.status === 'PROCESSING'
+      (c) => c.pushStatus === 'PENDING' || c.pushStatus === 'PROCESSING'
     );
 
     if (!hasActiveCampaigns) return;
@@ -214,12 +215,13 @@ export default function NotificationsPage() {
           body,
           url,
           type,
+          channel,
           filter: {
             campusId: effectiveCampusId,
             batchYear: batchYear || null,
             branch: branch || null,
             course: course || null,
-            inviteStatus: inviteStatus || null,
+            inviteStatus: inviteStatus,
           },
         }),
       });
@@ -337,8 +339,8 @@ export default function NotificationsPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">Batch / Passout Year</label>
                 <input
-                  type="number"
-                  placeholder="e.g. 2024 (or leave blank for all)"
+                  type="text"
+                  placeholder="e.g. 2024 or 2021-28 and blank for all"
                   value={batchYear}
                   onChange={(e) => setBatchYear(e.target.value)}
                   className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#003D7A] focus:outline-none transition shadow-sm"
@@ -407,10 +409,8 @@ export default function NotificationsPage() {
                   onChange={(e) => setInviteStatus(e.target.value)}
                   className="w-full text-xs font-bold text-slate-900 px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#003D7A] focus:outline-none transition shadow-sm"
                 >
-                  <option value="" className="text-slate-900 bg-white">All Alumni (Registered + Invited + Pending)</option>
-                  <option value="REGISTERED" className="text-slate-900 bg-white">Registered Users Only</option>
-                  <option value="INVITED" className="text-slate-900 bg-white">Invited Users Only</option>
-                  <option value="PENDING" className="text-slate-900 bg-white">Pending Import / Bounced Only</option>
+                  <option value="REGISTERED" className="text-slate-900 bg-white">🟢 Registered Users Only (Recommended)</option>
+                  <option value="" className="text-slate-900 bg-white">🌐 All Alumni (Active + Future Registrants)</option>
                 </select>
               </div>
             </div>
@@ -452,7 +452,7 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">Target Landing URL (Relative)</label>
                   <input
@@ -473,6 +473,18 @@ export default function NotificationsPage() {
                   >
                     <option value="ADMIN_ANNOUNCEMENT" className="text-slate-900 bg-white">Admin Announcement</option>
                     <option value="ANALYTICS_MILESTONE" className="text-slate-900 bg-white">Milestone / Achievement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Delivery Channel</label>
+                  <select
+                    value={channel}
+                    onChange={(e) => setChannel(e.target.value)}
+                    className="w-full text-xs font-bold text-slate-900 px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#003D7A] focus:outline-none transition shadow-sm"
+                  >
+                    <option value="PUSH_AND_INAPP" className="text-slate-900 bg-white">In-App + Web Push</option>
+                    <option value="INAPP_ONLY" className="text-slate-900 bg-white">In-App Only (Quiet)</option>
                   </select>
                 </div>
               </div>
@@ -586,22 +598,22 @@ export default function NotificationsPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
-                        {c.status === 'PENDING' && (
+                        {c.pushStatus === 'PENDING' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
                             <Clock size={11} /> PENDING
                           </span>
                         )}
-                        {c.status === 'PROCESSING' && (
+                        {c.pushStatus === 'PROCESSING' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 animate-pulse">
                             <RefreshCw size={11} className="animate-spin" /> PROCESSING
                           </span>
                         )}
-                        {c.status === 'COMPLETED' && (
+                        {c.pushStatus === 'COMPLETED' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
                             <CheckCircle2 size={11} /> COMPLETED
                           </span>
                         )}
-                        {c.status === 'FAILED' && (
+                        {c.pushStatus === 'FAILED' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800">
                             <AlertCircle size={11} /> FAILED
                           </span>
@@ -618,9 +630,9 @@ export default function NotificationsPage() {
                         <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full transition-all duration-500 ${
-                              c.status === 'COMPLETED'
+                              c.pushStatus === 'COMPLETED'
                                 ? 'bg-emerald-500'
-                                : c.status === 'PROCESSING'
+                                : c.pushStatus === 'PROCESSING'
                                 ? 'bg-blue-600'
                                 : 'bg-amber-400'
                             }`}

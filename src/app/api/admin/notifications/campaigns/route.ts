@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getAuthenticatedStaff, resolveCampusScope, CampusScopeError } from '@/lib/auth/staff-auth';
 import { buildAlumniWhere, CampaignAudienceFilter } from '@/lib/notifications/buildAlumniWhere';
 import { NotificationType } from '@prisma/client';
+import { triggerNotification } from '@/lib/notifications/triggerNotification';
 
 export async function GET(req: NextRequest) {
   const staff = await getAuthenticatedStaff();
@@ -15,16 +16,20 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '15', 10);
   const skip = (page - 1) * limit;
 
-  // Scoping: Sub-admins only see campaigns they created or relevant to their campus
-  const where: Record<string, unknown> = {};
+  // Scoping: Sub-admins only see campaigns they created
+  const where: any = {
+    campaignGroupId: { not: null },
+  };
   if (staff.role !== 'ADMIN') {
     where.createdById = staff.id;
   }
 
   try {
-    const [campaigns, total] = await Promise.all([
-      prisma.notificationCampaign.findMany({
+    // Get distinct campaign group notifications
+    const [distinctNotifs, totalDistinctGroups] = await Promise.all([
+      prisma.notification.findMany({
         where,
+        distinct: ['campaignGroupId'],
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -34,8 +39,60 @@ export async function GET(req: NextRequest) {
           },
         },
       }),
-      prisma.notificationCampaign.count({ where }),
+      prisma.notification.groupBy({
+        by: ['campaignGroupId'],
+        where,
+      }),
     ]);
+
+    const total = totalDistinctGroups.length;
+    const groupIds = distinctNotifs
+      .map((n) => n.campaignGroupId)
+      .filter((id): id is string => id !== null);
+
+    // Fetch all related fanned-out notification rows to aggregate stats
+    const allGroupRows = await prisma.notification.findMany({
+      where: { campaignGroupId: { in: groupIds } },
+    });
+
+    const campaigns = distinctNotifs.map((notif) => {
+      const related = allGroupRows.filter((r) => r.campaignGroupId === notif.campaignGroupId);
+      
+      const totalTargets = related.reduce((sum, r) => sum + (r.totalTargets || 0), 0);
+      const sentCount = related.reduce((sum, r) => sum + r.sentCount, 0);
+      const failedCount = related.reduce((sum, r) => sum + r.failedCount, 0);
+      
+      // Determine worst-case push status
+      const statuses = related.map((r) => r.pushStatus);
+      let pushStatus = notif.pushStatus;
+      if (statuses.includes('PROCESSING')) {
+        pushStatus = 'PROCESSING';
+      } else if (statuses.includes('PENDING')) {
+        pushStatus = 'PENDING';
+      } else if (statuses.includes('FAILED')) {
+        pushStatus = 'FAILED';
+      } else if (statuses.every((s) => s === 'COMPLETED')) {
+        pushStatus = 'COMPLETED';
+      }
+
+      return {
+        id: notif.id,
+        type: notif.type,
+        title: notif.title,
+        body: notif.body,
+        url: notif.url,
+        metadata: notif.metadata,
+        audienceTag: notif.audienceTag,
+        createdAt: notif.createdAt,
+        channel: notif.channel,
+        filter: notif.filter,
+        pushStatus,
+        totalTargets,
+        sentCount,
+        failedCount,
+        createdBy: notif.createdBy,
+      };
+    });
 
     return NextResponse.json({
       data: campaigns,
@@ -102,38 +159,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert campaign row with status: PENDING
-    const campaign = await prisma.notificationCampaign.create({
-      data: {
-        channel: channel === 'INAPP_ONLY' ? 'INAPP_ONLY' : 'PUSH_AND_INAPP',
-        type: type in NotificationType ? type : NotificationType.ADMIN_ANNOUNCEMENT,
-        title: title.trim(),
-        body: content.trim(),
-        url: url?.trim() || null,
-        filter: scopedFilter as never,
-        status: 'PENDING',
-        totalTargets,
-        sentCount: 0,
-        failedCount: 0,
-        createdById: staff.id,
-      },
+    // Call unified triggerNotification helper
+    const campaign = await triggerNotification({
+      type: type in NotificationType ? type : NotificationType.ADMIN_ANNOUNCEMENT,
+      channel: channel === 'INAPP_ONLY' ? 'INAPP_ONLY' : 'PUSH_AND_INAPP',
+      title: title.trim(),
+      body: content.trim(),
+      url: url?.trim() || null,
+      filter: scopedFilter,
+      createdById: staff.id,
+      staffRole: staff.role,
+      staffCampusId: staff.campusId || undefined,
     });
 
-    // Fire-and-forget nudge request to local campaign worker
-    const NUDGE_PORT = Number(process.env.WORKER_NUDGE_PORT || 9099);
-    fetch(`http://127.0.0.1:${NUDGE_PORT}/nudge`, { method: 'POST' }).catch((nudgeErr) => {
-      console.warn('[ADMIN_CAMPAIGNS] Worker nudge request failed (cron fallback will process campaign):', nudgeErr.message || nudgeErr);
-    });
-
-    // Return immediately (202 Accepted) without synchronous push processing
     return NextResponse.json(
       {
         success: true,
         campaign: {
           id: campaign.id,
           title: campaign.title,
-          status: campaign.status,
-          totalTargets: campaign.totalTargets,
+          pushStatus: campaign.pushStatus,
+          totalTargets,
           createdAt: campaign.createdAt,
         },
       },
