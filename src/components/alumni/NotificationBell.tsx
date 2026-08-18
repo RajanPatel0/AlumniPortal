@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
@@ -17,12 +17,13 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export interface NotificationItem {
   id: string;
-  type: 'ADMIN_ANNOUNCEMENT' | 'FOLLOW' | 'ANALYTICS_MILESTONE' | 'POST_CREATED';
+  type: 'ADMIN_ANNOUNCEMENT' | 'FOLLOW' | 'ANALYTICS_MILESTONE' | 'POST_CREATED' | 'COMMUNITY_UPDATE';
   title: string;
   body: string;
   url?: string | null;
@@ -133,6 +134,49 @@ export default function NotificationBell() {
     }
   };
 
+  // Optimistic Delete Individual Notification
+  const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation(); // Avoid triggering click/navigation event on card
+
+    const notificationItem = notifications.find((item) => item.id === notificationId);
+
+    // Optimistic list update
+    queryClient.setQueryData(['notifications', 'list'], (oldData: unknown) => {
+      if (!oldData || typeof oldData !== 'object' || !('pages' in oldData)) return oldData;
+      const infiniteData = oldData as { pages: { data: NotificationItem[]; nextCursor: string | null }[] };
+      return {
+        ...infiniteData,
+        pages: infiniteData.pages.map((page) => ({
+          ...page,
+          data: page.data.filter((item) => item.id !== notificationId),
+        })),
+      };
+    });
+
+    // Optimistic unread count update
+    if (notificationItem && !notificationItem.isRead) {
+      queryClient.setQueryData(['notifications', 'unreadCount'], (old: { unreadCount: number } | undefined) => ({
+        unreadCount: Math.max(0, (old?.unreadCount || 1) - 1),
+      }));
+    }
+
+    try {
+      const res = await apiFetch(`/alumni/notifications?id=${notificationId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast.success('Notification deleted');
+      } else {
+        throw new Error('Failed to delete notification');
+      }
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+      toast.error('Failed to delete notification');
+      // Rollback
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  };
+
   // Optimistic Mark-All-Read
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
@@ -195,6 +239,8 @@ export default function NotificationBell() {
         return <FileText size={15} className="text-[#003D7A]" />;
       case 'ANALYTICS_MILESTONE':
         return <Sparkles size={15} className="text-amber-600" />;
+      case 'COMMUNITY_UPDATE':
+        return <Megaphone size={15} className="text-rose-600" />;
       default:
         return <Megaphone size={15} className="text-[#C41E3A]" />;
     }
@@ -306,23 +352,31 @@ export default function NotificationBell() {
                         : 'bg-blue-50/50 hover:bg-blue-50/90 text-slate-900 border-l-3 border-[#003D7A]'
                     }`}
                   >
-                    {/* Type Icon */}
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        item.type === 'FOLLOW'
-                          ? 'bg-indigo-50 border border-indigo-100'
-                          : item.type === 'POST_CREATED'
-                          ? 'bg-blue-50 border border-blue-100'
-                          : item.type === 'ANALYTICS_MILESTONE'
-                          ? 'bg-amber-50 border border-amber-100'
-                          : 'bg-rose-50 border border-rose-100'
-                      }`}
-                    >
-                      {getIconForType(item.type)}
-                    </div>
+                    {/* Dynamic Avatar / Type Icon */}
+                    {item.type === 'FOLLOW' && item.metadata?.followerAvatarUrl ? (
+                      <img
+                        src={item.metadata.followerAvatarUrl as string}
+                        alt=""
+                        className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100 flex-shrink-0 mt-0.5"
+                      />
+                    ) : (
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          item.type === 'FOLLOW'
+                            ? 'bg-indigo-50 border border-indigo-100'
+                            : item.type === 'POST_CREATED'
+                            ? 'bg-blue-50 border border-blue-100'
+                            : item.type === 'ANALYTICS_MILESTONE'
+                            ? 'bg-amber-50 border border-amber-100'
+                            : 'bg-rose-50 border border-rose-100'
+                        }`}
+                      >
+                        {getIconForType(item.type)}
+                      </div>
+                    )}
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-6">
                       <div className="flex items-center justify-between gap-1.5">
                         <h4
                           className={`text-xs font-bold truncate ${
@@ -349,9 +403,19 @@ export default function NotificationBell() {
                       )}
                     </div>
 
-                    {/* Unread Dot Indicator */}
+                    {/* Hover Trash / Delete Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteNotification(e, item.id)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150 cursor-pointer z-10"
+                      title="Delete notification"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+
+                    {/* Unread Dot Indicator (only if trash is not hovered) */}
                     {!item.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-[#003D7A] flex-shrink-0 self-center" />
+                      <span className="w-2 h-2 rounded-full bg-[#003D7A] flex-shrink-0 self-center group-hover:scale-0 transition-transform" />
                     )}
                   </div>
                 ))}

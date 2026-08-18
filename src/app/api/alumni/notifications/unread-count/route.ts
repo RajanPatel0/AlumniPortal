@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { prisma } from '@/lib/prisma';
+import { getAlumniAudienceTags } from '@/lib/notifications/tags';
 
 export async function GET() {
   try {
@@ -9,8 +10,56 @@ export async function GET() {
       return NextResponse.json({ unreadCount: 0 });
     }
 
+    const alumniWithCampus = await prisma.alumni.findUnique({
+      where: { id: alumni.id },
+      select: {
+        id: true,
+        batchYear: true,
+        branch: true,
+        course: true,
+        notificationsReadAt: true,
+        createdAt: true,
+        registeredAt: true,
+        campus: { select: { code: true } }
+      }
+    });
+
+    if (!alumniWithCampus) {
+      return NextResponse.json({ unreadCount: 0 });
+    }
+
+    // Map campus.code to campusCode for getAlumniAudienceTags
+    const alumniData = {
+      id: alumniWithCampus.id,
+      campusCode: alumniWithCampus.campus.code,
+      batchYear: alumniWithCampus.batchYear,
+      branch: alumniWithCampus.branch,
+      course: alumniWithCampus.course
+    };
+
+    const followedCommunities = await prisma.communityMember.findMany({
+      where: { alumniId: alumni.id },
+      select: { communityId: true, isFollowingNewsletter: true }
+    });
+
+    const userTags = getAlumniAudienceTags(
+      alumniData,
+      followedCommunities
+    );
+
+    const readThreshold = alumniWithCampus.notificationsReadAt ?? alumniWithCampus.registeredAt ?? alumniWithCampus.createdAt;
+
     const unreadCount = await prisma.notification.count({
-      where: { userId: alumni.id, isRead: false },
+      where: {
+        audienceTag: { in: userTags },
+        createdAt: { gt: readThreshold },
+        userStates: {
+          none: {
+            userId: alumni.id,
+            isDeleted: true
+          }
+        }
+      }
     });
 
     return NextResponse.json({ unreadCount });

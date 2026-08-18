@@ -26,13 +26,14 @@ export async function sendPersonalNotification({
     // 1. Persist single Notification row for personal in-app record
     await prisma.notification.create({
       data: {
-        userId,
+        targetUserId: userId,
+        audienceTag: `user:${userId}`,
         type,
         title: formatted.title,
         body: formatted.body,
         url: formatted.url,
         metadata: payload as never,
-        isRead: false,
+        channel: 'INAPP_ONLY',
       },
     });
 

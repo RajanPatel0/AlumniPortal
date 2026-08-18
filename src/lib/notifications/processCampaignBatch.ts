@@ -10,24 +10,24 @@ import { sendPush } from '../push/send';
  */
 export async function processCampaignBatch(
   db: PrismaClient,
-  campaignId: string,
+  notificationId: string,
   batchSize = 500
 ): Promise<{ done: boolean; batchCount?: number; sentCount?: number; failedCount?: number }> {
-  const campaign = await db.notificationCampaign.findUniqueOrThrow({
-    where: { id: campaignId },
+  const notification = await db.notification.findUniqueOrThrow({
+    where: { id: notificationId },
   });
 
-  if (campaign.status === 'COMPLETED') {
+  if (notification.pushStatus === 'COMPLETED') {
     return { done: true };
   }
 
-  const where = buildAlumniWhere((campaign.filter || {}) as CampaignAudienceFilter);
+  const where = buildAlumniWhere((notification.filter || {}) as CampaignAudienceFilter);
 
   // Resumable cursor query: orders by id ascending, takes next batchSize
   const batch = await db.alumni.findMany({
     where: {
       ...where,
-      ...(campaign.cursor ? { id: { gt: campaign.cursor } } : {}),
+      ...(notification.pushCursor ? { id: { gt: notification.pushCursor } } : {}),
     },
     orderBy: { id: 'asc' },
     take: batchSize,
@@ -45,45 +45,26 @@ export async function processCampaignBatch(
 
   // If no remaining alumni match the cursor, mark as completed
   if (batch.length === 0) {
-    await db.notificationCampaign.update({
-      where: { id: campaignId },
+    await db.notification.update({
+      where: { id: notificationId },
       data: {
-        status: 'COMPLETED',
+        pushStatus: 'COMPLETED',
         completedAt: new Date(),
       },
     });
     return { done: true };
   }
 
-  // 1. Bulk insert in-app Notification records for all batch alumni (both PUSH_AND_INAPP & INAPP_ONLY)
-  try {
-    await db.notification.createMany({
-      data: batch.map((a) => ({
-        userId: a.id,
-        campaignId: campaign.id,
-        type: campaign.type,
-        title: campaign.title,
-        body: campaign.body,
-        url: campaign.url,
-        metadata: { campaignId: campaign.id },
-        isRead: false,
-      })),
-      skipDuplicates: true,
-    });
-  } catch (inAppErr) {
-    console.error('[processCampaignBatch] Failed to bulk insert in-app notification rows:', inAppErr);
-  }
-
   // 2. Dispatch OS Web Push notifications ONLY if channel is PUSH_AND_INAPP
-  const isPushEnabled = campaign.channel !== 'INAPP_ONLY';
+  const isPushEnabled = notification.channel !== 'INAPP_ONLY';
   // Flatten subscriptions for this batch
   const subs = isPushEnabled ? batch.flatMap((a) => a.pushSubscriptions) : [];
 
   // Format push payload using single source of truth
-  const pushPayload = formatPushPayload(campaign.type, {
-    title: campaign.title,
-    body: campaign.body,
-    url: campaign.url,
+  const pushPayload = formatPushPayload(notification.type, {
+    title: notification.title,
+    body: notification.body,
+    url: notification.url,
   });
 
   let sent = 0;
@@ -122,12 +103,12 @@ export async function processCampaignBatch(
   const lastProcessedId = batch[batch.length - 1].id;
 
   // Persist progress and cursor atomically
-  await db.notificationCampaign.update({
-    where: { id: campaignId },
+  await db.notification.update({
+    where: { id: notificationId },
     data: {
-      status: 'PROCESSING',
-      startedAt: campaign.startedAt ?? new Date(),
-      cursor: lastProcessedId,
+      pushStatus: 'PROCESSING',
+      startedAt: notification.startedAt ?? new Date(),
+      pushCursor: lastProcessedId,
       sentCount: { increment: sent },
       failedCount: { increment: failed },
     },

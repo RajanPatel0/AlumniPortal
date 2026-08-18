@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCommunitySession } from "@/lib/auth/community-auth";
 import { isLeaderOrAdmin, hasCommunityAdminAccess } from "@/lib/community-permissions";
+import { triggerNotification } from "@/lib/notifications/triggerNotification";
 
 export async function GET(
   request: Request,
@@ -167,6 +168,21 @@ export async function POST(
         },
       },
     });
+
+    // Trigger community update notification asynchronously/safely
+    try {
+      await triggerNotification({
+        type: 'COMMUNITY_UPDATE',
+        channel: 'INAPP_ONLY',
+        title: `${community.name} Update: ${title}`,
+        body: content.length > 150 ? content.slice(0, 150) + "..." : content,
+        url: `/alumni/communities/${community.slug}/updates?updateId=${update.id}`,
+        customTag: !!isNewsletter ? `community:${community.id}:newsletter` : `community:${community.id}:all`,
+        createdById: session.staffId || undefined,
+      });
+    } catch (notifErr) {
+      console.error("[POST_COMMUNITY_UPDATE_NOTIFICATION_ERROR]", notifErr);
+    }
 
     return NextResponse.json({ success: true, data: update }, { status: 201 });
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { parseBatchYears } from './tags';
 
 export interface CampaignAudienceFilter {
   campusId?: string | string[] | null;
@@ -23,6 +24,10 @@ export function buildAlumniWhere(filter: CampaignAudienceFilter = {}): Prisma.Al
   };
 
   // Campus filter
+  if (filter.campusId === 'all' || filter.campusId === '') {
+    filter.campusId = null;
+  }
+
   if (filter.campusId) {
     if (Array.isArray(filter.campusId)) {
       const validCampuses = filter.campusId.filter(Boolean);
@@ -31,16 +36,18 @@ export function buildAlumniWhere(filter: CampaignAudienceFilter = {}): Prisma.Al
       } else if (validCampuses.length > 1) {
         where.campusId = { in: validCampuses };
       }
-    } else if (typeof filter.campusId === 'string' && filter.campusId.trim() !== '' && filter.campusId !== 'all') {
+    } else if (typeof filter.campusId === 'string' && filter.campusId.trim() !== '') {
       where.campusId = filter.campusId.trim();
     }
   }
 
   // Batch Year
   if (filter.batchYear !== undefined && filter.batchYear !== null && filter.batchYear !== '') {
-    const year = typeof filter.batchYear === 'string' ? parseInt(filter.batchYear, 10) : filter.batchYear;
-    if (!isNaN(year) && year > 0) {
-      where.batchYear = year;
+    const parsedYears = parseBatchYears(filter.batchYear);
+    if (parsedYears.length === 1) {
+      where.batchYear = parsedYears[0];
+    } else if (parsedYears.length > 1) {
+      where.batchYear = { in: parsedYears };
     }
   }
 
@@ -63,16 +70,24 @@ export function buildAlumniWhere(filter: CampaignAudienceFilter = {}): Prisma.Al
   if (filter.inviteStatus && typeof filter.inviteStatus === 'string' && filter.inviteStatus.trim() !== '') {
     if (filter.inviteStatus === 'PENDING') {
       where.inviteStatus = { in: ['PENDING', 'BOUNCED'] };
-    } else {
-      where.inviteStatus = filter.inviteStatus as never;
+      where.isRegistered = false;
+    } else if (filter.inviteStatus === 'INVITED') {
+      where.inviteStatus = 'INVITED';
+      where.isRegistered = false;
+    } else if (filter.inviteStatus === 'REGISTERED') {
+      where.inviteStatus = 'REGISTERED';
+      where.isRegistered = true;
     }
-  }
-
-  if (typeof filter.isRegistered === 'boolean') {
-    where.isRegistered = filter.isRegistered;
+  } else if (filter.inviteStatus === '') {
+    // Explicitly selected "All Alumni (Registered + Invited + Pending)"
+    // Do not apply any isRegistered filter
   } else {
-    // By default for all campaigns/notifications, target registered alumni ONLY
-    where.isRegistered = true;
+    if (typeof filter.isRegistered === 'boolean') {
+      where.isRegistered = filter.isRegistered;
+    } else {
+      // By default for all campaigns/notifications, target registered alumni ONLY
+      where.isRegistered = true;
+    }
   }
 
   return where;

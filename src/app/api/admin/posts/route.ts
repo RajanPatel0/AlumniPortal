@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { deleteFile } from '@/lib/fileUpload';
+import { triggerNotification } from '@/lib/notifications/triggerNotification';
 
 export async function GET(req: NextRequest) {
   try {
@@ -92,29 +93,19 @@ export async function POST(req: NextRequest) {
         include: { images: true }
       });
 
-      // Asynchronously queue in-app notification campaign for all alumni
+      // Trigger in-app notification campaign for all alumni
       const notificationBody = content?.trim()
         ? (content.trim().length > 100 ? content.trim().slice(0, 100) + '...' : content.trim())
         : 'New update posted in the alumni portal';
 
-      await prisma.notificationCampaign.create({
-        data: {
-          channel: 'INAPP_ONLY',
-          type: 'POST_CREATED',
-          title: 'New Post',
-          body: notificationBody,
-          url: `/alumni/feed?postId=${post.id}`,
-          filter: { isRegistered: true },
-          status: 'PENDING',
-          cursor: null,
-          createdById: payload.id,
-        },
-      });
-
-      // Fire-and-forget nudge request to local campaign worker
-      const NUDGE_PORT = Number(process.env.WORKER_NUDGE_PORT || 9099);
-      fetch(`http://127.0.0.1:${NUDGE_PORT}/nudge`, { method: 'POST' }).catch((nudgeErr) => {
-        console.warn('[ADMIN_POSTS] Worker nudge request failed (cron fallback will process campaign):', nudgeErr.message || nudgeErr);
+      await triggerNotification({
+        channel: 'PUSH_AND_INAPP',
+        type: 'POST_CREATED',
+        title: 'New Post',
+        body: notificationBody,
+        url: `/alumni/feed?postId=${post.id}`,
+        filter: { isRegistered: true },
+        createdById: payload.id,
       });
 
       const formattedPost = {

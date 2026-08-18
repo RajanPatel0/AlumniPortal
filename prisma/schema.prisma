@@ -88,11 +88,19 @@ enum NotificationChannel {
   INAPP_ONLY
 }
 
+enum PushDeliveryStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum NotificationType {
   ADMIN_ANNOUNCEMENT
   FOLLOW
   ANALYTICS_MILESTONE
   POST_CREATED
+  COMMUNITY_UPDATE
 }
 
 // ─────────────────────────────────────────
@@ -168,8 +176,9 @@ model Staff {
   communityMemberships CommunityMember[]
   communityUpdates     CommunityUpdate[]
   communityBlogs       CommunityBlog[]
-  notificationCampaigns NotificationCampaign[]
+  notifications        Notification[]       @relation("NotificationCreator")
 
+  @@index([campusId])
   @@map("staff")
 }
 
@@ -284,7 +293,8 @@ model Alumni {
 
   notificationsReadAt DateTime?
   pushSubscriptions   PushSubscription[]
-  notifications       Notification[]
+  notifications       Notification[]      @relation("UserNotifications")
+  notificationStates  NotificationState[] @relation("UserNotificationStates")
 
   @@index([batchYear])
   @@index([branch])
@@ -419,6 +429,7 @@ model RegistrationRequest {
 
   @@index([status])
   @@index([affiliatedCollegeId])
+  @@index([campusId])
   @@map("registration_requests")
 }
 
@@ -1072,49 +1083,57 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
-model NotificationCampaign {
-  id            String                     @id @default(cuid())
-  channel       NotificationChannel        @default(PUSH_AND_INAPP)
-  type          NotificationType
-  title         String
-  body          String                     @db.Text
-  url           String?
-  filter        Json
-  status        NotificationCampaignStatus @default(PENDING)
-  cursor        String?
-  totalTargets  Int?
-  sentCount     Int                        @default(0)
-  failedCount   Int                        @default(0)
-  createdById   String?
-  createdBy     Staff?                     @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt     DateTime                   @default(now())
-  startedAt     DateTime?
-  completedAt   DateTime?
-  notifications Notification[]
+model Notification {
+  id             String               @id @default(cuid())
+  type           NotificationType
+  title          String
+  body           String               @db.Text
+  url            String?
+  metadata       Json?
+  audienceTag    String               @db.VarChar(500)
+  targetUserId   String?
+  targetUser     Alumni?              @relation("UserNotifications", fields: [targetUserId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now())
 
-  @@index([status])
+  // Merged push delivery tracking fields
+  channel        NotificationChannel  @default(INAPP_ONLY)
+  filter         Json?
+  pushStatus     PushDeliveryStatus?
+  pushCursor     String?
+  totalTargets   Int?
+  sentCount      Int                  @default(0)
+  failedCount    Int                  @default(0)
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  createdById    String?
+  createdBy      Staff?               @relation("NotificationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  userStates     NotificationState[]
+
+  // Grouping for fanned-out campaign notifications
+  campaignGroupId String?
+
+  @@index([audienceTag])
   @@index([createdAt])
-  @@map("notification_campaigns")
+  @@index([targetUserId])
+  @@index([pushStatus])
+  @@index([campaignGroupId])
+  @@map("notifications")
 }
 
-model Notification {
-  id         String                @id @default(cuid())
-  userId     String
-  user       Alumni                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaignId String?
-  campaign   NotificationCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  type       NotificationType
-  title      String
-  body       String                @db.Text
-  url        String?
-  metadata   Json?
-  isRead     Boolean               @default(false)
-  createdAt  DateTime              @default(now())
+model NotificationState {
+  id             String       @id @default(cuid())
+  userId         String
+  user           Alumni       @relation("UserNotificationStates", fields: [userId], references: [id], onDelete: Cascade)
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  isRead         Boolean      @default(false)
+  isDeleted      Boolean      @default(false)
+  updatedAt      DateTime     @updatedAt
 
-  @@unique([userId, campaignId])
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
-  @@map("notifications")
+  @@unique([userId, notificationId])
+  @@index([userId])
+  @@map("notification_states")
 }
 
 

@@ -18,9 +18,9 @@ async function runWorkerTick() {
 
   isRunning = true;
   try {
-    const activeCampaigns = await prisma.notificationCampaign.findMany({
+    const activeCampaigns = await prisma.notification.findMany({
       where: {
-        status: { in: ['PENDING', 'PROCESSING'] },
+        pushStatus: { in: ['PENDING', 'PROCESSING'] },
       },
       orderBy: { createdAt: 'asc' },
       take: 5,

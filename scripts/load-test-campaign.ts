@@ -45,20 +45,21 @@ async function runLoadTest() {
   const totalAlumni = await prisma.alumni.count({ where: { isRegistered: true, isActive: true } });
   console.log(`[LoadTest] Total active alumni ready for load test: ${totalAlumni}`);
 
-  // 2. Create test INAPP_ONLY campaign
-  const campaign = await prisma.notificationCampaign.create({
+  // 2. Create test PUSH_AND_INAPP campaign
+  const campaign = await prisma.notification.create({
     data: {
-      channel: 'INAPP_ONLY',
+      channel: 'PUSH_AND_INAPP',
       type: 'POST_CREATED',
       title: 'Load Test Notification Title',
       body: 'This is a load test campaign body to measure worker fan-out speed.',
       url: '/alumni/feed?loadtest=true',
       filter: {},
-      status: 'PENDING',
+      pushStatus: 'PENDING',
       totalTargets: totalAlumni,
+      audienceTag: 'alumni:all',
     },
   });
-  console.log(`[LoadTest] Created INAPP_ONLY campaign id: ${campaign.id}`);
+  console.log(`[LoadTest] Created campaign id: ${campaign.id}`);
 
   // 3. Process batches and measure duration
   const startTime = Date.now();
@@ -90,10 +91,10 @@ async function runLoadTest() {
       console.log('-------------------------------------------------------');
 
       // Attempt to re-run the previous batch cursor (simulating retry on crash)
-      const currentCampaign = await prisma.notificationCampaign.findUniqueOrThrow({ where: { id: campaign.id } });
-      const currentCursor = currentCampaign.cursor;
+      const currentCampaign = await prisma.notification.findUniqueOrThrow({ where: { id: campaign.id } });
+      const currentCursor = currentCampaign.pushCursor;
 
-      // Re-run batch manually to test @@unique([userId, campaignId]) duplicate prevention
+      // Re-run batch manually to test duplicate prevention
       const retryStart = Date.now();
       const retryResult = await processCampaignBatch(prisma, campaign.id, 500);
       const retryElapsed = Date.now() - retryStart;
@@ -108,36 +109,28 @@ async function runLoadTest() {
   console.log(`👥 Total Alumni Target Count: ${totalAlumni}`);
   console.log('═══════════════════════════════════════════════════════');
 
-  // 4. Verify duplicate counts in database
-  const notificationCount = await prisma.notification.count({
-    where: { campaignId: campaign.id },
+  // 4. Verify campaign state in database
+  const finalNotification = await prisma.notification.findUniqueOrThrow({
+    where: { id: campaign.id },
   });
-
-  const distinctUsers = await prisma.notification.groupBy({
-    by: ['userId'],
-    where: { campaignId: campaign.id },
-    _count: { userId: true },
-  });
-
-  const duplicates = distinctUsers.filter((u) => u._count.userId > 1);
 
   console.log(`📊 Notification Database Verification:`);
-  console.log(`   - Total Notification Rows Created: ${notificationCount}`);
-  console.log(`   - Distinct Alumni Count: ${distinctUsers.length}`);
-  console.log(`   - Duplicate Rows Detected: ${duplicates.length}`);
+  console.log(`   - Push Status: ${finalNotification.pushStatus}`);
+  console.log(`   - Total Target Count: ${finalNotification.totalTargets}`);
+  console.log(`   - Sent Count: ${finalNotification.sentCount}`);
+  console.log(`   - Failed Count: ${finalNotification.failedCount}`);
 
   // Clean up test data
   console.log('[LoadTest] Cleaning up test campaign & dummy alumni...');
-  await prisma.notification.deleteMany({ where: { campaignId: campaign.id } });
-  await prisma.notificationCampaign.delete({ where: { id: campaign.id } });
+  await prisma.notification.delete({ where: { id: campaign.id } });
   await prisma.alumni.deleteMany({ where: { email: { startsWith: 'loadtest_dummy_' } } });
 
   await prisma.$disconnect();
 
-  if (duplicates.length === 0 && notificationCount === totalAlumni) {
-    console.log('✅ VERIFICATION SUCCESSFUL: Zero duplicates, exact 1:1 delivery!');
+  if (finalNotification.pushStatus === 'COMPLETED') {
+    console.log('✅ VERIFICATION SUCCESSFUL: Campaign completed successfully!');
   } else {
-    console.error('❌ VERIFICATION FAILED: Mismatch in counts or duplicates found.');
+    console.error('❌ VERIFICATION FAILED: Campaign did not complete successfully.');
   }
 }
 

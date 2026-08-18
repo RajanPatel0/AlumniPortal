@@ -23,8 +23,8 @@ export interface FollowPayload {
 }
 
 export interface MilestonePayload {
-  milestoneTitle: string;
-  milestoneDescription: string;
+  title?: string;
+  body?: string;
   url?: string;
   [key: string]: unknown;
 }
@@ -34,6 +34,7 @@ export const notificationFormats: {
   [NotificationType.FOLLOW]: NotificationFormatConfig<FollowPayload>;
   [NotificationType.ANALYTICS_MILESTONE]: NotificationFormatConfig<MilestonePayload>;
   [NotificationType.POST_CREATED]: NotificationFormatConfig<AdminAnnouncementPayload>;
+  [NotificationType.COMMUNITY_UPDATE]: NotificationFormatConfig<AdminAnnouncementPayload>;
 } = {
   [NotificationType.ADMIN_ANNOUNCEMENT]: {
     icon: '/icon.png',
@@ -55,8 +56,14 @@ export const notificationFormats: {
   },
   [NotificationType.ANALYTICS_MILESTONE]: {
     icon: '/icon.png',
-    renderTitle: (p) => p.milestoneTitle || 'New Milestone Reached!',
-    renderBody: (p) => p.milestoneDescription || 'Check out your recent achievement.',
+    renderTitle: (p) => p.title || 'New Milestone Reached!',
+    renderBody: (p) => p.body || 'Check out your recent achievement.',
+    getUrl: (p) => p.url || '/alumni/feed',
+  },
+  [NotificationType.COMMUNITY_UPDATE]: {
+    icon: '/icon.png',
+    renderTitle: (p) => p.title || 'New Community Update',
+    renderBody: (p) => p.body || '',
     getUrl: (p) => p.url || '/alumni/feed',
   },
 };
