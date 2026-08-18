@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilters } from '@/components/jobs/JobFilters';
 import { getAdminJobsAction, toggleAdminJobStatusAction, deleteJobAction } from '@/actions/jobs';
-import { type JobsApiResponse, DEFAULT_FILTER_OPTIONS, withAll } from '@/types/jobs';
+import { type JobsApiResponse, type JobItemType, DEFAULT_FILTER_OPTIONS, withAll } from '@/types/jobs';
 
 // Dynamically imported Modal (Lazy Loaded client-side)
 const RegisterJobModal = dynamic(
@@ -37,6 +37,7 @@ function AdminJobsPageClient() {
 
   // Modal form state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobItemType | null>(null);
 
   // Helper to update search params
   const updateQueryParam = (key: string, value: string | boolean) => {
@@ -222,6 +223,7 @@ function AdminJobsPageClient() {
                     onApply={() => {}}
                     isAdmin={true}
                     onDelete={handleDelete}
+                    onEdit={setEditingJob}
                   />
                 ))}
               </div>
@@ -255,9 +257,13 @@ function AdminJobsPageClient() {
 
       {/* Reusable Form Modal */}
       <RegisterJobModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isModalOpen || !!editingJob}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingJob(null);
+        }}
         isAdmin={true}
+        jobToEdit={editingJob}
       />
     </div>
   );

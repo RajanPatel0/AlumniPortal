@@ -3,7 +3,44 @@
  * Both pages import from here — no duplication.
  */
 
-import type { JobItemType } from '@/components/jobs/JobCard';
+import type { Job as PrismaJob } from '@prisma/client';
+
+/** Shape of a job's extra metadata JSON column */
+export interface JobMetadata {
+  workplaceType: string;
+  type: string;
+  experienceRange: string;
+  industry: string;
+  skills: string[];
+  applicants: string[];
+}
+
+export interface JobApplicantProfile {
+  id: string;
+  name: string;
+  email: string;
+  currentRole: string | null;
+  avatarUrl: string | null;
+  city: string | null;
+}
+
+export interface JobItemType extends Omit<PrismaJob, 'metadata'>, JobMetadata {
+  applicantsProfiles: JobApplicantProfile[];
+  postedByMe: boolean;
+  appliedByMe: boolean;
+  isExpired: boolean;
+  postedByAlumni?: {
+    id: string;
+    name: string;
+    currentRole: string | null;
+    avatarUrl: string | null;
+    city: string | null;
+  } | null;
+  postedByStaff?: {
+    id: string;
+    name: string;
+  } | null;
+}
 
 export interface JobsApiResponse {
   jobs: JobItemType[];

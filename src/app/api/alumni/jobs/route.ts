@@ -3,14 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 import { Prisma } from '@prisma/client';
 
-interface JobMetadata {
-  workplaceType?: string;
-  type?: string;
-  experienceRange?: string;
-  industry?: string;
-  skills?: string[];
-  applicants?: string[];
-}
+import type { JobMetadata } from '@/types/jobs';
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,7 +50,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const formattedJobs = jobs.map((job) => {
-      const meta = (job.metadata as JobMetadata) || {};
+      const meta = (job.metadata as Partial<JobMetadata>) || {};
       return {
         id: job.id,
         title: job.title,

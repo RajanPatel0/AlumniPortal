@@ -1,41 +1,11 @@
 import { useState } from 'react';
-import { MapPin, Briefcase, IndianRupee, Lock, Unlock, ExternalLink, Calendar, Trash2 } from 'lucide-react';
+import { MapPin, Briefcase, IndianRupee, Lock, Unlock, ExternalLink, Calendar, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { getJobApplicantsExportDataAction } from '@/actions/jobs';
 import { exportCandidatesToExcel } from '@/lib/export-utils';
 
-export interface JobItemType {
-  id: string;
-  title: string;
-  company: string;
-  location: string | null;
-  salaryRange: string | null;
-  applyUrl: string | null;
-  isActive: boolean;
-  postedByAlumniId: string | null;
-  createdAt: Date | string;
-  expireAt: Date | string | null;
-  workplaceType: string;
-  type: string;
-  experienceRange: string;
-  industry: string;
-  skills: string[];
-  applicants: string[];
-  applicantsProfiles: any[];
-  postedByMe: boolean;
-  appliedByMe: boolean;
-  isExpired: boolean;
-  postedByAlumni?: {
-    name: string;
-    currentRole: string | null;
-    avatarUrl: string | null;
-    city: string | null;
-  } | null;
-  postedByStaff?: {
-    name: string;
-  } | null;
-}
+import type { JobItemType } from '@/types/jobs';
 
 interface JobCardProps {
   job: JobItemType;
@@ -43,10 +13,12 @@ interface JobCardProps {
   onApply: (id: string) => void;
   isAdmin?: boolean;
   onDelete?: (id: string) => void;
+  onEdit?: (job: JobItemType) => void;
 }
 
-export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelete }: JobCardProps) {
+export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelete, onEdit }: JobCardProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -127,6 +99,22 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
           ))}
         </div>
       )}
+      {/* Description */}
+      {job.description && (
+        <div className="mt-2 text-slate-600 text-xs leading-relaxed break-words whitespace-pre-line">
+          <p className={!isDescriptionExpanded ? 'line-clamp-2' : ''}>
+            {job.description}
+          </p>
+          {job.description.length > 150 && (
+            <button
+              onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+              className="mt-1 text-[#003D7A] hover:text-[#002b56] font-bold text-[10px] cursor-pointer focus:outline-none transition-colors"
+            >
+              {isDescriptionExpanded ? 'Show Less' : 'Show More'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Owner Info & Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-[10px] text-slate-400 font-medium flex-wrap gap-2">
@@ -147,7 +135,7 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
             ) : (
               <span className="text-slate-400 flex items-center gap-0.5">
                 <Lock size={11} />
-                Closed {job.isExpired && '(Expired)'}
+                Deadline {job.isExpired && '(Expired)'}
               </span>
             )}
           </div>
@@ -164,6 +152,17 @@ export function JobCard({ job, onToggleStatus, onApply, isAdmin = false, onDelet
             >
               {job.isActive ? <Lock size={10} /> : <Unlock size={10} />}
               <span>{job.isActive ? 'Close Job' : 'Reopen Job'}</span>
+            </button>
+          )}
+
+          {/* Owner/Admin controls: Edit Job */}
+          {(job.postedByMe || isAdmin) && onEdit && (
+            <button
+              onClick={() => onEdit(job)}
+              className="p-1 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-700 text-[9px] font-black transition flex items-center gap-1 active:scale-[0.98]"
+            >
+              <Pencil size={10} />
+              <span>Edit</span>
             </button>
           )}
 

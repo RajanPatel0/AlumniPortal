@@ -5,6 +5,7 @@ import { getCurrentAlumni, getCurrentAlumniOrStaff } from '@/lib/auth/getCurrent
 import { getAuthenticatedStaff, hasCampusAccess } from '@/lib/auth/staff-auth';
 import { jobSchema, type JobSchemaType } from '@/schemas/job';
 import { Prisma } from '@prisma/client';
+import type { JobMetadata, JobItemType } from '@/types/jobs';
 
 // ─────────────────────────────────────────
 // TYPES
@@ -20,16 +21,6 @@ export interface JobFilterParams {
   page?: number;
   limit?: number;
   showOpenOnly?: boolean;
-}
-
-/** Shape of a job's extra metadata JSON column */
-interface JobMetadata {
-  workplaceType: string;
-  type: string;
-  experienceRange: string;
-  industry: string;
-  skills: string[];
-  applicants: string[];
 }
 
 // ─────────────────────────────────────────
@@ -210,7 +201,7 @@ export async function getJobsAction(params: JobFilterParams) {
     }),
   ]);
 
-  const formattedJobs = await Promise.all(
+  const formattedJobs: JobItemType[] = await Promise.all(
     jobs.map(async (job) => {
       const meta = normalizeMetadata(job.metadata);
       const isOwner = alumniId ? job.postedByAlumniId === alumniId : false;
@@ -378,7 +369,7 @@ export async function getAdminJobsAction(params: JobFilterParams) {
     }),
   ]);
 
-  const formattedJobs = await Promise.all(
+  const formattedJobs: JobItemType[] = await Promise.all(
     jobs.map(async (job) => {
       const meta = normalizeMetadata(job.metadata);
 
@@ -559,5 +550,74 @@ export async function getJobApplicantsExportDataAction(id: string): Promise<Acti
     return { success: false, error: error.message || 'Failed to fetch applicants details' };
   }
 }
+
+export async function updateJobAction(id: string, formData: JobSchemaType): Promise<ActionResult> {
+  try {
+    const alumni = await getCurrentAlumni();
+    if (!alumni) return { success: false, error: 'Unauthorized' };
+
+    const validated = jobSchema.safeParse(formData);
+    if (!validated.success) return { success: false, error: 'Validation failed' };
+
+    const job = await prisma.job.findUnique({ where: { id }, select: { postedByAlumniId: true } });
+    if (!job) return { success: false, error: 'Job not found' };
+    if (job.postedByAlumniId !== alumni.id) return { success: false, error: 'Permission denied' };
+
+    const metadata = buildJobMetadata(validated.data);
+
+    await prisma.job.update({
+      where: { id },
+      data: buildJobCreateData(validated.data, metadata),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('[updateJobAction]', error);
+    return { success: false, error: error.message || 'Failed to update opportunity' };
+  }
+}
+
+export async function updateAdminJobAction(id: string, formData: JobSchemaType): Promise<ActionResult> {
+  try {
+    const staff = await getAuthenticatedStaff();
+    if (!staff) return { success: false, error: 'Unauthorized' };
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    }
+
+    const validated = jobSchema.safeParse(formData);
+    if (!validated.success) return { success: false, error: 'Validation failed' };
+
+    const job = await prisma.job.findUnique({
+      where: { id },
+      select: {
+        postedByStaffId: true,
+        postedByStaff: { select: { campusId: true } },
+        postedByAlumni: { select: { campusId: true } },
+      },
+    });
+    if (!job) return { success: false, error: 'Opportunity not found' };
+
+    const jobCampusId = job.postedByStaff?.campusId || job.postedByAlumni?.campusId || null;
+    if (!hasCampusAccess(staff, jobCampusId)) {
+      return { success: false, error: 'Forbidden: You do not have permission to manage opportunities from another campus' };
+    }
+
+    const metadata = buildJobMetadata(validated.data);
+
+    await prisma.job.update({
+      where: { id },
+      data: buildJobCreateData(validated.data, metadata),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('[updateAdminJobAction]', error);
+    return { success: false, error: error.message || 'Failed to update opportunity' };
+  }
+}
+
 
 
