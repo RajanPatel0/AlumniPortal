@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
         batchYear: true,
         branch: true,
         course: true,
+        notificationsReadAt: true,
+        createdAt: true,
+        registeredAt: true,
         campus: { select: { code: true } }
       }
     });
@@ -48,8 +51,11 @@ export async function GET(req: NextRequest) {
       followedCommunities
     );
 
+    const readThreshold = alumniWithCampus.notificationsReadAt ?? alumniWithCampus.registeredAt ?? alumniWithCampus.createdAt;
+
     let whereCondition: any = {
       audienceTag: { in: userTags },
+      createdAt: { gte: alumniWithCampus.registeredAt ?? alumniWithCampus.createdAt },
       userStates: {
         none: {
           userId: alumni.id,
@@ -95,7 +101,8 @@ export async function GET(req: NextRequest) {
       prisma.notification.count({
         where: {
           audienceTag: { in: userTags },
-          userStates: { none: { userId: alumni.id, OR: [{ isRead: true }, { isDeleted: true }] } }
+          createdAt: { gt: readThreshold },
+          userStates: { none: { userId: alumni.id, isDeleted: true } }
         }
       })
     ]);
@@ -103,6 +110,7 @@ export async function GET(req: NextRequest) {
     let nextCursor: string | null = null;
     let data = notificationsWithExtra.map(n => {
       const state = n.userStates[0];
+      const isRead = n.createdAt <= readThreshold || (state ? state.isRead : false);
       return {
         id: n.id,
         type: n.type,
@@ -111,7 +119,7 @@ export async function GET(req: NextRequest) {
         url: n.url,
         metadata: n.metadata,
         createdAt: n.createdAt,
-        isRead: state ? state.isRead : false,
+        isRead,
       };
     });
 
@@ -178,31 +186,18 @@ export async function PATCH(req: NextRequest) {
     );
 
     if (markAll) {
-      const unreadNotifications = await prisma.notification.findMany({
-        where: {
-          audienceTag: { in: userTags },
-          userStates: { none: { userId: alumni.id, OR: [{ isRead: true }, { isDeleted: true }] } }
-        },
-        select: { id: true }
+      await prisma.alumni.update({
+        where: { id: alumni.id },
+        data: { notificationsReadAt: new Date() }
       });
 
-      const unreadIds = unreadNotifications.map(n => n.id);
-
-      // Batch insert in chunks of 500
-      const CHUNK_SIZE = 500;
-      for (let i = 0; i < unreadIds.length; i += CHUNK_SIZE) {
-        const chunk = unreadIds.slice(i, i + CHUNK_SIZE);
-        
-        await prisma.notificationState.createMany({
-          data: chunk.map((id) => ({
-            userId: alumni.id,
-            notificationId: id,
-            isRead: true,
-            isDeleted: false,
-          })),
-          skipDuplicates: true
-        });
-      }
+      await prisma.notificationState.deleteMany({
+        where: {
+          userId: alumni.id,
+          isRead: true,
+          isDeleted: false
+        }
+      });
 
       return NextResponse.json({ success: true, message: 'All notifications marked as read' });
     }

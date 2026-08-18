@@ -17,6 +17,9 @@ export async function GET() {
         batchYear: true,
         branch: true,
         course: true,
+        notificationsReadAt: true,
+        createdAt: true,
+        registeredAt: true,
         campus: { select: { code: true } }
       }
     });
@@ -44,16 +47,16 @@ export async function GET() {
       followedCommunities
     );
 
+    const readThreshold = alumniWithCampus.notificationsReadAt ?? alumniWithCampus.registeredAt ?? alumniWithCampus.createdAt;
+
     const unreadCount = await prisma.notification.count({
       where: {
         audienceTag: { in: userTags },
+        createdAt: { gt: readThreshold },
         userStates: {
           none: {
             userId: alumni.id,
-            OR: [
-              { isRead: true },
-              { isDeleted: true }
-            ]
+            isDeleted: true
           }
         }
       }
