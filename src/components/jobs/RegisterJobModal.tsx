@@ -1,47 +1,49 @@
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { jobSchema, type JobSchemaType } from '@/schemas/job';
-import { createJobAction, createAdminJobAction } from '@/actions/jobs';
+import { createJobAction, createAdminJobAction, updateJobAction, updateAdminJobAction } from '@/actions/jobs';
+import type { JobItemType } from '@/types/jobs';
 
 interface RegisterJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   isAdmin?: boolean;
+  jobToEdit?: JobItemType | null;
 }
 
-interface JobFormValues {
-  title: string;
-  company: string;
-  description: string;
-  location: string;
-  workplaceType: string;
-  type: string;
-  experienceRange: string;
-  salaryRange?: string;
-  applyUrl?: string;
-  industry: string;
-  customIndustry?: string;
-  skills?: string;
-  expireAt?: any;
-}
+const getDefaultExpireDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split('T')[0];
+};
 
-export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJobModalProps) {
+export function RegisterJobModal({ isOpen, onClose, isAdmin = false, jobToEdit = null }: RegisterJobModalProps) {
   const queryClient = useQueryClient();
 
-  const createJobMutation = useMutation({
+  const jobMutation = useMutation({
     mutationFn: async (formData: JobSchemaType) => {
-      const action = isAdmin ? createAdminJobAction : createJobAction;
-      const result = await action(formData);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create job');
+      if (jobToEdit) {
+        const action = isAdmin ? updateAdminJobAction : updateJobAction;
+        const result = await action(jobToEdit.id, formData);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update job');
+        }
+        return result;
+      } else {
+        const action = isAdmin ? createAdminJobAction : createJobAction;
+        const result = await action(formData);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to create job');
+        }
+        return result;
       }
-      return result;
     },
     onSuccess: () => {
-      toast.success('Opportunity posted successfully!');
+      toast.success(jobToEdit ? 'Opportunity updated successfully!' : 'Opportunity posted successfully!');
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
       onClose();
@@ -58,7 +60,7 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
     reset,
     watch,
     formState: { errors },
-  } = useForm<JobFormValues>({
+  } = useForm<JobSchemaType>({
     resolver: zodResolver(jobSchema) as any,
     defaultValues: {
       title: '',
@@ -73,19 +75,58 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
       industry: 'Software',
       customIndustry: '',
       skills: '',
-      expireAt: null,
+      expireAt: getDefaultExpireDate() as any,
     },
   });
 
   const watchedIndustry = watch('industry');
 
-  const onSubmit = (formData: JobFormValues) => {
+  useEffect(() => {
+    if (isOpen) {
+      if (jobToEdit) {
+        const isPredefinedIndustry = ['Software', 'Design', 'Administration'].includes(jobToEdit.industry);
+        reset({
+          title: jobToEdit.title,
+          company: jobToEdit.company,
+          description: jobToEdit.description,
+          location: jobToEdit.location || '',
+          workplaceType: jobToEdit.workplaceType,
+          type: jobToEdit.type,
+          experienceRange: jobToEdit.experienceRange,
+          salaryRange: jobToEdit.salaryRange || '',
+          applyUrl: jobToEdit.applyUrl || '',
+          industry: isPredefinedIndustry ? jobToEdit.industry : 'Other',
+          customIndustry: isPredefinedIndustry ? '' : jobToEdit.industry,
+          skills: jobToEdit.skills ? jobToEdit.skills.join(', ') : '',
+          expireAt: jobToEdit.expireAt ? new Date(jobToEdit.expireAt).toISOString().split('T')[0] : null,
+        } as any);
+      } else {
+        reset({
+          title: '',
+          company: '',
+          description: '',
+          location: '',
+          workplaceType: 'On-site',
+          type: 'Full Time',
+          experienceRange: '1-4 years',
+          salaryRange: '',
+          applyUrl: '',
+          industry: 'Software',
+          customIndustry: '',
+          skills: '',
+          expireAt: getDefaultExpireDate() as any,
+        });
+      }
+    }
+  }, [jobToEdit, reset, isOpen]);
+
+  const onSubmit = (formData: JobSchemaType) => {
     const payload = { ...formData } as any;
     if (payload.industry === 'Other') {
       payload.industry = payload.customIndustry || '';
     }
     delete payload.customIndustry;
-    createJobMutation.mutate(payload);
+    jobMutation.mutate(payload);
   };
 
   if (!isOpen) return null;
@@ -95,7 +136,9 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 flex-shrink-0">
-          <h3 className="font-bold text-gray-900 text-sm">Post an opportunity</h3>
+          <h3 className="font-bold text-gray-900 text-sm">
+            {jobToEdit ? 'Edit opportunity' : 'Post an opportunity'}
+          </h3>
           <button 
             onClick={onClose}
             className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
@@ -303,13 +346,13 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
             </button>
             <button 
               type="submit" 
-              disabled={createJobMutation.isPending}
+              disabled={jobMutation.isPending}
               className="flex-1 py-2.5 bg-[#003D7A] hover:bg-[#002b56] text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              {createJobMutation.isPending && (
+              {jobMutation.isPending && (
                 <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              <span>Post Opportunity</span>
+              <span>{jobToEdit ? 'Update Opportunity' : 'Post Opportunity'}</span>
             </button>
           </div>
         </form>
