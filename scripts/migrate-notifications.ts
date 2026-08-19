@@ -264,7 +264,17 @@ async function main() {
     await prisma.$executeRawUnsafe(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`${c.CONSTRAINT_NAME}\``);
   }
 
-  await prisma.$executeRawUnsafe('RENAME TABLE `notifications` TO `notifications_old`, `notifications_v2` TO `notifications`, `notification_states` TO `notification_states_old`, `notification_states_v2` TO `notification_states`');
+  const checkOldStates: any[] = await prisma.$queryRawUnsafe(`
+    SELECT TABLE_NAME 
+    FROM information_schema.TABLES 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification_states'
+  `);
+
+  if (checkOldStates.length > 0) {
+    await prisma.$executeRawUnsafe('RENAME TABLE `notifications` TO `notifications_old`, `notifications_v2` TO `notifications`, `notification_states` TO `notification_states_old`, `notification_states_v2` TO `notification_states`');
+  } else {
+    await prisma.$executeRawUnsafe('RENAME TABLE `notifications` TO `notifications_old`, `notifications_v2` TO `notifications`, `notification_states_v2` TO `notification_states`');
+  }
   
   await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS `notifications_old`');
   await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS `notification_states_old`');

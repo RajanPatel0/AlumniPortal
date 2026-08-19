@@ -66,7 +66,7 @@ export default function NotificationsPage() {
   // Compose form state
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [url, setUrl] = useState('/alumni/feed');
+  const [url, setUrl] = useState('/alumni/alumni/feed');
   const [type, setType] = useState('ADMIN_ANNOUNCEMENT');
   const [channel, setChannel] = useState('PUSH_AND_INAPP');
   const [submitting, setSubmitting] = useState(false);
