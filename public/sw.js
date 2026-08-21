@@ -89,7 +89,14 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const rawUrl = event.notification.data?.url || self.registration.scope;
-  const targetUrl = new URL(rawUrl, self.registration.scope).href;
+  let targetUrl;
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//')) {
+    targetUrl = new URL(rawUrl, self.registration.scope).href;
+  } else {
+    // Strip leading slash to force resolution relative to the service worker scope directory
+    const cleanRelative = rawUrl.startsWith('/') ? rawUrl.slice(1) : rawUrl;
+    targetUrl = new URL(cleanRelative, self.registration.scope).href;
+  }
   const appScope = self.registration.scope;
 
   event.waitUntil(
