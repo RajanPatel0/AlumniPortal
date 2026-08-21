@@ -697,43 +697,67 @@ export default function DashboardPage() {
         </div>
 
         {/* Top Companies Card */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-          <div className="border-b border-slate-100 pb-4 mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-extrabold text-[#012140]">Top Companies</h3>
-              <p className="text-[11px] text-slate-500">Primary employers representing university alumni</p>
-            </div>
-            <button
-              onClick={() => setActiveModal('companies')}
-              className="px-3.5 py-1.5 bg-[#C41E3A]/10 hover:bg-[#C41E3A]/20 text-[#C41E3A] text-xs font-bold rounded-xl transition"
-            >
-              View All
-            </button>
-          </div>
+        {(() => {
+          const notSpecifiedCompanyItem = charts?.companyDistribution?.find(
+            (item) => item.name.toLowerCase() === 'not specified' || item.name.toLowerCase() === 'unspecified'
+          );
+          const notSpecifiedCompanyCount = notSpecifiedCompanyItem ? notSpecifiedCompanyItem.count : 0;
 
-          <div className="space-y-4">
-            {charts?.companyDistribution && charts.companyDistribution.length > 0 ? (
-              charts.companyDistribution.map((item, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold text-slate-700">
-                    <span className="truncate pr-4">{item.name}</span>
-                    <span>{item.count} alumni</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div 
-                      className="bg-gradient-to-r from-[#C41E3A] to-red-700 h-full rounded-full transition-all duration-700" 
-                      style={{ width: `${(item.count / maxCompanyCount) * 100}%` }}
-                    />
-                  </div>
+          const validCompanyDistribution = (charts?.companyDistribution || []).filter(
+            (item) => item.name.toLowerCase() !== 'not specified' && item.name.toLowerCase() !== 'unspecified'
+          );
+
+          const maxValidCompanyCount = validCompanyDistribution.length > 0
+            ? Math.max(...validCompanyDistribution.map((item) => item.count))
+            : 1;
+
+          return (
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+              <div className="border-b border-slate-100 pb-4 mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#012140]">Top Companies</h3>
+                  <p className="text-[11px] text-slate-500">Primary employers representing university alumni</p>
                 </div>
-              ))
-            ) : (
-              <div className="py-12 text-center text-slate-400 text-xs italic">
-                No company data available
+                <div className="flex items-center gap-2">
+                  {notSpecifiedCompanyCount > 0 && (
+                    <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-bold rounded-xl shadow-2xs">
+                      Not Specified: {notSpecifiedCompanyCount}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setActiveModal('companies')}
+                    className="px-3.5 py-1.5 bg-[#C41E3A]/10 hover:bg-[#C41E3A]/20 text-[#C41E3A] text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    View All
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+
+              <div className="space-y-4">
+                {validCompanyDistribution.length > 0 ? (
+                  validCompanyDistribution.map((item, idx) => (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span className="truncate pr-4">{item.name}</span>
+                        <span>{item.count} alumni</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-[#C41E3A] to-red-700 h-full rounded-full transition-all duration-700" 
+                          style={{ width: `${(item.count / maxValidCompanyCount) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-slate-400 text-xs italic">
+                    No company data available
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       </section>
 

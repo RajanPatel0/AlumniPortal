@@ -137,12 +137,19 @@ export default function DashboardLayout({
         }`}
       >
         {/* Header logo area */}
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider overflow-hidden">
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-4 flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider overflow-hidden flex-shrink-0">
               <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
             </div>
-            <span className="text-base font-bold tracking-tight">IKGPTU Alumni</span>
+            <div className="leading-tight min-w-0">
+              <span className="block text-xs sm:text-sm font-extrabold tracking-tight text-white whitespace-nowrap">
+                IKGPTU Alumni Network
+              </span>
+              <span className="block text-[10px] font-bold text-red-400 uppercase tracking-widest leading-none mt-0.5">
+                Admin View
+              </span>
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

@@ -79,11 +79,19 @@ export default function DistributionModal({
         const res = await apiFetch(endpoint);
         if (res.ok) {
           const json = await res.json();
-          const mappedData = (json.data || []).map((row: any) => ({
-            name: isBranches ? row.branch : row.company,
-            count: row.count,
-            percentage: row.percentage,
-          }));
+          const mappedData = (json.data || [])
+            .map((row: any) => ({
+              name: isBranches ? row.branch : row.company,
+              count: row.count,
+              percentage: row.percentage,
+            }))
+            .filter((item: any) => {
+              if (!isBranches && item.name) {
+                const lower = item.name.toLowerCase();
+                return lower !== 'not specified' && lower !== 'unspecified';
+              }
+              return true;
+            });
           setItems(mappedData);
           setPagination(json.pagination || { page: 1, limit: 15, total: 0, pages: 1 });
         } else {

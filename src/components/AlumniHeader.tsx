@@ -27,11 +27,11 @@ export default function AlumniHeader({ isStaff = false }: AlumniHeaderProps) {
             <img src={`${BASE_PATH}/icon.png`} alt="logo" className="w-full h-full object-cover" />
           </div>
           
-          <Link href="/" className="group block focus:outline-none max-w-[150px] sm:max-w-none">
-            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-slate-900 group-hover:text-[#003D7A] transition-colors leading-tight truncate sm:whitespace-normal">
-              I.K.G. Punjab Technical University
+          <Link href="/" className="group block focus:outline-none min-w-0">
+            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-slate-900 group-hover:text-[#003D7A] transition-colors leading-tight">
+              I.K.Gujral Punjab Technical University
             </h1>
-            <p className="hidden sm:block text-[10px] font-semibold text-slate-500 tracking-wider uppercase transition-colors group-hover:text-[#C41E3A] mt-0.5">
+            <p className="text-[9px] sm:text-[10px] font-semibold text-slate-500 tracking-wider uppercase transition-colors group-hover:text-[#C41E3A] mt-0.5">
               Alumni Relations
             </p>
           </Link>

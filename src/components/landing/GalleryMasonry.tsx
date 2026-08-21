@@ -147,26 +147,28 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
           </div>
         </div>
 
-        {/* ── DESKTOP / SM+: Original masonry column layout ── */}
-        <div className="hidden sm:block">
-          <div className="columns-2 md:columns-3 lg:columns-4 gap-6">
-            {filteredItems.map((item, idx) => (
-              <div
-                key={item.id}
-                onClick={() => setLightboxIndex(idx)}
-                className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative break-inside-avoid mb-6 group"
-              >
-                <img
-                  src={item.image}
-                  alt={item.caption}
-                  className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41E3A] mb-1">{item.album}</span>
-                  <p className="text-white text-xs font-semibold leading-relaxed line-clamp-2">{item.caption}</p>
+        {/* ── DESKTOP / SM+: Fixed height window (140vh max window) with internal scroll ── */}
+        <div className="hidden sm:block relative rounded-3xl border border-slate-200/60 bg-white/50 backdrop-blur-xs p-4 sm:p-6 shadow-inner">
+          <div className="max-h-[120vh] xl:max-h-[140vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400 scroll-smooth">
+            <div className="columns-2 md:columns-3 lg:columns-4 gap-6">
+              {filteredItems.map((item, idx) => (
+                <div
+                  key={item.id}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative break-inside-avoid mb-6 group"
+                >
+                  <img
+                    src={item.image}
+                    alt={item.caption}
+                    className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41E3A] mb-1">{item.album}</span>
+                    <p className="text-white text-xs font-semibold leading-relaxed line-clamp-2">{item.caption}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
