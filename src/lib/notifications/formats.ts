@@ -69,16 +69,87 @@ export const notificationFormats: {
 };
 
 /**
+ * Normalizes any user-entered landing URL (internal relative path) to start with exactly
+ * one "/alumni/" prefix, stripping out any double-prefixed "/alumni/alumni/..." paths
+ * or protocol/domain suffixes for localhost/test.ptu.ac.in.
+ */
+export function normalizeRoutePath(urlInput: string | null | undefined): string | null {
+  if (!urlInput) return null;
+  
+  // 1. If it's an external URL, return it as-is
+  if (/^(https?:)?\/\//i.test(urlInput)) {
+    try {
+      const parsed = new URL(urlInput);
+      
+      // Dynamically extract the configured app domain host from env
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      let appHost = "";
+      if (appUrl) {
+        try {
+          appHost = new URL(appUrl).host;
+        } catch {}
+      }
+      
+      if (
+        parsed.host === "test.ptu.ac.in" || 
+        parsed.host === "localhost:3000" || 
+        (appHost && parsed.host === appHost)
+      ) {
+        urlInput = parsed.pathname + parsed.search + parsed.hash;
+      } else {
+        return urlInput;
+      }
+    } catch {
+      return urlInput;
+    }
+  }
+
+  // 2. Clean slashes and split path segments
+  let cleanPath = urlInput.trim();
+  if (!cleanPath.startsWith("/")) {
+    cleanPath = "/" + cleanPath;
+  }
+
+  // Parse path and query/hash separately
+  const queryIndex = cleanPath.indexOf("?");
+  const hashIndex = cleanPath.indexOf("#");
+  let pathname = cleanPath;
+  let suffix = "";
+
+  if (queryIndex !== -1 || hashIndex !== -1) {
+    const splitIndex = queryIndex !== -1 && hashIndex !== -1 ? Math.min(queryIndex, hashIndex) : (queryIndex !== -1 ? queryIndex : hashIndex);
+    pathname = cleanPath.slice(0, splitIndex);
+    suffix = cleanPath.slice(splitIndex);
+  }
+
+  // Clean pathname: split by "/" and filter out empty segments
+  const segments = pathname.split("/").filter(Boolean);
+
+  // Remove any leading "alumni" segments so we have a clean relative path
+  while (segments[0] === "alumni") {
+    segments.shift();
+  }
+
+  // Re-prepend "alumni" to construct the clean route path relative to basePath
+  const normalizedPathname = "/alumni/" + segments.join("/");
+  
+  return normalizedPathname + suffix;
+}
+
+/**
  * Format a push notification payload using the unified format registry.
  */
 export function formatPushPayload(type: NotificationType, payload: Record<string, unknown>) {
   const formatter = notificationFormats[type] || notificationFormats[NotificationType.ADMIN_ANNOUNCEMENT];
 
+  const rawUrl = formatter.getUrl(payload as never);
+  const normalizedUrl = normalizeRoutePath(rawUrl) || '/alumni/feed';
+
   return {
     type,
     title: formatter.renderTitle(payload as never),
     body: formatter.renderBody(payload as never),
-    url: formatter.getUrl(payload as never),
+    url: normalizedUrl,
     icon: formatter.icon,
   };
 }
