@@ -120,20 +120,32 @@ export async function GET() {
 
     const welcomeNote = welcomeNotes[0];
 
-    const events = dbEvents.length > 0
-      ? dbEvents.map(e => ({
+    const now = new Date();
+    // Sort dbEvents: future events first (closest upcoming first), then past events
+    const sortedDbEvents = [...dbEvents].sort((a, b) => {
+      const aTime = new Date(a.eventDate).getTime();
+      const bTime = new Date(b.eventDate).getTime();
+      const nowTime = now.getTime();
+
+      const aIsFuture = aTime >= nowTime;
+      const bIsFuture = bTime >= nowTime;
+
+      if (aIsFuture && !bIsFuture) return -1;
+      if (!aIsFuture && bIsFuture) return 1;
+      if (aIsFuture && bIsFuture) return aTime - bTime;
+      return bTime - aTime;
+    });
+
+    const events = sortedDbEvents.length > 0
+      ? sortedDbEvents.map(e => ({
           id: e.id,
           title: e.title,
           description: e.description,
-          bannerImage: e.coverImageUrl || 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=800&q=80',
+          bannerImage: e.coverImageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
           dateTime: e.eventDate.toISOString(),
           venue: e.venue,
-          venueType: 'physical',
-          category: e.category.toLowerCase().includes('webinar') 
-            ? 'webinar' 
-            : e.category.toLowerCase().includes('workshop') 
-              ? 'workshop' 
-              : 'reunion',
+          venueType: 'physical' as const,
+          category: e.category || 'Conference',
           registrationLink: '#rsvp-modal',
           campusTag: 'Main Campus',
           published: e.isPublished,
@@ -141,13 +153,13 @@ export async function GET() {
       : [
           {
             id: 'event-1',
-            title: 'Silver Jubilee Alumni Reunion 2026',
-            description: 'Join us at the Main Campus for a nostalgic walk down memory lane, network dinners, and interactive sessions with current students.',
-            bannerImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=800&q=80',
-            dateTime: '2026-08-15T10:00:00Z',
+            title: 'Universities admission conference 2026',
+            description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.',
+            bannerImage: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+            dateTime: new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString(),
             venue: 'Main Auditorium, IKGPTU Main Campus',
-            venueType: 'physical',
-            category: 'reunion',
+            venueType: 'physical' as const,
+            category: 'Conference',
             registrationLink: '#rsvp-modal',
             capacity: 500,
             campusTag: 'Main Campus',
@@ -155,16 +167,30 @@ export async function GET() {
           },
           {
             id: 'event-2',
-            title: 'Global Tech Webinar: AI in 2026',
-            description: 'Industry experts from Silicon Valley discuss the future landscape of generative AI and prompt engineering standards.',
-            bannerImage: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
-            dateTime: '2026-07-22T15:30:00Z',
-            venue: 'Zoom & YouTube Live Stream',
-            venueType: 'virtual',
-            category: 'webinar',
+            title: 'History and culture open day conference 2026',
+            description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.',
+            bannerImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+            dateTime: new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000).toISOString(),
+            venue: 'Heritage Hall, Amritsar Campus',
+            venueType: 'physical' as const,
+            category: 'Conference',
             registrationLink: '#rsvp-modal',
-            capacity: 1000,
-            campusTag: 'All Campuses',
+            capacity: 300,
+            campusTag: 'Amritsar Campus',
+            published: true,
+          },
+          {
+            id: 'event-3',
+            title: 'Undergraduate and postgraduate open days 2026',
+            description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.',
+            bannerImage: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1200&q=80',
+            dateTime: new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+            venue: 'Central Plaza, Mohali Campus',
+            venueType: 'physical' as const,
+            category: 'Conference',
+            registrationLink: '#rsvp-modal',
+            capacity: 400,
+            campusTag: 'Mohali Campus',
             published: true,
           }
         ];
