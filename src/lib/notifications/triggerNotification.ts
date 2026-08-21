@@ -3,6 +3,7 @@ import { NotificationChannel, NotificationType, PushDeliveryStatus, Prisma } fro
 import { generateCampaignTags } from './tags';
 import { sendPush } from '../push/send';
 import { buildAlumniWhere } from './buildAlumniWhere';
+import { normalizeRoutePath } from './formats';
 import crypto from 'crypto';
 
 export interface TriggerNotificationOptions {
@@ -25,6 +26,7 @@ export interface TriggerNotificationOptions {
 
 export async function triggerNotification(options: TriggerNotificationOptions) {
   const { type, channel, title, body, url, metadata, userId, filter, customTag, createdById, staffRole, staffCampusId } = options;
+  const normalizedUrl = url ? normalizeRoutePath(url) : null;
 
   let combos: { tag: string; scopedFilter: any }[] = [];
   let targetUserId: string | null = null;
@@ -87,7 +89,7 @@ export async function triggerNotification(options: TriggerNotificationOptions) {
           type,
           title,
           body,
-          url: url || null,
+          url: normalizedUrl || null,
           metadata: (metadata as Prisma.InputJsonValue) ?? Prisma.DbNull,
           audienceTag: combo.tag,
           targetUserId,
@@ -112,7 +114,7 @@ export async function triggerNotification(options: TriggerNotificationOptions) {
         });
         if (subs.length > 0) {
           const results = await Promise.allSettled(
-            subs.map((s) => sendPush(s, { title, body, url: url || undefined }))
+            subs.map((s) => sendPush(s, { title, body, url: normalizedUrl || undefined }))
           );
           const expired = subs
             .filter((_, i) => {

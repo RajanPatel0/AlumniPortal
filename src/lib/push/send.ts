@@ -1,14 +1,14 @@
-import webpush from 'web-push';
+import webpush from "web-push";
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:alumni@ptu.ac.in';
+const vapidSubject = process.env.VAPID_SUBJECT || "mailto:alumni@ptu.ac.in";
 
 if (vapidPublicKey && vapidPrivateKey) {
   try {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
   } catch (err) {
-    console.error('Failed to set VAPID details:', err);
+    console.error("Failed to set VAPID details:", err);
   }
 }
 
@@ -39,12 +39,12 @@ export interface SendPushResult {
  */
 export async function sendPush(
   sub: PushSubscriptionKeys,
-  payload: PushPayload
+  payload: PushPayload,
 ): Promise<SendPushResult> {
   try {
     if (!vapidPublicKey || !vapidPrivateKey) {
-      console.warn('VAPID keys not configured. Skipping push delivery.');
-      return { ok: false, expired: false, error: 'VAPID keys not configured' };
+      console.warn("VAPID keys not configured. Skipping push delivery.");
+      return { ok: false, expired: false, error: "VAPID keys not configured" };
     }
 
     await webpush.sendNotification(
@@ -55,19 +55,23 @@ export async function sendPush(
           auth: sub.auth,
         },
       },
-      JSON.stringify(payload)
+      JSON.stringify(payload),
     );
 
     return { ok: true, expired: false };
   } catch (err: unknown) {
     const error = err as { statusCode?: number; message?: string };
     if (error.statusCode === 404 || error.statusCode === 410) {
-      return { ok: false, expired: true, error: 'Subscription expired or unsubscribed (404/410)' };
+      return {
+        ok: false,
+        expired: true,
+        error: "Subscription expired or unsubscribed (404/410)",
+      };
     }
     return {
       ok: false,
       expired: false,
-      error: error.message || 'Push delivery failed',
+      error: error.message || "Push delivery failed",
     };
   }
 }
