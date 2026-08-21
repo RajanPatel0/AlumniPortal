@@ -60,6 +60,7 @@ export const eventSchema = z.object({
   imageUrls: z.array(z.string()).optional().default([]),
   rsvpDeadline: z.preprocess(preprocessDate, z.date().nullable().optional()),
   isPublished: z.boolean().default(false),
+  showOnLanding: z.boolean().optional(),
 });
 
 export type EventSchemaType = z.infer<typeof eventSchema>;

@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Download,
   Loader2,
+  Globe,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -29,6 +30,7 @@ import {
   updateAdminEventAction,
   deleteEventAction,
   toggleEventPublishAction,
+  toggleEventLandingFromAdminAction,
   getEventRsvpsAction,
   exportEventRsvpsAction,
 } from "@/actions/events";
@@ -61,7 +63,8 @@ const EMPTY_FORM = {
   coverImageUrl: "",
   imageUrls: [] as string[],
   rsvpDeadline: "",
-  isPublished: false,
+  isPublished: true,
+  showOnLanding: true,
 };
 
 // ─── Admin Events Client ──────────────────────────────────────────────────────
@@ -188,6 +191,21 @@ function AdminEventsClient() {
     },
   });
 
+  const toggleLandingMutation = useMutation({
+    mutationFn: ({ id, showOnLanding }: { id: string; showOnLanding: boolean }) =>
+      toggleEventLandingFromAdminAction(id, showOnLanding),
+    onSuccess: (result, vars) => {
+      if (result.success) {
+        toast.success(
+          vars.showOnLanding ? "Added to Landing Page" : "Hidden from Landing Page",
+        );
+        queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+      } else {
+        toast.error("Failed to update landing status");
+      }
+    },
+  });
+
   // ── Modal helpers ─────────────────────────────────────────────────────────
   const openCreate = () => {
     setEditingEvent(null);
@@ -209,6 +227,7 @@ function AdminEventsClient() {
         ? new Date(event.rsvpDeadline as string).toISOString().slice(0, 16)
         : "",
       isPublished: event.isPublished,
+      showOnLanding: (event as any).showOnLanding ?? true,
     });
     setShowModal(true);
   };
@@ -332,6 +351,9 @@ function AdminEventsClient() {
                 onTogglePublish={(id, pub) =>
                   togglePublishMutation.mutate({ id, isPublished: pub })
                 }
+                onToggleLanding={(id, show) =>
+                  toggleLandingMutation.mutate({ id, showOnLanding: show })
+                }
               />
             ))}
           </div>
@@ -420,7 +442,7 @@ function AdminEventsClient() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {/* Category */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
@@ -458,6 +480,26 @@ function AdminEventsClient() {
                   >
                     <option value="true">Published</option>
                     <option value="false">Draft</option>
+                  </select>
+                </div>
+
+                {/* Show on Landing Page */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                    Show on Landing
+                  </label>
+                  <select
+                    value={formData.showOnLanding ? "true" : "false"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        showOnLanding: e.target.value === "true",
+                      })
+                    }
+                    className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+                  >
+                    <option value="true">Yes (Show)</option>
+                    <option value="false">No (Hide)</option>
                   </select>
                 </div>
               </div>
@@ -739,13 +781,17 @@ function AdminEventRow({
   onDelete,
   onViewRsvp,
   onTogglePublish,
+  onToggleLanding,
 }: {
   event: EventItemType;
   onEdit: (e: EventItemType) => void;
   onDelete: (e: EventItemType) => void;
   onViewRsvp: (id: string) => void;
   onTogglePublish: (id: string, pub: boolean) => void;
+  onToggleLanding: (id: string, show: boolean) => void;
 }) {
+  const isLanding = (event as any).showOnLanding ?? true;
+
   return (
     <div className="flex items-center gap-4 p-4 hover:bg-slate-50 transition">
       {/* Date block */}
@@ -776,6 +822,15 @@ function AdminEventRow({
             }`}
           >
             {event.isPublished ? "Published" : "Draft"}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+              isLanding
+                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {isLanding ? "★ Landing" : "Hidden from Landing"}
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
@@ -812,14 +867,25 @@ function AdminEventRow({
         <button
           onClick={() => onViewRsvp(event.id)}
           title="View RSVPs"
-          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
         >
           <Users size={15} />
         </button>
         <button
+          onClick={() => onToggleLanding(event.id, !isLanding)}
+          title={isLanding ? "Hide from Landing Page" : "Show on Landing Page"}
+          className={`p-2 rounded-lg transition cursor-pointer ${
+            isLanding
+              ? "text-blue-600 hover:bg-blue-50"
+              : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+          }`}
+        >
+          <Globe size={15} />
+        </button>
+        <button
           onClick={() => onTogglePublish(event.id, !event.isPublished)}
           title={event.isPublished ? "Unpublish" : "Publish"}
-          className={`p-2 rounded-lg transition ${
+          className={`p-2 rounded-lg transition cursor-pointer ${
             event.isPublished
               ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
               : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
@@ -830,14 +896,14 @@ function AdminEventRow({
         <button
           onClick={() => onEdit(event)}
           title="Edit"
-          className="p-2 text-slate-400 hover:text-[#003D7A] hover:bg-blue-50 rounded-lg transition"
+          className="p-2 text-slate-400 hover:text-[#003D7A] hover:bg-blue-50 rounded-lg transition cursor-pointer"
         >
           <Pencil size={15} />
         </button>
         <button
           onClick={() => onDelete(event)}
           title="Delete"
-          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
         >
           <Trash2 size={15} />
         </button>

@@ -109,6 +109,7 @@ function buildEventData(data: EventSchemaType) {
     imageUrls: data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls : undefined,
     rsvpDeadline: data.rsvpDeadline ?? null,
     isPublished: data.isPublished,
+    showOnLanding: data.showOnLanding ?? true,
   };
 }
 
@@ -395,6 +396,24 @@ export async function toggleEventPublishAction(id: string, isPublished: boolean)
   } catch (err: any) {
     console.error('[toggleEventPublishAction]', err);
     return { success: false, error: err.message || 'Failed to update publish status' };
+  }
+}
+
+export async function toggleEventLandingFromAdminAction(id: string, showOnLanding: boolean): Promise<ActionResult> {
+  try {
+    const staff = await getAuthenticatedStaff();
+    if (!staff) return { success: false, error: 'Unauthorized' };
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Forbidden: Access denied to events module' };
+    }
+
+    await prisma.event.update({ where: { id }, data: { showOnLanding } });
+    return { success: true };
+  } catch (err: any) {
+    console.error('[toggleEventLandingFromAdminAction]', err);
+    return { success: false, error: err.message || 'Failed to update landing status' };
   }
 }
 
